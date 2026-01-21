@@ -149,8 +149,15 @@ export default function Login() {
                 <p className="text-xs text-slate-500 font-medium opacity-60">🔒 256-bit SSL Encrypted • Trusted by 10,000+ Businesses</p>
             </div>
         </div>
-
       </div>
+
+      {/* --- NEW FOOTER --- */}
+      <div className="absolute bottom-4 w-full text-center z-20">
+          <p className="text-[11px] text-slate-400 opacity-60">
+              Powered by <a href="https://pixalara.com" target="_blank" rel="noreferrer" className="hover:text-white transition-colors">pixalara.com</a>
+          </p>
+      </div>
+
     </div>
   )
 }
