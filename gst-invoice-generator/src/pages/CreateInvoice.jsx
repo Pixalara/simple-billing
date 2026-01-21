@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useForm, useFieldArray, useWatch } from 'react-hook-form'
 import { supabase } from '../supabaseClient'
 import { useNavigate } from 'react-router-dom'
+import { INDIAN_STATES } from '../constants' // Import the list
 
 export default function CreateInvoice() {
   const navigate = useNavigate()
@@ -83,7 +84,7 @@ export default function CreateInvoice() {
 
       if (error) throw error
       alert('Invoice Saved Successfully!')
-      navigate('/dashboard') // Go back to dashboard after saving
+      navigate('/dashboard')
     } catch (error) {
       alert('Error saving invoice: ' + error.message)
     } finally {
@@ -101,13 +102,20 @@ export default function CreateInvoice() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 p-4 bg-gray-50 rounded">
             <h3 className="col-span-2 font-semibold text-gray-700">Buyer Details</h3>
             <input {...register('buyer_name', { required: true })} placeholder="Buyer Name" className="p-2 border rounded" />
-            <select {...register('buyer_state', { required: true })} className="p-2 border rounded">
-              <option value="">Select State</option>
-              <option value="Karnataka">Karnataka</option>
-              <option value="Maharashtra">Maharashtra</option>
-              <option value="Delhi">Delhi</option>
-              {/* Add other states */}
+            
+            {/* UPDATED: Dynamic State List */}
+            <select 
+                {...register('buyer_state', { required: true })} 
+                className="p-2 border rounded"
+            >
+                <option value="">Select State</option>
+                {INDIAN_STATES.map((state) => (
+                    <option key={state} value={state}>
+                        {state}
+                    </option>
+                ))}
             </select>
+
             <input {...register('buyer_gstin')} placeholder="Buyer GSTIN (Optional)" className="p-2 border rounded" />
           </div>
 
