@@ -64,7 +64,7 @@ export default function Login() {
             </h1>
             
             <p className="text-lg text-slate-300 max-w-xl mx-auto md:mx-0 leading-relaxed">
-                Join thousands of businesses who trust <strong>Pixalara</strong> for GST billing, payment tracking, and automated WhatsApp sharing.
+                Join thousands of businesses who trust <strong>Pixalara</strong> for GST billing and automated WhatsApp sharing.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start pt-4 text-sm font-medium text-slate-300">
