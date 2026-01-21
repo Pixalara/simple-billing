@@ -44,14 +44,15 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-cover bg-center relative" 
+    // Updated main container layout
+    <div className="min-h-[100dvh] w-full flex flex-col justify-between bg-cover bg-center relative" 
          style={{ backgroundImage: "url('https://images.unsplash.com/photo-1497366216548-37526070297c?q=80&w=2301&auto=format&fit=crop')" }}>
       
       {/* Dark Gradient Overlay for Readability */}
       <div className="absolute inset-0 bg-gradient-to-br from-slate-900/95 via-blue-900/90 to-slate-900/95"></div>
 
-      {/* Main Content Container */}
-      <div className="relative z-10 w-full max-w-6xl p-4 grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+      {/* Main Content Container - Added flex-grow and py-8 for spacing */}
+      <div className="relative z-10 w-full max-w-6xl p-4 grid grid-cols-1 md:grid-cols-2 gap-12 items-center flex-grow py-8">
         
         {/* LEFT SIDE: Brand & Value Prop */}
         <div className="text-white text-center md:text-left space-y-6">
@@ -151,10 +152,11 @@ export default function Login() {
         </div>
       </div>
 
-      {/* --- NEW FOOTER --- */}
-      <div className="absolute bottom-4 w-full text-center z-20">
+      {/* --- UPDATED FOOTER --- */}
+      {/* Removed absolute positioning, added padding */}
+      <div className="w-full text-center z-20 py-4">
           <p className="text-[11px] text-slate-400 opacity-60">
-              Powered by <a href="https://pixalara.com" target="_blank" rel="noreferrer" className="hover:text-white transition-colors">pixalara.com</a>
+              Powered by <a href="https://pixalara.com" target="_blank" rel="noreferrer" className="hover:text-white transition-colors underline">pixalara.com</a>
           </p>
       </div>
 
