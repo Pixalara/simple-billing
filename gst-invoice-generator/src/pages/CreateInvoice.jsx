@@ -22,7 +22,6 @@ export default function CreateInvoice() {
   
   // Custom Visual States
   const [theme, setTheme] = useState(THEMES[0])
-  const [logoPreview, setLogoPreview] = useState(null)
   const [signaturePreview, setSignaturePreview] = useState(null)
 
   const { register, control, handleSubmit, setValue } = useForm({
@@ -40,26 +39,28 @@ export default function CreateInvoice() {
   const formData = useWatch({ control })
   const { fields, append, remove } = useFieldArray({ control, name: 'items' })
 
-  // 1. Fetch Profile
+  // 1. Fetch Profile & Auto-fill Logo
   useEffect(() => {
     const fetchProfile = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return navigate('/login')
       const { data } = await supabase.from('users').select('*').eq('id', user.id).single()
-      if (data) setSellerProfile(data)
+      
+      if (data) {
+        setSellerProfile(data)
+        // Note: We don't need to set logoPreview manually anymore; 
+        // we use data.logo_url directly in the JSX below.
+      }
     }
     fetchProfile()
   }, [])
 
-  // 2. Handle Image Uploads (Local Preview)
-  const handleImageUpload = (e, type) => {
+  // 2. Handle Signature Upload (Local Preview only)
+  const handleImageUpload = (e) => {
     const file = e.target.files[0]
     if (file) {
       const reader = new FileReader()
-      reader.onloadend = () => {
-        if (type === 'logo') setLogoPreview(reader.result)
-        if (type === 'signature') setSignaturePreview(reader.result)
-      }
+      reader.onloadend = () => setSignaturePreview(reader.result)
       reader.readAsDataURL(file)
     }
   }
@@ -152,12 +153,6 @@ export default function CreateInvoice() {
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           
-          {/* Logo Upload */}
-          <div className="bg-gray-50 p-3 rounded border">
-            <label className="text-xs font-bold text-gray-500 uppercase">Business Logo</label>
-            <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'logo')} className="block w-full text-sm text-gray-500 mt-1 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
-          </div>
-
           {/* Dates & PO */}
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -224,7 +219,7 @@ export default function CreateInvoice() {
           <div className="space-y-3">
              <div className="bg-gray-50 p-3 rounded border">
                 <label className="text-xs font-bold text-gray-500">Signature Upload</label>
-                <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'signature')} className="block w-full text-sm text-gray-500 mt-1" />
+                <input type="file" accept="image/*" onChange={handleImageUpload} className="block w-full text-sm text-gray-500 mt-1" />
             </div>
             <div>
               <label className="text-xs text-gray-500">Terms & Conditions</label>
@@ -255,8 +250,9 @@ export default function CreateInvoice() {
           {/* COLORED HEADER */}
           <div className="p-8 flex justify-between items-start" style={{ backgroundColor: theme.hex, color: theme.text }}>
             <div>
-              {logoPreview && (
-                <img src={logoPreview} alt="Logo" className="h-20 w-auto mb-4 object-contain bg-white rounded p-1" />
+              {/* AUTO-LOAD LOGO FROM PROFILE */}
+              {sellerProfile?.logo_url && (
+                <img src={sellerProfile.logo_url} alt="Logo" className="h-20 w-auto mb-4 object-contain bg-white rounded p-1" />
               )}
               <h1 className="text-4xl font-bold uppercase tracking-wide">Invoice</h1>
               <p className="opacity-80 mt-1"># {`INV-${new Date().getFullYear()}-001`}</p>
@@ -264,7 +260,11 @@ export default function CreateInvoice() {
             <div className="text-right">
               <h2 className="text-2xl font-bold">{sellerProfile?.business_name || 'Your Business Name'}</h2>
               <p className="opacity-90">{sellerProfile?.state}</p>
-              <p className="opacity-90">{sellerProfile?.email}</p>
+              {/* AUTO-LOAD CONTACT INFO */}
+              {sellerProfile?.business_email && <p className="opacity-90 text-sm">{sellerProfile.business_email}</p>}
+              {sellerProfile?.business_phone && <p className="opacity-90 text-sm">{sellerProfile.business_phone}</p>}
+              {sellerProfile?.website && <p className="opacity-90 text-sm">{sellerProfile.website}</p>}
+              
               {sellerProfile?.gstin && <p className="font-semibold mt-1">GSTIN: {sellerProfile.gstin}</p>}
             </div>
           </div>
