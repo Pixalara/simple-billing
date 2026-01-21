@@ -19,8 +19,10 @@ export default function CreateInvoice() {
   const { id } = useParams()
   const invoiceRef = useRef()
   
-  // Mobile Tab State (Edit vs Preview)
+  // Mobile Tab State
   const [mobileTab, setMobileTab] = useState('edit')
+  // Scale State for Mobile Preview
+  const [previewScale, setPreviewScale] = useState(1)
   
   const [loading, setLoading] = useState(false)
   const [sharing, setSharing] = useState(false)
@@ -41,6 +43,7 @@ export default function CreateInvoice() {
   const formData = watch()
   const { fields, append, remove } = useFieldArray({ control, name: 'items' })
 
+  // 1. Fetch Data
   useEffect(() => {
     const loadData = async () => {
       const { data: { user } } = await supabase.auth.getUser()
@@ -63,6 +66,23 @@ export default function CreateInvoice() {
     }
     loadData()
   }, [id, navigate, reset])
+
+  // 2. Auto-Scale Logic for Mobile
+  useEffect(() => {
+    const handleResize = () => {
+      const screenWidth = window.innerWidth
+      if (screenWidth < 1024) { // Mobile/Tablet
+         // A4 width is approx 794px. We scale it down to fit.
+         const scale = (screenWidth - 32) / 794
+         setPreviewScale(scale < 1 ? scale : 1)
+      } else {
+        setPreviewScale(1)
+      }
+    }
+    handleResize()
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
 
   const handleImageUpload = (e) => {
     const file = e.target.files[0]
@@ -108,10 +128,23 @@ export default function CreateInvoice() {
   }
   const totals = calculateTotals()
 
-  const handleShare = async () => {
-    setSharing(true)
-    try {
-      const element = invoiceRef.current
+  // --- PDF GENERATION HELPER ---
+  const generatePdfBlob = async () => {
+      const originalElement = invoiceRef.current
+      if (!originalElement) return null;
+
+      // Clone to ensure full A4 size capture even if scaled down on mobile
+      const clone = originalElement.cloneNode(true)
+      clone.style.transform = 'none'
+      clone.style.margin = '0'
+      
+      const container = document.createElement('div')
+      container.style.position = 'fixed'
+      container.style.top = '-10000px'
+      container.style.left = '-10000px'
+      container.appendChild(clone)
+      document.body.appendChild(container)
+
       const opt = {
         margin: 0,
         filename: `Invoice_${formData.buyer_name || 'Customer'}.pdf`,
@@ -120,20 +153,35 @@ export default function CreateInvoice() {
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
       }
       
-      const pdfBlob = await html2pdf().set(opt).from(element).output('blob')
-      const file = new File([pdfBlob], opt.filename, { type: 'application/pdf' })
+      try {
+        const pdfBlob = await html2pdf().set(opt).from(clone).output('blob')
+        document.body.removeChild(container)
+        return { blob: pdfBlob, filename: opt.filename }
+      } catch (err) {
+        document.body.removeChild(container)
+        throw err
+      }
+  }
+
+  const handleShare = async () => {
+    setSharing(true)
+    try {
+      const result = await generatePdfBlob()
+      if (!result) return
+
+      const file = new File([result.blob], result.filename, { type: 'application/pdf' })
 
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
         await navigator.share({
           files: [file],
           title: 'Invoice',
-          text: `Here is the invoice from ${sellerProfile?.business_name}.`,
+          text: `Here is the invoice from ${sellerProfile?.business_name}. Powered by pixalara.com`,
         })
       } else {
-        const url = URL.createObjectURL(pdfBlob)
+        const url = URL.createObjectURL(result.blob)
         const a = document.createElement('a')
         a.href = url
-        a.download = opt.filename
+        a.download = result.filename
         a.click()
         alert('On Desktop/Web, please drag the downloaded file to WhatsApp/Email manually.')
       }
@@ -144,16 +192,19 @@ export default function CreateInvoice() {
     }
   }
 
-  const handleDownloadPDF = () => {
-    const element = invoiceRef.current
-    const opt = {
-      margin: 0,
-      filename: `Invoice_${formData.buyer_name || 'Draft'}.pdf`,
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+  const handleDownloadPDF = async () => {
+    try {
+        const result = await generatePdfBlob()
+        if (result) {
+            const url = URL.createObjectURL(result.blob)
+            const a = document.createElement('a')
+            a.href = url
+            a.download = result.filename
+            a.click()
+        }
+    } catch (e) {
+        alert('Error generating PDF')
     }
-    html2pdf().set(opt).from(element).save()
   }
 
   const handlePrint = () => window.print()
@@ -188,25 +239,15 @@ export default function CreateInvoice() {
         @media print {
           body * { visibility: hidden; }
           #invoice-preview, #invoice-preview * { visibility: visible; }
-          #invoice-preview { position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0; box-shadow: none; }
+          #invoice-preview { position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0; box-shadow: none; transform: none !important; }
           .no-print { display: none !important; }
         }
       `}</style>
       
       {/* --- MOBILE TABS --- */}
       <div className="lg:hidden sticky top-0 z-20 bg-white border-b flex text-sm font-bold shadow-sm">
-        <button 
-            onClick={() => setMobileTab('edit')} 
-            className={`flex-1 py-3 text-center ${mobileTab === 'edit' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500'}`}
-        >
-            ✎ Editor
-        </button>
-        <button 
-            onClick={() => setMobileTab('preview')} 
-            className={`flex-1 py-3 text-center ${mobileTab === 'preview' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500'}`}
-        >
-            👁 Preview
-        </button>
+        <button onClick={() => setMobileTab('edit')} className={`flex-1 py-3 text-center ${mobileTab === 'edit' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500'}`}>✎ Editor</button>
+        <button onClick={() => setMobileTab('preview')} className={`flex-1 py-3 text-center ${mobileTab === 'preview' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500'}`}>👁 Preview</button>
       </div>
 
       {/* --- LEFT SIDE: EDITOR --- */}
@@ -295,13 +336,9 @@ export default function CreateInvoice() {
             </div>
           </div>
 
+          {/* ACTION BUTTONS */}
           <div className="flex flex-col gap-3 pt-4 border-t sticky bottom-0 bg-white z-10 pb-4 md:pb-0">
-            <button 
-              type="button" 
-              onClick={handleShare}
-              disabled={sharing}
-              className="w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 font-bold shadow flex items-center justify-center gap-2"
-            >
+            <button type="button" onClick={handleShare} disabled={sharing} className="w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 font-bold shadow flex items-center justify-center gap-2">
                {sharing ? '...' : 'Share Invoice'} 
                <span className="text-xs font-normal opacity-75">(WhatsApp)</span>
             </button>
@@ -315,13 +352,29 @@ export default function CreateInvoice() {
             </div>
           </div>
         </form>
+
+        {/* WEBSITE FOOTER */}
+        <div className="mt-8 text-center text-xs text-gray-400">
+           <p>Powered by <a href="https://pixalara.com" target="_blank" className="text-blue-500 hover:underline">pixalara.com</a></p>
+        </div>
       </div>
 
       {/* --- RIGHT SIDE: PREVIEW --- */}
-      <div className={`w-full lg:w-7/12 flex justify-center bg-gray-300 p-2 md:p-8 overflow-y-auto ${mobileTab === 'edit' ? 'hidden lg:flex' : 'flex'}`}>
-        {/* Scroll Wrapper for Mobile: Ensures A4 fits via scrolling instead of shrinking */}
-        <div className="w-full overflow-x-auto flex justify-center">
-            <div id="invoice-preview" ref={invoiceRef} className="bg-white shadow-2xl relative shrink-0" style={{ width: '210mm', minHeight: '297mm', padding: '0' }}>
+      <div className={`w-full lg:w-7/12 flex justify-center bg-gray-300 p-0 md:p-8 overflow-y-auto ${mobileTab === 'edit' ? 'hidden lg:flex' : 'flex'}`}>
+        <div 
+            className="w-full flex justify-center origin-top p-4 md:p-0"
+            style={{ 
+                transform: `scale(${previewScale})`, 
+                transformOrigin: 'top center',
+                height: previewScale < 1 ? `${297 * 3.78 * previewScale}px` : 'auto' 
+            }}
+        >
+            <div 
+                id="invoice-preview" 
+                ref={invoiceRef} 
+                className="bg-white shadow-2xl relative shrink-0" 
+                style={{ width: '210mm', minHeight: '297mm', padding: '0' }}
+            >
             
             {/* Header */}
             <div className="p-8 flex justify-between items-start" style={{ backgroundColor: theme.hex, color: theme.text }}>
@@ -339,7 +392,7 @@ export default function CreateInvoice() {
                 </div>
             </div>
 
-            <div className="p-8">
+            <div className="p-8 pb-16"> {/* Added padding bottom to make room for footer */}
                 <div className="flex justify-between mb-8">
                 <div className="w-1/2">
                     <h3 className="text-gray-500 text-xs uppercase font-bold mb-1">Bill To</h3>
@@ -414,6 +467,14 @@ export default function CreateInvoice() {
                     <p className="whitespace-pre-wrap text-xs">{formData.terms}</p>
                 </div>
             </div>
+
+            {/* POWERED BY (PDF FOOTER) */}
+            <div className="absolute bottom-6 w-full text-center">
+                 <p className="text-[10px] text-gray-400">
+                     Powered by <a href="https://pixalara.com/" target="_blank" rel="noreferrer" className="font-semibold text-gray-500 no-underline">pixalara.com</a>
+                 </p>
+            </div>
+
             <div className="h-4 w-full absolute bottom-0" style={{ backgroundColor: theme.hex }}></div>
             </div>
         </div>
