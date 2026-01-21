@@ -5,7 +5,6 @@ import { useNavigate } from 'react-router-dom'
 import { INDIAN_STATES } from '../constants'
 import html2pdf from 'html2pdf.js'
 
-// Vyapar-like Theme Colors
 const THEMES = [
   { name: 'Blue', hex: '#2563eb', text: 'white' },
   { name: 'Green', hex: '#16a34a', text: 'white' },
@@ -20,7 +19,6 @@ export default function CreateInvoice() {
   const [loading, setLoading] = useState(false)
   const [sellerProfile, setSellerProfile] = useState(null)
   
-  // Custom Visual States
   const [theme, setTheme] = useState(THEMES[0])
   const [signaturePreview, setSignaturePreview] = useState(null)
 
@@ -30,32 +28,22 @@ export default function CreateInvoice() {
       dueDate: '',
       items: [{ description: '', quantity: 1, price: 0, gstRate: 18 }],
       terms: '1. Goods once sold will not be taken back.\n2. Interest @ 18% p.a. will be charged if payment is not made within the due date.',
-      bankName: '',
-      accountNo: '',
-      ifsc: ''
     }
   })
 
   const formData = useWatch({ control })
   const { fields, append, remove } = useFieldArray({ control, name: 'items' })
 
-  // 1. Fetch Profile & Auto-fill Logo
   useEffect(() => {
     const fetchProfile = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return navigate('/login')
       const { data } = await supabase.from('users').select('*').eq('id', user.id).single()
-      
-      if (data) {
-        setSellerProfile(data)
-        // Note: We don't need to set logoPreview manually anymore; 
-        // we use data.logo_url directly in the JSX below.
-      }
+      if (data) setSellerProfile(data)
     }
     fetchProfile()
   }, [])
 
-  // 2. Handle Signature Upload (Local Preview only)
   const handleImageUpload = (e) => {
     const file = e.target.files[0]
     if (file) {
@@ -65,7 +53,6 @@ export default function CreateInvoice() {
     }
   }
 
-  // 3. Calculate Totals
   const calculateTotals = () => {
     let subtotal = 0
     let totalGST = 0
@@ -95,11 +82,10 @@ export default function CreateInvoice() {
   }
   const totals = calculateTotals()
 
-  // 4. Download PDF
   const handleDownloadPDF = () => {
     const element = invoiceRef.current
     const opt = {
-      margin: 0, // No margin for full bleed
+      margin: 0,
       filename: `Invoice_${formData.buyer_name || 'Draft'}.pdf`,
       image: { type: 'jpeg', quality: 0.98 },
       html2canvas: { scale: 2, useCORS: true },
@@ -108,7 +94,11 @@ export default function CreateInvoice() {
     html2pdf().set(opt).from(element).save()
   }
 
-  // 5. Save Invoice
+  // New: Simple Print Function
+  const handlePrint = () => {
+    window.print()
+  }
+
   const onSubmit = async (data) => {
     setLoading(true)
     try {
@@ -133,12 +123,35 @@ export default function CreateInvoice() {
   return (
     <div className="min-h-screen bg-gray-100 p-4 md:p-8 flex flex-col lg:flex-row gap-6">
       
-      {/* --- LEFT SIDE: EDITOR --- */}
-      <div className="w-full lg:w-5/12 bg-white p-6 rounded-lg shadow-lg h-fit overflow-y-auto max-h-screen custom-scrollbar">
+      {/* Styles for Printing: Hides everything except the invoice paper */}
+      <style>{`
+        @media print {
+          body * {
+            visibility: hidden;
+          }
+          #invoice-preview, #invoice-preview * {
+            visibility: visible;
+          }
+          #invoice-preview {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            margin: 0;
+            padding: 0;
+            box-shadow: none;
+          }
+          /* Hide the sidebar and buttons */
+          .no-print {
+            display: none !important;
+          }
+        }
+      `}</style>
+      
+      {/* --- LEFT SIDE: EDITOR (Hidden on Print) --- */}
+      <div className="no-print w-full lg:w-5/12 bg-white p-6 rounded-lg shadow-lg h-fit overflow-y-auto max-h-screen custom-scrollbar">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold text-gray-800">Invoice Editor</h2>
-          
-          {/* Theme Selector */}
           <div className="flex gap-2">
             {THEMES.map((t) => (
               <button 
@@ -153,7 +166,6 @@ export default function CreateInvoice() {
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           
-          {/* Dates & PO */}
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-xs text-gray-500">Invoice Date</label>
@@ -169,7 +181,6 @@ export default function CreateInvoice() {
             </div>
           </div>
 
-          {/* Bill To */}
           <div className="bg-gray-50 p-3 rounded border">
             <h3 className="text-sm font-semibold mb-2 text-gray-700">Bill To (Customer)</h3>
             <input {...register('buyer_name')} placeholder="Business/Client Name" className="w-full p-2 border rounded mb-2" />
@@ -181,18 +192,6 @@ export default function CreateInvoice() {
             <input {...register('buyer_address')} placeholder="Billing Address" className="w-full p-2 border rounded mt-2" />
           </div>
 
-          {/* Bank Details */}
-          <div className="bg-gray-50 p-3 rounded border">
-            <h3 className="text-sm font-semibold mb-2 text-gray-700">Bank Details</h3>
-            <div className="grid grid-cols-2 gap-2">
-              <input {...register('bankName')} placeholder="Bank Name" className="w-full p-2 border rounded" />
-              <input {...register('accountNo')} placeholder="Account Number" className="w-full p-2 border rounded" />
-              <input {...register('ifsc')} placeholder="IFSC Code" className="w-full p-2 border rounded" />
-              <input {...register('upiId')} placeholder="UPI ID (Optional)" className="w-full p-2 border rounded" />
-            </div>
-          </div>
-
-          {/* Items */}
           <div>
             <h3 className="text-sm font-semibold mb-2 text-gray-700">Items</h3>
             {fields.map((item, index) => (
@@ -215,7 +214,6 @@ export default function CreateInvoice() {
             </button>
           </div>
 
-          {/* Signature & Terms */}
           <div className="space-y-3">
              <div className="bg-gray-50 p-3 rounded border">
                 <label className="text-xs font-bold text-gray-500">Signature Upload</label>
@@ -227,13 +225,16 @@ export default function CreateInvoice() {
             </div>
           </div>
 
-          {/* Actions */}
-          <div className="flex gap-4 pt-4 border-t sticky bottom-0 bg-white">
-            <button type="button" onClick={handleDownloadPDF} className="flex-1 bg-gray-900 text-white py-3 rounded-lg hover:bg-black font-bold shadow-lg transition transform hover:scale-105">
-              Download PDF
+          {/* Action Buttons */}
+          <div className="flex gap-2 pt-4 border-t sticky bottom-0 bg-white z-10">
+            <button type="button" onClick={handlePrint} className="flex-1 bg-gray-200 text-gray-800 py-3 rounded-lg hover:bg-gray-300 font-bold shadow transition">
+              Print
             </button>
-            <button type="submit" disabled={loading} className="flex-1 bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 font-bold shadow-lg">
-              {loading ? 'Saving...' : 'Save & Close'}
+            <button type="button" onClick={handleDownloadPDF} className="flex-1 bg-gray-900 text-white py-3 rounded-lg hover:bg-black font-bold shadow transition">
+              PDF
+            </button>
+            <button type="submit" disabled={loading} className="flex-1 bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 font-bold shadow transition">
+              {loading ? 'Saving...' : 'Save'}
             </button>
           </div>
         </form>
@@ -243,14 +244,14 @@ export default function CreateInvoice() {
       <div className="w-full lg:w-7/12 flex justify-center bg-gray-300 p-8 overflow-y-auto">
         
         <div 
+          id="invoice-preview" // ID Used for Printing
           ref={invoiceRef} 
           className="bg-white shadow-2xl relative"
           style={{ width: '210mm', minHeight: '297mm', padding: '0' }}
         >
-          {/* COLORED HEADER */}
+          {/* HEADER */}
           <div className="p-8 flex justify-between items-start" style={{ backgroundColor: theme.hex, color: theme.text }}>
             <div>
-              {/* AUTO-LOAD LOGO FROM PROFILE */}
               {sellerProfile?.logo_url && (
                 <img src={sellerProfile.logo_url} alt="Logo" className="h-20 w-auto mb-4 object-contain bg-white rounded p-1" />
               )}
@@ -260,17 +261,14 @@ export default function CreateInvoice() {
             <div className="text-right">
               <h2 className="text-2xl font-bold">{sellerProfile?.business_name || 'Your Business Name'}</h2>
               <p className="opacity-90">{sellerProfile?.state}</p>
-              {/* AUTO-LOAD CONTACT INFO */}
               {sellerProfile?.business_email && <p className="opacity-90 text-sm">{sellerProfile.business_email}</p>}
               {sellerProfile?.business_phone && <p className="opacity-90 text-sm">{sellerProfile.business_phone}</p>}
               {sellerProfile?.website && <p className="opacity-90 text-sm">{sellerProfile.website}</p>}
-              
               {sellerProfile?.gstin && <p className="font-semibold mt-1">GSTIN: {sellerProfile.gstin}</p>}
             </div>
           </div>
 
           <div className="p-8">
-            {/* META INFO ROW */}
             <div className="flex justify-between mb-8">
               <div className="w-1/2">
                 <h3 className="text-gray-500 text-xs uppercase font-bold mb-1">Bill To</h3>
@@ -299,7 +297,6 @@ export default function CreateInvoice() {
               </div>
             </div>
 
-            {/* TABLE */}
             <table className="w-full mb-8">
               <thead>
                 <tr style={{ backgroundColor: theme.hex, color: theme.text }}>
@@ -334,21 +331,10 @@ export default function CreateInvoice() {
               </tbody>
             </table>
 
-            {/* FOOTER SECTION */}
             <div className="flex justify-between items-start">
               
-              {/* Bank & Terms */}
+              {/* Only Terms (No Bank) */}
               <div className="w-1/2 pr-8">
-                {formData.bankName && (
-                  <div className="mb-6 bg-gray-50 p-3 rounded border">
-                    <h4 className="font-bold text-sm mb-2" style={{ color: theme.hex }}>Bank Details</h4>
-                    <p className="text-sm"><span className="text-gray-500">Bank:</span> {formData.bankName}</p>
-                    <p className="text-sm"><span className="text-gray-500">A/c No:</span> {formData.accountNo}</p>
-                    <p className="text-sm"><span className="text-gray-500">IFSC:</span> {formData.ifsc}</p>
-                    {formData.upiId && <p className="text-sm"><span className="text-gray-500">UPI:</span> {formData.upiId}</p>}
-                  </div>
-                )}
-
                 <div className="text-sm text-gray-600">
                   <h4 className="font-bold text-gray-800 mb-1">Terms & Conditions</h4>
                   <p className="whitespace-pre-wrap text-xs">{formData.terms}</p>
@@ -386,7 +372,6 @@ export default function CreateInvoice() {
                     <span>₹{totals.grandTotal}</span>
                  </div>
 
-                 {/* Signature Area */}
                  <div className="mt-8 text-right">
                     {signaturePreview && (
                        <img src={signaturePreview} alt="Sign" className="h-16 ml-auto mb-2 object-contain" />
@@ -399,7 +384,6 @@ export default function CreateInvoice() {
 
           </div>
           
-          {/* BOTTOM COLOR BAR */}
           <div className="h-4 w-full absolute bottom-0" style={{ backgroundColor: theme.hex }}></div>
 
         </div>

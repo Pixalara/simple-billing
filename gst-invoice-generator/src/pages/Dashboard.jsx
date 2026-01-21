@@ -9,25 +9,24 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
   const [savedLogo, setSavedLogo] = useState(null)
+  const [invoices, setInvoices] = useState([]) // Store list of invoices
   const navigate = useNavigate()
   
-  const { register, handleSubmit, setValue, watch } = useForm()
+  const { register, handleSubmit, setValue } = useForm()
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
       if (!session) navigate('/login')
-      else fetchProfile(session.user.id)
+      else {
+        fetchProfile(session.user.id)
+        fetchInvoices(session.user.id) // Fetch invoices on load
+      }
     })
   }, [])
 
   const fetchProfile = async (userId) => {
-    const { data } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', userId)
-      .single()
-    
+    const { data } = await supabase.from('users').select('*').eq('id', userId).single()
     if (data) {
       setValue('business_name', data.business_name)
       setValue('state', data.state)
@@ -35,46 +34,35 @@ export default function Dashboard() {
       setValue('business_email', data.business_email)
       setValue('business_phone', data.business_phone)
       setValue('website', data.website)
-      
       if (data.logo_url) setSavedLogo(data.logo_url)
     }
     setLoading(false)
   }
 
-  // Handle Logo Upload to Supabase Storage
+  // New: Fetch Invoices List
+  const fetchInvoices = async (userId) => {
+    const { data, error } = await supabase
+      .from('invoices')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false }) // Newest first
+
+    if (data) setInvoices(data)
+  }
+
   const handleLogoUpload = async (event) => {
     try {
       setUploading(true)
       const file = event.target.files[0]
       if (!file) return
-
       const fileExt = file.name.split('.').pop()
       const fileName = `${session.user.id}-${Math.random()}.${fileExt}`
-      const filePath = `${fileName}`
-
-      // 1. Upload to "logos" bucket
-      const { error: uploadError } = await supabase.storage
-        .from('logos')
-        .upload(filePath, file)
-
+      const { error: uploadError } = await supabase.storage.from('logos').upload(fileName, file)
       if (uploadError) throw uploadError
-
-      // 2. Get Public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('logos')
-        .getPublicUrl(filePath)
-
-      // 3. Save URL to Database immediately
-      const { error: dbError } = await supabase
-        .from('users')
-        .update({ logo_url: publicUrl })
-        .eq('id', session.user.id)
-
-      if (dbError) throw dbError
-
+      const { data: { publicUrl } } = supabase.storage.from('logos').getPublicUrl(fileName)
+      await supabase.from('users').update({ logo_url: publicUrl }).eq('id', session.user.id)
       setSavedLogo(publicUrl)
       alert('Logo uploaded successfully!')
-
     } catch (error) {
       alert('Error uploading logo: ' + error.message)
     } finally {
@@ -85,14 +73,10 @@ export default function Dashboard() {
   const updateProfile = async (formData) => {
     try {
       setLoading(true)
-      const { error } = await supabase
-        .from('users')
-        .upsert({
-          id: session.user.id,
-          ...formData,
-          // We don't overwrite logo_url here as it's handled separately
-        })
-
+      const { error } = await supabase.from('users').upsert({
+        id: session.user.id,
+        ...formData
+      })
       if (error) throw error
       alert('Business details saved!')
     } catch (error) {
@@ -111,7 +95,7 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold text-gray-800">Dashboard</h1>
@@ -120,130 +104,123 @@ export default function Dashboard() {
           </button>
         </div>
 
-        {/* Business Profile Section */}
-        <div className="bg-white p-8 rounded-lg shadow-lg mb-8">
-          <h2 className="text-2xl font-semibold mb-6 border-b pb-4 text-gray-800">Business Profile</h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             
-            {/* LEFT COL: Logo Upload */}
-            <div className="md:col-span-1 flex flex-col items-center">
-                <div className="w-full aspect-square bg-gray-100 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center overflow-hidden mb-4 relative group">
-                    {savedLogo ? (
-                        <img src={savedLogo} alt="Logo" className="w-full h-full object-contain p-2" />
-                    ) : (
-                        <span className="text-gray-400 font-medium">No Logo</span>
-                    )}
-                    
-                    {/* Hover Overlay */}
-                    <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                        <p className="text-white text-sm font-semibold">Change Logo</p>
-                    </div>
-                </div>
+            {/* LEFT COLUMN: Business Profile */}
+            <div className="lg:col-span-1 bg-white p-6 rounded-lg shadow-lg h-fit">
+                <h2 className="text-xl font-bold mb-4 text-gray-800 border-b pb-2">Business Profile</h2>
                 
-                <label className="bg-blue-50 text-blue-600 px-4 py-2 rounded-md cursor-pointer hover:bg-blue-100 font-medium w-full text-center transition">
-                    {uploading ? 'Uploading...' : 'Upload Logo'}
-                    <input 
-                        type="file" 
-                        accept="image/*" 
-                        onChange={handleLogoUpload} 
-                        disabled={uploading}
-                        className="hidden" 
-                    />
-                </label>
-                <p className="text-xs text-gray-500 mt-2 text-center">Recommended: Square PNG/JPG</p>
-            </div>
-
-            {/* RIGHT COL: Details Form */}
-            <div className="md:col-span-2">
-                <form onSubmit={handleSubmit(updateProfile)} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    
-                    {/* Business Name */}
-                    <div className="col-span-2">
-                        <label className="block text-sm font-semibold text-gray-700 mb-1">Business Name *</label>
-                        <input 
-                            {...register('business_name', { required: true })}
-                            className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"
-                            placeholder="e.g., Pixalara Traders"
-                        />
+                {/* Logo Section */}
+                <div className="flex flex-col items-center mb-6">
+                    <div className="w-32 h-32 bg-gray-100 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center overflow-hidden mb-3 relative group">
+                        {savedLogo ? (
+                            <img src={savedLogo} alt="Logo" className="w-full h-full object-contain p-2" />
+                        ) : (
+                            <span className="text-gray-400 text-xs">No Logo</span>
+                        )}
                     </div>
+                    <label className="text-sm text-blue-600 cursor-pointer hover:underline">
+                        {uploading ? 'Uploading...' : 'Change Logo'}
+                        <input type="file" accept="image/*" onChange={handleLogoUpload} disabled={uploading} className="hidden" />
+                    </label>
+                </div>
 
-                    {/* Email */}
+                <form onSubmit={handleSubmit(updateProfile)} className="space-y-3">
                     <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-1">Business Email</label>
-                        <input 
-                            {...register('business_email')}
-                            className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"
-                            placeholder="billing@company.com"
-                        />
+                        <label className="text-xs font-bold text-gray-500">Business Name</label>
+                        <input {...register('business_name')} className="w-full p-2 border rounded text-sm" />
                     </div>
-
-                    {/* Phone */}
                     <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-1">Phone Number</label>
-                        <input 
-                            {...register('business_phone')}
-                            className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"
-                            placeholder="+91 98765 43210"
-                        />
+                        <label className="text-xs font-bold text-gray-500">Business Email</label>
+                        <input {...register('business_email')} className="w-full p-2 border rounded text-sm" />
                     </div>
-
-                    {/* Website */}
                     <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-1">Website</label>
-                        <input 
-                            {...register('website')}
-                            className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"
-                            placeholder="www.pixalara.io"
-                        />
+                        <label className="text-xs font-bold text-gray-500">Phone</label>
+                        <input {...register('business_phone')} className="w-full p-2 border rounded text-sm" />
                     </div>
-
-                    {/* State */}
                     <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-1">State *</label>
-                        <select 
-                            {...register('state', { required: true })} 
-                            className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"
-                        >
+                        <label className="text-xs font-bold text-gray-500">Website</label>
+                        <input {...register('website')} className="w-full p-2 border rounded text-sm" />
+                    </div>
+                    <div>
+                        <label className="text-xs font-bold text-gray-500">State</label>
+                        <select {...register('state')} className="w-full p-2 border rounded text-sm">
                             <option value="">Select State</option>
-                            {INDIAN_STATES.map((state) => (
-                                <option key={state} value={state}>{state}</option>
-                            ))}
+                            {INDIAN_STATES.map((s) => <option key={s} value={s}>{s}</option>)}
                         </select>
                     </div>
-
-                    {/* GSTIN */}
-                    <div className="col-span-2">
-                        <label className="block text-sm font-semibold text-gray-700 mb-1">GSTIN (Optional)</label>
-                        <input 
-                            {...register('gstin')}
-                            className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"
-                            placeholder="29ABCDE1234F1Z5"
-                        />
+                    <div>
+                        <label className="text-xs font-bold text-gray-500">GSTIN</label>
+                        <input {...register('gstin')} className="w-full p-2 border rounded text-sm" />
                     </div>
-
-                    <div className="col-span-2 mt-4 pt-4 border-t">
-                        <button 
-                            type="submit"
-                            className="bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 font-bold w-full md:w-auto transition shadow-md"
-                        >
-                            Save Details
-                        </button>
-                    </div>
+                    <button type="submit" className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 font-bold text-sm mt-2">
+                        Save Profile
+                    </button>
                 </form>
             </div>
-          </div>
-        </div>
 
-        {/* Invoice Actions */}
-        <div className="bg-white p-6 rounded-lg shadow text-center">
-            <h2 className="text-xl font-semibold mb-4">Ready to bill?</h2>
-            <button 
-              onClick={() => navigate('/create-invoice')} 
-              className="bg-green-600 text-white px-8 py-3 rounded-lg hover:bg-green-700 font-bold shadow-lg transform transition hover:scale-105"
-            >
-                + Create New Invoice
-            </button>
+            {/* RIGHT COLUMN: Invoices List */}
+            <div className="lg:col-span-2 space-y-6">
+                
+                {/* Create New Action */}
+                <div className="bg-gradient-to-r from-blue-600 to-indigo-700 p-6 rounded-lg shadow-lg text-white flex justify-between items-center">
+                    <div>
+                        <h2 className="text-2xl font-bold">Invoices</h2>
+                        <p className="opacity-90">Manage and create GST bills</p>
+                    </div>
+                    <button 
+                        onClick={() => navigate('/create-invoice')} 
+                        className="bg-white text-blue-700 px-6 py-3 rounded-lg font-bold shadow hover:bg-gray-100 transition transform hover:scale-105"
+                    >
+                        + Create New Invoice
+                    </button>
+                </div>
+
+                {/* Invoices Table */}
+                <div className="bg-white rounded-lg shadow overflow-hidden">
+                    <div className="px-6 py-4 border-b">
+                        <h3 className="font-bold text-gray-700">Recent Invoices</h3>
+                    </div>
+                    
+                    {invoices.length === 0 ? (
+                        <div className="p-8 text-center text-gray-500">
+                            No invoices found. Create your first one!
+                        </div>
+                    ) : (
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left text-sm">
+                                <thead className="bg-gray-50 text-gray-600 uppercase font-semibold">
+                                    <tr>
+                                        <th className="px-6 py-3">Date</th>
+                                        <th className="px-6 py-3">Invoice #</th>
+                                        <th className="px-6 py-3">Customer</th>
+                                        <th className="px-6 py-3 text-right">Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-200">
+                                    {invoices.map((inv) => (
+                                        <tr key={inv.id} className="hover:bg-gray-50">
+                                            <td className="px-6 py-4">
+                                                {new Date(inv.created_at).toLocaleDateString('en-IN')}
+                                            </td>
+                                            <td className="px-6 py-4 font-medium text-blue-600">
+                                                {inv.invoice_no}
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                {inv.invoice_data?.buyer_name || 'Unknown'}
+                                            </td>
+                                            <td className="px-6 py-4 text-right font-bold text-gray-800">
+                                                ₹{inv.total_amount}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </div>
+
+            </div>
         </div>
       </div>
     </div>
