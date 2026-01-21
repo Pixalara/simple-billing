@@ -39,9 +39,9 @@ export default function Dashboard() {
     setLoading(false)
   }
 
-  // New: Fetch Invoices List
+  // Fetch Invoices List
   const fetchInvoices = async (userId) => {
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from('invoices')
       .select('*')
       .eq('user_id', userId)
@@ -57,10 +57,17 @@ export default function Dashboard() {
       if (!file) return
       const fileExt = file.name.split('.').pop()
       const fileName = `${session.user.id}-${Math.random()}.${fileExt}`
+      
+      // Upload to "logos" bucket
       const { error: uploadError } = await supabase.storage.from('logos').upload(fileName, file)
       if (uploadError) throw uploadError
+      
+      // Get Public URL
       const { data: { publicUrl } } = supabase.storage.from('logos').getPublicUrl(fileName)
+      
+      // Save URL to Database
       await supabase.from('users').update({ logo_url: publicUrl }).eq('id', session.user.id)
+      
       setSavedLogo(publicUrl)
       alert('Logo uploaded successfully!')
     } catch (error) {
@@ -199,7 +206,11 @@ export default function Dashboard() {
                                 </thead>
                                 <tbody className="divide-y divide-gray-200">
                                     {invoices.map((inv) => (
-                                        <tr key={inv.id} className="hover:bg-gray-50">
+                                        <tr 
+                                            key={inv.id} 
+                                            onClick={() => navigate(`/edit-invoice/${inv.id}`)} // <-- Navigate to Edit
+                                            className="hover:bg-blue-50 cursor-pointer transition-colors"
+                                        >
                                             <td className="px-6 py-4">
                                                 {new Date(inv.created_at).toLocaleDateString('en-IN')}
                                             </td>

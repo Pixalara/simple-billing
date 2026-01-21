@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useForm, useFieldArray, useWatch } from 'react-hook-form'
 import { supabase } from '../supabaseClient'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom' // <-- Added useParams
 import { INDIAN_STATES } from '../constants'
 import html2pdf from 'html2pdf.js'
 
@@ -15,14 +15,17 @@ const THEMES = [
 
 export default function CreateInvoice() {
   const navigate = useNavigate()
+  const { id } = useParams() // <-- Get Invoice ID from URL
   const invoiceRef = useRef()
   const [loading, setLoading] = useState(false)
   const [sellerProfile, setSellerProfile] = useState(null)
   
+  // Custom Visual States
   const [theme, setTheme] = useState(THEMES[0])
   const [signaturePreview, setSignaturePreview] = useState(null)
+  const [existingInvoiceNo, setExistingInvoiceNo] = useState(null) // Store ID for display
 
-  const { register, control, handleSubmit, setValue } = useForm({
+  const { register, control, handleSubmit, setValue, reset } = useForm({
     defaultValues: {
       invoiceDate: new Date().toISOString().split('T')[0],
       dueDate: '',
@@ -34,15 +37,39 @@ export default function CreateInvoice() {
   const formData = useWatch({ control })
   const { fields, append, remove } = useFieldArray({ control, name: 'items' })
 
+  // 1. Fetch Profile & Invoice Data (If Editing)
   useEffect(() => {
-    const fetchProfile = async () => {
+    const loadData = async () => {
+      // Get User
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return navigate('/login')
-      const { data } = await supabase.from('users').select('*').eq('id', user.id).single()
-      if (data) setSellerProfile(data)
+      
+      // Get Profile
+      const { data: profile } = await supabase.from('users').select('*').eq('id', user.id).single()
+      if (profile) setSellerProfile(profile)
+
+      // If Editing: Fetch Invoice Data
+      if (id) {
+        const { data: invoice, error } = await supabase
+          .from('invoices')
+          .select('*')
+          .eq('id', id)
+          .single()
+
+        if (invoice) {
+          reset(invoice.invoice_data) // <--- FILL FORM AUTOMATICALLY
+          setExistingInvoiceNo(invoice.invoice_no)
+          
+          // Restore Theme
+          if (invoice.invoice_data.theme) {
+            const foundTheme = THEMES.find(t => t.hex === invoice.invoice_data.theme)
+            if (foundTheme) setTheme(foundTheme)
+          }
+        }
+      }
     }
-    fetchProfile()
-  }, [])
+    loadData()
+  }, [id, navigate, reset])
 
   const handleImageUpload = (e) => {
     const file = e.target.files[0]
@@ -94,22 +121,40 @@ export default function CreateInvoice() {
     html2pdf().set(opt).from(element).save()
   }
 
-  // New: Simple Print Function
-  const handlePrint = () => {
-    window.print()
-  }
+  const handlePrint = () => window.print()
 
+  // 2. Save Logic (Insert vs Update)
   const onSubmit = async (data) => {
     setLoading(true)
     try {
       const { data: { user } } = await supabase.auth.getUser()
-      const invoiceNo = `INV-${Date.now().toString().slice(-6)}`
-      const { error } = await supabase.from('invoices').insert({
+      
+      // Use existing Number if editing, else generate new
+      const invoiceNo = existingInvoiceNo || `INV-${Date.now().toString().slice(-6)}`
+
+      const payload = {
         user_id: user.id,
         invoice_no: invoiceNo,
         invoice_data: { ...data, totals, theme: theme.hex },
         total_amount: totals.grandTotal
-      })
+      }
+
+      let error
+      if (id) {
+        // UPDATE existing
+        const { error: updateError } = await supabase
+          .from('invoices')
+          .update(payload)
+          .eq('id', id)
+        error = updateError
+      } else {
+        // INSERT new
+        const { error: insertError } = await supabase
+          .from('invoices')
+          .insert(payload)
+        error = insertError
+      }
+
       if (error) throw error
       alert('Invoice Saved Successfully!')
       navigate('/dashboard')
@@ -122,36 +167,21 @@ export default function CreateInvoice() {
 
   return (
     <div className="min-h-screen bg-gray-100 p-4 md:p-8 flex flex-col lg:flex-row gap-6">
-      
-      {/* Styles for Printing: Hides everything except the invoice paper */}
       <style>{`
         @media print {
-          body * {
-            visibility: hidden;
-          }
-          #invoice-preview, #invoice-preview * {
-            visibility: visible;
-          }
-          #invoice-preview {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-            margin: 0;
-            padding: 0;
-            box-shadow: none;
-          }
-          /* Hide the sidebar and buttons */
-          .no-print {
-            display: none !important;
-          }
+          body * { visibility: hidden; }
+          #invoice-preview, #invoice-preview * { visibility: visible; }
+          #invoice-preview { position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0; box-shadow: none; }
+          .no-print { display: none !important; }
         }
       `}</style>
       
-      {/* --- LEFT SIDE: EDITOR (Hidden on Print) --- */}
+      {/* --- LEFT SIDE: EDITOR --- */}
       <div className="no-print w-full lg:w-5/12 bg-white p-6 rounded-lg shadow-lg h-fit overflow-y-auto max-h-screen custom-scrollbar">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold text-gray-800">Invoice Editor</h2>
+          <h2 className="text-xl font-bold text-gray-800">
+             {id ? 'Edit Invoice' : 'New Invoice'}
+          </h2>
           <div className="flex gap-2">
             {THEMES.map((t) => (
               <button 
@@ -165,7 +195,6 @@ export default function CreateInvoice() {
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-xs text-gray-500">Invoice Date</label>
@@ -225,7 +254,6 @@ export default function CreateInvoice() {
             </div>
           </div>
 
-          {/* Action Buttons */}
           <div className="flex gap-2 pt-4 border-t sticky bottom-0 bg-white z-10">
             <button type="button" onClick={handlePrint} className="flex-1 bg-gray-200 text-gray-800 py-3 rounded-lg hover:bg-gray-300 font-bold shadow transition">
               Print
@@ -234,17 +262,16 @@ export default function CreateInvoice() {
               PDF
             </button>
             <button type="submit" disabled={loading} className="flex-1 bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 font-bold shadow transition">
-              {loading ? 'Saving...' : 'Save'}
+              {loading ? 'Saving...' : 'Update Invoice'}
             </button>
           </div>
         </form>
       </div>
 
-      {/* --- RIGHT SIDE: LIVE PREVIEW (A4) --- */}
+      {/* --- RIGHT SIDE: LIVE PREVIEW --- */}
       <div className="w-full lg:w-7/12 flex justify-center bg-gray-300 p-8 overflow-y-auto">
-        
         <div 
-          id="invoice-preview" // ID Used for Printing
+          id="invoice-preview" 
           ref={invoiceRef} 
           className="bg-white shadow-2xl relative"
           style={{ width: '210mm', minHeight: '297mm', padding: '0' }}
@@ -256,7 +283,8 @@ export default function CreateInvoice() {
                 <img src={sellerProfile.logo_url} alt="Logo" className="h-20 w-auto mb-4 object-contain bg-white rounded p-1" />
               )}
               <h1 className="text-4xl font-bold uppercase tracking-wide">Invoice</h1>
-              <p className="opacity-80 mt-1"># {`INV-${new Date().getFullYear()}-001`}</p>
+              {/* Display Existing Invoice Number or Draft */}
+              <p className="opacity-80 mt-1"># {existingInvoiceNo || 'DRAFT'}</p>
             </div>
             <div className="text-right">
               <h2 className="text-2xl font-bold">{sellerProfile?.business_name || 'Your Business Name'}</h2>
@@ -315,7 +343,6 @@ export default function CreateInvoice() {
                     <tr key={i} className="border-b border-gray-200">
                       <td className="py-3 px-3">
                         <p className="font-semibold text-gray-800">{item.description}</p>
-                        <p className="text-xs text-gray-500">HSN/SAC: 9983</p>
                       </td>
                       <td className="text-center py-3 px-3">{item.quantity}</td>
                       <td className="text-right py-3 px-3">₹{item.price}</td>
@@ -332,8 +359,6 @@ export default function CreateInvoice() {
             </table>
 
             <div className="flex justify-between items-start">
-              
-              {/* Only Terms (No Bank) */}
               <div className="w-1/2 pr-8">
                 <div className="text-sm text-gray-600">
                   <h4 className="font-bold text-gray-800 mb-1">Terms & Conditions</h4>
@@ -341,7 +366,6 @@ export default function CreateInvoice() {
                 </div>
               </div>
 
-              {/* Totals & Sign */}
               <div className="w-5/12">
                  <div className="space-y-2 border-b pb-4">
                     <div className="flex justify-between text-gray-600">
@@ -381,11 +405,8 @@ export default function CreateInvoice() {
                  </div>
               </div>
             </div>
-
           </div>
-          
           <div className="h-4 w-full absolute bottom-0" style={{ backgroundColor: theme.hex }}></div>
-
         </div>
       </div>
     </div>
