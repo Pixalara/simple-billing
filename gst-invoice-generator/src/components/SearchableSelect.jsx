@@ -5,14 +5,19 @@ export default function SearchableSelect({ options, value, onChange, placeholder
   const [search, setSearch] = useState('')
   const wrapperRef = useRef(null)
 
-  // Filter options based on search text
+  // Sync internal search state with external value (for initial load/edit)
+  useEffect(() => {
+    if (value && value !== search) {
+      setSearch(value)
+    }
+  }, [value])
+
   const filteredOptions = options.filter(item => 
     item.description.toLowerCase().includes(search.toLowerCase()) ||
     item.code.includes(search) ||
     item.category.toLowerCase().includes(search.toLowerCase())
   )
 
-  // Handle clicking outside to close dropdown
   useEffect(() => {
     function handleClickOutside(event) {
       if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
@@ -25,21 +30,21 @@ export default function SearchableSelect({ options, value, onChange, placeholder
 
   return (
     <div className="relative w-full" ref={wrapperRef}>
-      {/* The Input Field */}
       <input
         type="text"
         className="w-full p-2 border rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none"
         placeholder={placeholder}
-        value={value || search} // Show selected value or search text
+        value={search}
         onChange={(e) => {
-          setSearch(e.target.value)
+          const text = e.target.value
+          setSearch(text)
           setIsOpen(true)
-          onChange({ description: e.target.value }) // Allow custom typing
+          // Allow manual typing instantly
+          onChange({ description: text }) 
         }}
-        onClick={() => setIsOpen(true)}
+        onFocus={() => setIsOpen(true)}
       />
 
-      {/* The Dropdown List */}
       {isOpen && (
         <div className="absolute z-50 w-full mt-1 bg-white border rounded shadow-xl max-h-60 overflow-y-auto custom-scrollbar">
           {filteredOptions.length > 0 ? (
@@ -48,8 +53,8 @@ export default function SearchableSelect({ options, value, onChange, placeholder
                 key={index}
                 className="p-2 hover:bg-blue-50 cursor-pointer border-b last:border-b-0"
                 onClick={() => {
-                  onChange(item) // Send full item back to parent
-                  setSearch('')
+                  setSearch(item.description)
+                  onChange(item)
                   setIsOpen(false)
                 }}
               >
@@ -66,7 +71,13 @@ export default function SearchableSelect({ options, value, onChange, placeholder
               </div>
             ))
           ) : (
-            <div className="p-2 text-gray-500 text-xs">No matching HSN codes found</div>
+            // --- NEW: Custom Item Handler ---
+            <div 
+                className="p-3 text-blue-600 cursor-pointer hover:bg-gray-50 text-sm font-semibold"
+                onClick={() => setIsOpen(false)}
+            >
+                + Use "{search}"
+            </div>
           )}
         </div>
       )}
