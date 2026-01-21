@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../supabaseClient'
 import { useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
+import { INDIAN_STATES } from '../constants' // Import the list of states
 
 export default function Dashboard() {
   const [session, setSession] = useState(null)
@@ -90,15 +91,19 @@ export default function Dashboard() {
               />
             </div>
 
-            {/* State Selection (Critical for GST) */}
+            {/* State Selection (Using the full list from constants) */}
             <div>
               <label className="block text-sm font-medium text-gray-700">State *</label>
-              <select {...register('state', { required: true })} className="mt-1 w-full p-2 border rounded">
+              <select 
+                {...register('state', { required: true })} 
+                className="mt-1 w-full p-2 border rounded"
+              >
                 <option value="">Select State</option>
-                <option value="Karnataka">Karnataka</option>
-                <option value="Maharashtra">Maharashtra</option>
-                <option value="Delhi">Delhi</option>
-                {/* Add more states as needed */}
+                {INDIAN_STATES.map((state) => (
+                  <option key={state} value={state}>
+                    {state}
+                  </option>
+                ))}
               </select>
             </div>
 
@@ -126,13 +131,13 @@ export default function Dashboard() {
         {/* Invoice Actions */}
         <div className="bg-white p-6 rounded-lg shadow text-center">
             <h2 className="text-xl font-semibold mb-4">Invoices</h2>
-            <p className="text-gray-500 mb-6">You haven't created any invoices yet.</p>
+            <p className="text-gray-500 mb-6">Create professional GST invoices instantly.</p>
             <button 
-  onClick={() => navigate('/create-invoice')} 
-  className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 font-bold"
->
-    + Create New Invoice
-</button>
+              onClick={() => navigate('/create-invoice')} 
+              className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 font-bold"
+            >
+                + Create New Invoice
+            </button>
         </div>
       </div>
     </div>
