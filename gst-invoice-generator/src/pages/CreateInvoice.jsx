@@ -18,11 +18,9 @@ export default function CreateInvoice() {
   const navigate = useNavigate()
   const { id } = useParams()
   const invoiceRef = useRef()
-  const containerRef = useRef() // Ref to measure available space
+  const containerRef = useRef()
   
-  // Mobile Tab State
   const [mobileTab, setMobileTab] = useState('edit')
-  // Scale State for Preview
   const [previewScale, setPreviewScale] = useState(1)
   
   const [loading, setLoading] = useState(false)
@@ -68,37 +66,30 @@ export default function CreateInvoice() {
     loadData()
   }, [id, navigate, reset])
 
-  // 2. SMART AUTO-SCALE LOGIC (Fits A4 into any container width)
+  // 2. Auto-Scale Logic
   useEffect(() => {
     const handleResize = () => {
       if (containerRef.current) {
         const availableWidth = containerRef.current.offsetWidth
-        // A4 width is ~794px. We allow 32px padding.
         const requiredWidth = 794
-        const padding = 32 // space for margins
+        const padding = 32
         
-        // Calculate scale: Available Space / Required A4 Space
         let scale = (availableWidth - padding) / requiredWidth
-        
-        // Cap scale at 1 (don't zoom in if screen is huge)
         if (scale > 1) scale = 1
         
         setPreviewScale(scale)
       }
     }
     
-    // Run initially and on resize
     handleResize()
     window.addEventListener('resize', handleResize)
-    
-    // Also run when switching tabs (for mobile)
     const timeout = setTimeout(handleResize, 100) 
     
     return () => {
         window.removeEventListener('resize', handleResize)
         clearTimeout(timeout)
     }
-  }, [mobileTab]) // Re-run when tab changes
+  }, [mobileTab])
 
   const handleImageUpload = (e) => {
     const file = e.target.files[0]
@@ -144,7 +135,7 @@ export default function CreateInvoice() {
   }
   const totals = calculateTotals()
 
-  // --- PDF GENERATION HELPER ---
+  // --- PDF GENERATION ---
   const generatePdfBlob = async () => {
       const originalElement = invoiceRef.current
       if (!originalElement) return null;
@@ -360,7 +351,6 @@ export default function CreateInvoice() {
             </div>
           </div>
 
-          {/* ACTION BUTTONS */}
           <div className="flex flex-col gap-3 pt-4 border-t sticky bottom-0 bg-white z-10 pb-4 md:pb-0">
             <button type="button" onClick={handleShare} disabled={sharing} className="w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 font-bold shadow flex items-center justify-center gap-2">
                {sharing ? '...' : 'Share Invoice'} 
@@ -377,15 +367,14 @@ export default function CreateInvoice() {
           </div>
         </form>
 
-        {/* WEBSITE FOOTER */}
         <div className="mt-8 text-center text-xs text-gray-400">
            <p>Powered by <a href="https://pixalara.com" target="_blank" rel="noreferrer" className="text-blue-500 hover:underline">pixalara.com</a></p>
         </div>
       </div>
 
-      {/* --- RIGHT SIDE: PREVIEW (Now uses ref to Auto-Scale) --- */}
+      {/* --- RIGHT SIDE: PREVIEW --- */}
       <div 
-        ref={containerRef} // Added REF here to measure width
+        ref={containerRef}
         className={`w-full lg:w-7/12 flex justify-center bg-gray-300 p-0 md:p-8 overflow-hidden ${mobileTab === 'edit' ? 'hidden lg:flex' : 'flex'}`}
       >
         <div 
@@ -403,23 +392,23 @@ export default function CreateInvoice() {
                 style={{ width: '210mm', minHeight: '297mm', padding: '0' }}
             >
             
-            {/* Header */}
-            <div className="p-8 flex justify-between items-start" style={{ backgroundColor: theme.hex, color: theme.text }}>
+            {/* UPDATED HEADER: Professional Fit (Reduced Padding) */}
+            <div className="px-8 py-6 flex justify-between items-start" style={{ backgroundColor: theme.hex, color: theme.text }}>
                 <div>
-                {sellerProfile?.logo_url && <img src={sellerProfile.logo_url} alt="Logo" className="h-20 w-auto mb-4 object-contain bg-white rounded p-1" />}
-                <h1 className="text-4xl font-bold uppercase tracking-wide">Invoice</h1>
-                <p className="opacity-80 mt-1"># {existingInvoiceNo || 'DRAFT'}</p>
+                {sellerProfile?.logo_url && <img src={sellerProfile.logo_url} alt="Logo" className="h-16 w-auto mb-2 object-contain bg-white rounded p-1" />}
+                <h1 className="text-3xl font-bold uppercase tracking-wide">Invoice</h1>
+                <p className="opacity-80 mt-1 text-sm"># {existingInvoiceNo || 'DRAFT'}</p>
                 </div>
                 <div className="text-right">
-                <h2 className="text-2xl font-bold">{sellerProfile?.business_name || 'Your Business Name'}</h2>
-                <p className="opacity-90">{sellerProfile?.state}</p>
-                {sellerProfile?.business_email && <p className="opacity-90 text-sm">{sellerProfile.business_email}</p>}
-                {sellerProfile?.business_phone && <p className="opacity-90 text-sm">{sellerProfile.business_phone}</p>}
-                {sellerProfile?.gstin && <p className="font-semibold mt-1">GSTIN: {sellerProfile.gstin}</p>}
+                <h2 className="text-xl font-bold">{sellerProfile?.business_name || 'Your Business Name'}</h2>
+                <p className="opacity-90 text-sm">{sellerProfile?.state}</p>
+                {sellerProfile?.business_email && <p className="opacity-90 text-xs">{sellerProfile.business_email}</p>}
+                {sellerProfile?.business_phone && <p className="opacity-90 text-xs">{sellerProfile.business_phone}</p>}
+                {sellerProfile?.gstin && <p className="font-semibold mt-1 text-sm">GSTIN: {sellerProfile.gstin}</p>}
                 </div>
             </div>
 
-            <div className="p-8 pb-16">
+            <div className="px-8 py-6 pb-16">
                 <div className="flex justify-between mb-8">
                 <div className="w-1/2">
                     <h3 className="text-gray-500 text-xs uppercase font-bold mb-1">Bill To</h3>
@@ -495,7 +484,6 @@ export default function CreateInvoice() {
                 </div>
             </div>
 
-            {/* POWERED BY (PDF FOOTER) */}
             <div className="absolute bottom-6 w-full text-center">
                  <p className="text-[10px] text-gray-400">
                      Powered by <a href="https://pixalara.com/" target="_blank" rel="noreferrer" className="font-semibold text-gray-500 no-underline">pixalara.com</a>
