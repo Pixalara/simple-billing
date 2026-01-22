@@ -10,7 +10,7 @@ export default function Dashboard() {
   const [uploadingLogo, setUploadingLogo] = useState(false)
   const [uploadingSig, setUploadingSig] = useState(false)
   const [savedLogo, setSavedLogo] = useState(null)
-  const [savedSignature, setSavedSignature] = useState(null) // New State
+  const [savedSignature, setSavedSignature] = useState(null)
   const [invoices, setInvoices] = useState([]) 
   const navigate = useNavigate()
   
@@ -30,7 +30,6 @@ export default function Dashboard() {
   const fetchProfile = async (userId) => {
     const { data } = await supabase.from('users').select('*').eq('id', userId).single()
     if (data) {
-      // Basic Info
       setValue('business_name', data.business_name)
       setValue('state', data.state)
       setValue('gstin', data.gstin)
@@ -38,15 +37,13 @@ export default function Dashboard() {
       setValue('business_phone', data.business_phone)
       setValue('website', data.website)
       
-      // Bank Info
       setValue('bank_name', data.bank_name)
       setValue('account_number', data.account_number)
       setValue('ifsc_code', data.ifsc_code)
       setValue('branch_name', data.branch_name)
 
-      // Images
       if (data.logo_url) setSavedLogo(data.logo_url)
-      if (data.signature_url) setSavedSignature(data.signature_url) // Fetch Signature
+      if (data.signature_url) setSavedSignature(data.signature_url)
     }
     setLoading(false)
   }
@@ -56,7 +53,6 @@ export default function Dashboard() {
     if (data) setInvoices(data)
   }
 
-  // Generic Upload Function
   const handleFileUpload = async (event, type) => {
     try {
       if (type === 'logo') setUploadingLogo(true)
@@ -68,7 +64,6 @@ export default function Dashboard() {
       const fileExt = file.name.split('.').pop()
       const fileName = `${session.user.id}-${type}-${Math.random()}.${fileExt}`
       
-      // We reuse the 'logos' bucket for signatures to keep it simple
       const { error } = await supabase.storage.from('logos').upload(fileName, file)
       if (error) throw error
       
@@ -106,6 +101,25 @@ export default function Dashboard() {
     }
   }
 
+  // --- DELETE FUNCTION ---
+  const handleDeleteInvoice = async (id, e) => {
+    e.stopPropagation() // Prevent triggering the row click (Edit)
+    
+    if (!window.confirm("Are you sure you want to delete this invoice? This cannot be undone.")) {
+        return
+    }
+
+    try {
+        const { error } = await supabase.from('invoices').delete().eq('id', id)
+        if (error) throw error
+        
+        // Remove from local state instantly
+        setInvoices(prev => prev.filter(inv => inv.id !== id))
+    } catch (error) {
+        alert('Error deleting: ' + error.message)
+    }
+  }
+
   const handleLogout = async () => {
     await supabase.auth.signOut()
     navigate('/login')
@@ -127,7 +141,6 @@ export default function Dashboard() {
             <div className="lg:col-span-1 bg-white p-5 rounded-xl shadow-sm h-fit">
                 <h2 className="text-lg font-bold mb-4 text-gray-800 border-b pb-2">Business Profile</h2>
                 
-                {/* UPLOAD SECTION: Logo & Signature side-by-side */}
                 <div className="flex gap-4 mb-6">
                     {/* LOGO */}
                     <div className="flex flex-col items-center w-1/2">
@@ -192,33 +205,58 @@ export default function Dashboard() {
                         <div className="p-8 text-center text-gray-400 text-sm">No invoices yet.</div>
                     ) : (
                         <>
+                            {/* DESKTOP TABLE */}
                             <table className="hidden md:table w-full text-left text-sm">
                                 <thead className="bg-gray-50 text-gray-500 uppercase font-semibold text-xs">
-                                    <tr><th className="px-5 py-3">Date</th><th className="px-5 py-3">Invoice #</th><th className="px-5 py-3">Customer</th><th className="px-5 py-3 text-right">Amount</th></tr>
+                                    <tr>
+                                        <th className="px-5 py-3">Date</th>
+                                        <th className="px-5 py-3">Invoice #</th>
+                                        <th className="px-5 py-3">Customer</th>
+                                        <th className="px-5 py-3 text-right">Amount</th>
+                                        <th className="px-5 py-3 text-center">Action</th>
+                                    </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100">
                                     {invoices.map((inv) => (
-                                        <tr key={inv.id} onClick={() => navigate(`/edit-invoice/${inv.id}`)} className="hover:bg-blue-50 cursor-pointer">
+                                        <tr key={inv.id} onClick={() => navigate(`/edit-invoice/${inv.id}`)} className="hover:bg-blue-50 cursor-pointer group">
                                             <td className="px-5 py-3">{new Date(inv.created_at).toLocaleDateString('en-IN')}</td>
                                             <td className="px-5 py-3 font-medium text-blue-600">{inv.invoice_no}</td>
                                             <td className="px-5 py-3">{inv.invoice_data?.buyer_name}</td>
                                             <td className="px-5 py-3 text-right font-bold">₹{inv.total_amount}</td>
+                                            <td className="px-5 py-3 text-center">
+                                                <button 
+                                                    onClick={(e) => handleDeleteInvoice(inv.id, e)}
+                                                    className="text-gray-400 hover:text-red-600 p-1 rounded hover:bg-red-50 transition-colors"
+                                                    title="Delete Invoice"
+                                                >
+                                                    🗑️
+                                                </button>
+                                            </td>
                                         </tr>
                                     ))}
                                 </tbody>
                             </table>
 
+                            {/* MOBILE CARDS */}
                             <div className="md:hidden divide-y divide-gray-100">
                                 {invoices.map((inv) => (
-                                    <div key={inv.id} onClick={() => navigate(`/edit-invoice/${inv.id}`)} className="p-4 active:bg-blue-50">
-                                        <div className="flex justify-between mb-1">
+                                    <div key={inv.id} onClick={() => navigate(`/edit-invoice/${inv.id}`)} className="p-4 active:bg-blue-50 relative">
+                                        <div className="flex justify-between mb-1 pr-8">
                                             <span className="font-bold text-blue-600 text-sm">{inv.invoice_no}</span>
                                             <span className="text-gray-400 text-xs">{new Date(inv.created_at).toLocaleDateString('en-IN')}</span>
                                         </div>
-                                        <div className="flex justify-between items-center">
+                                        <div className="flex justify-between items-center pr-8">
                                             <span className="text-gray-800 font-medium text-sm">{inv.invoice_data?.buyer_name || 'No Name'}</span>
                                             <span className="text-gray-900 font-bold text-base">₹{inv.total_amount}</span>
                                         </div>
+                                        
+                                        {/* Mobile Delete Button (Absolute positioned) */}
+                                        <button 
+                                            onClick={(e) => handleDeleteInvoice(inv.id, e)}
+                                            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-600 p-2"
+                                        >
+                                            🗑️
+                                        </button>
                                     </div>
                                 ))}
                             </div>
