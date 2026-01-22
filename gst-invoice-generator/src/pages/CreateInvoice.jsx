@@ -71,7 +71,6 @@ export default function CreateInvoice() {
   const formData = watch()
   const { fields, append, remove } = useFieldArray({ control, name: 'items' })
 
-  // 1. Fetch Data
   useEffect(() => {
     const loadData = async () => {
       const { data: { user } } = await supabase.auth.getUser()
@@ -80,7 +79,6 @@ export default function CreateInvoice() {
       const { data: profile } = await supabase.from('users').select('*').eq('id', user.id).single()
       if (profile) {
           setSellerProfile(profile)
-          // --- AUTO LOAD SIGNATURE ---
           if (profile.signature_url) {
               setSignaturePreview(profile.signature_url)
           }
@@ -101,7 +99,6 @@ export default function CreateInvoice() {
     loadData()
   }, [id, navigate, reset])
 
-  // 2. Auto-Scale Logic
   useEffect(() => {
     const handleResize = () => {
       if (containerRef.current) {
@@ -126,7 +123,6 @@ export default function CreateInvoice() {
     }
   }, [mobileTab])
 
-  // Manual Override for Signature
   const handleImageUpload = (e) => {
     const file = e.target.files[0]
     if (file) {
@@ -182,13 +178,19 @@ export default function CreateInvoice() {
     return ''; 
   }
 
+  // --- PDF GENERATION (FIXED) ---
   const generatePdfBlob = async () => {
       const originalElement = invoiceRef.current
       if (!originalElement) return null;
 
       const clone = originalElement.cloneNode(true)
+      
+      // FIX 1: Reset transform & set explicit dimensions for A4 to prevent overflow
       clone.style.transform = 'none'
       clone.style.margin = '0'
+      clone.style.width = '210mm'
+      clone.style.height = '296.5mm' // Slightly less than 297mm to prevent 2nd page
+      clone.style.overflow = 'hidden' // Crop anything that spills over
       
       const container = document.createElement('div')
       container.style.position = 'fixed'
@@ -201,7 +203,7 @@ export default function CreateInvoice() {
         margin: 0,
         filename: `Invoice_${formData.buyer_name || 'Customer'}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true },
+        html2canvas: { scale: 2, useCORS: true, scrollY: 0 },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
       }
       
@@ -387,12 +389,10 @@ export default function CreateInvoice() {
 
           <div className="space-y-3">
              <div className="bg-gray-50 p-3 rounded border">
-                {/* Shows Signature if available from Profile, else Input */}
                 <div className="flex justify-between items-center mb-2">
                     <label className="text-xs font-bold text-gray-500">Signature</label>
                     {signaturePreview && <span className="text-xs text-green-600 font-semibold">✓ Loaded from Profile</span>}
                 </div>
-                {/* Always allow manual override */}
                 <input type="file" accept="image/*" onChange={handleImageUpload} className="block w-full text-sm text-gray-500 mt-1" />
             </div>
             <div>
@@ -432,7 +432,8 @@ export default function CreateInvoice() {
             style={{ 
                 transform: `scale(${previewScale})`, 
                 transformOrigin: 'top center',
-                height: previewScale < 1 ? `${(297 * 3.78 * previewScale) + 20}px` : 'auto' 
+                // Added buffer to height to ensure bottom bar is visible on mobile
+                height: previewScale < 1 ? `${(297 * 3.78 * previewScale) + 30}px` : 'auto' 
             }}
         >
             <div 
@@ -538,20 +539,34 @@ export default function CreateInvoice() {
                     <p className="text-xs font-bold text-gray-800">{amountInWords}</p>
                 </div>
                 
+                {/* FIX 2: Simplified Bank Details Structure */}
                 <div className="flex justify-between mt-8 items-end">
-                    <div className="text-xs text-gray-600">
+                    <div className="text-xs text-black w-7/12"> {/* Explicit text-black */}
                         {sellerProfile?.bank_name && (
-                            <div className="border p-2 rounded bg-gray-50 inline-block pr-8">
-                                <p className="font-bold text-gray-700 mb-1 border-b pb-1">Bank Details</p>
-                                <p><span className="font-semibold">Bank:</span> {sellerProfile.bank_name}</p>
-                                <p><span className="font-semibold">A/c No:</span> {sellerProfile.account_number}</p>
-                                <p><span className="font-semibold">IFSC:</span> {sellerProfile.ifsc_code}</p>
-                                {sellerProfile.branch_name && <p><span className="font-semibold">Branch:</span> {sellerProfile.branch_name}</p>}
+                            <div className="border p-2 rounded bg-gray-50">
+                                <p className="font-bold text-gray-700 mb-1 border-b border-gray-300 pb-1">Bank Details</p>
+                                <div className="grid grid-cols-3 gap-y-0.5">
+                                    <span className="font-semibold col-span-1">Bank:</span>
+                                    <span className="col-span-2">{sellerProfile.bank_name}</span>
+                                    
+                                    <span className="font-semibold col-span-1">A/c No:</span>
+                                    <span className="col-span-2">{sellerProfile.account_number}</span>
+                                    
+                                    <span className="font-semibold col-span-1">IFSC:</span>
+                                    <span className="col-span-2">{sellerProfile.ifsc_code}</span>
+                                    
+                                    {sellerProfile.branch_name && (
+                                        <>
+                                            <span className="font-semibold col-span-1">Branch:</span>
+                                            <span className="col-span-2">{sellerProfile.branch_name}</span>
+                                        </>
+                                    )}
+                                </div>
                             </div>
                         )}
                     </div>
 
-                    <div className="text-right">
+                    <div className="text-right w-4/12">
                         {signaturePreview && <img src={signaturePreview} alt="Sign" className="h-12 ml-auto mb-1 object-contain" />}
                         <p className="text-[10px] font-bold uppercase">Authorized Signatory</p>
                         <p className="text-[10px] text-gray-500">{sellerProfile?.business_name}</p>
@@ -564,13 +579,13 @@ export default function CreateInvoice() {
                 </div>
             </div>
 
-            <div className="absolute bottom-8 w-full text-center">
+            <div className="absolute bottom-10 w-full text-center">
                  <p className="text-[10px] text-gray-400">
                      Powered by <a href="https://pixalara.com/" target="_blank" rel="noreferrer" className="font-semibold text-gray-500 no-underline">pixalara.com</a>
                  </p>
             </div>
 
-            {/* BOTTOM BAR (Increased height to h-6) */}
+            {/* Thicker Bottom Bar */}
             <div className="h-6 w-full absolute bottom-0" style={{ backgroundColor: theme.hex }}></div>
             </div>
         </div>
