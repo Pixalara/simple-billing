@@ -105,18 +105,14 @@ export default function CreateInvoice() {
         const availableWidth = containerRef.current.offsetWidth
         const requiredWidth = 794
         const padding = 32
-        
         let scale = (availableWidth - padding) / requiredWidth
         if (scale > 1) scale = 1
-        
         setPreviewScale(scale)
       }
     }
-    
     handleResize()
     window.addEventListener('resize', handleResize)
     const timeout = setTimeout(handleResize, 100) 
-    
     return () => {
         window.removeEventListener('resize', handleResize)
         clearTimeout(timeout)
@@ -178,30 +174,38 @@ export default function CreateInvoice() {
     return ''; 
   }
 
-  // --- PDF GENERATION (FIXED & ALIGNMENT CORRECTED) ---
+  // --- STRICT PDF GENERATION FIX ---
   const generatePdfBlob = async () => {
       const originalElement = invoiceRef.current
       if (!originalElement) return null;
 
-      // 1. Clone node
+      // 1. Clone the invoice
       const clone = originalElement.cloneNode(true)
       
-      // 2. FORCE STYLES for PDF consistency
-      // We force width to 794px (A4 width in px at 96 DPI) to mimic Desktop view
-      clone.style.width = '794px'
-      clone.style.minHeight = '1122px' // A4 Height
-      clone.style.height = 'auto'      // Let content flow, but we cut it off below
-      clone.style.maxHeight = '1118px' // STRICT limit slightly less than full page to prevent overflow
-      clone.style.overflow = 'hidden'  // Crop anything extra
+      // 2. STRIP Responsive Classes that mess up alignment
+      // We remove classes that might constrain width or center it flex-wise
+      clone.classList.remove('shadow-2xl', 'relative', 'shrink-0') 
+      
+      // 3. FORCE Desktop Dimensions & Reset positioning
+      // This forces the clone to be exactly A4 width, ignoring mobile constraints
+      clone.style.width = '794px' 
+      clone.style.minHeight = '1120px' // Just under A4 height
+      clone.style.height = 'auto'
+      clone.style.maxHeight = '1120px' 
+      clone.style.overflow = 'hidden'
       clone.style.transform = 'none'
       clone.style.margin = '0'
+      clone.style.padding = '0'
       clone.style.backgroundColor = 'white'
       
-      // 3. Put in container
+      // 4. Create a temporary container at TOP LEFT (z-index -1)
+      // Positioning at -10000px can sometimes confuse html2canvas coordinate calculation
       const container = document.createElement('div')
-      container.style.position = 'fixed'
-      container.style.top = '-10000px'
-      container.style.left = '-10000px'
+      container.style.position = 'absolute'
+      container.style.top = '0'
+      container.style.left = '0'
+      container.style.zIndex = '-1000'
+      container.style.width = '794px' // Match clone width
       container.appendChild(clone)
       document.body.appendChild(container)
 
@@ -213,11 +217,10 @@ export default function CreateInvoice() {
             scale: 2, 
             useCORS: true, 
             scrollY: 0,
-            windowWidth: 1024 // FORCE DESKTOP LAYOUT rendering
+            width: 794, // Force canvas width
+            windowWidth: 1200 // Simulate desktop window
         },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-        // STRICT page break rules to stop 2nd page
-        pagebreak: { mode: 'avoid-all', before: '#page2custom' } 
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
       }
       
       try {
@@ -445,7 +448,6 @@ export default function CreateInvoice() {
             style={{ 
                 transform: `scale(${previewScale})`, 
                 transformOrigin: 'top center',
-                // Increased Buffer to prevent mobile clipping in PREVIEW ONLY
                 height: previewScale < 1 ? `${(297 * 3.78 * previewScale) + 30}px` : 'auto' 
             }}
         >
