@@ -14,7 +14,7 @@ const THEMES = [
   { name: 'Orange', hex: '#ea580c', text: 'white' },
 ]
 
-// --- HELPER: NUMBER TO WORDS (INDIAN FORMAT) ---
+// --- HELPER: NUMBER TO WORDS ---
 const numberToWords = (num) => {
     const a = ['', 'One ', 'Two ', 'Three ', 'Four ', 'Five ', 'Six ', 'Seven ', 'Eight ', 'Nine ', 'Ten ', 'Eleven ', 'Twelve ', 'Thirteen ', 'Fourteen ', 'Fifteen ', 'Sixteen ', 'Seventeen ', 'Eighteen ', 'Nineteen '];
     const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
@@ -64,7 +64,8 @@ export default function CreateInvoice() {
       invoiceDate: new Date().toISOString().split('T')[0],
       dueDate: '',
       items: [{ description: '', hsn: '', quantity: 1, price: 0, gstRate: 18 }],
-      terms: '1. Goods once sold will not be taken back.\n2. Interest @ 18% p.a. will be charged if payment is not made within the due date.',
+      // --- UPDATED TERMS HERE ---
+      terms: '1. Payment must be made within 7 days from the invoice date.\n2. Goods once sold will not be taken back.\n3. Interest @ 18% p.a. will be charged if payment is delayed.',
     }
   })
 
@@ -163,7 +164,6 @@ export default function CreateInvoice() {
     }
   }
   const totals = calculateTotals()
-  // Calculate Amount in Words based on Grand Total
   const amountInWords = totals.grandTotal ? numberToWords(totals.grandTotal) : '';
 
   // --- PDF GENERATION ---
@@ -503,7 +503,7 @@ export default function CreateInvoice() {
                     </div>
                 </div>
 
-                {/* NEW: Amount in Words */}
+                {/* Amount in Words */}
                 <div className="mt-2 text-right">
                     <p className="text-xs text-gray-500 font-semibold italic">Amount in Words:</p>
                     <p className="text-xs font-bold text-gray-800">{amountInWords}</p>
