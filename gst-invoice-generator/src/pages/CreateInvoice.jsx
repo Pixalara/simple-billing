@@ -392,47 +392,47 @@ export default function CreateInvoice() {
                 style={{ width: '210mm', minHeight: '297mm', padding: '0' }}
             >
             
-            {/* UPDATED HEADER: Professional Fit (Reduced Padding) */}
-            <div className="px-8 py-6 flex justify-between items-start" style={{ backgroundColor: theme.hex, color: theme.text }}>
+            {/* UPDATED COMPACT HEADER */}
+            <div className="px-6 py-4 flex justify-between items-start" style={{ backgroundColor: theme.hex, color: theme.text }}>
                 <div>
-                {sellerProfile?.logo_url && <img src={sellerProfile.logo_url} alt="Logo" className="h-16 w-auto mb-2 object-contain bg-white rounded p-1" />}
-                <h1 className="text-3xl font-bold uppercase tracking-wide">Invoice</h1>
-                <p className="opacity-80 mt-1 text-sm"># {existingInvoiceNo || 'DRAFT'}</p>
+                {sellerProfile?.logo_url && <img src={sellerProfile.logo_url} alt="Logo" className="h-12 w-auto mb-1 object-contain bg-white rounded p-0.5" />}
+                <h1 className="text-2xl font-bold uppercase tracking-wide">Invoice</h1>
+                <p className="opacity-80 text-xs"># {existingInvoiceNo || 'DRAFT'}</p>
                 </div>
                 <div className="text-right">
-                <h2 className="text-xl font-bold">{sellerProfile?.business_name || 'Your Business Name'}</h2>
-                <p className="opacity-90 text-sm">{sellerProfile?.state}</p>
-                {sellerProfile?.business_email && <p className="opacity-90 text-xs">{sellerProfile.business_email}</p>}
-                {sellerProfile?.business_phone && <p className="opacity-90 text-xs">{sellerProfile.business_phone}</p>}
-                {sellerProfile?.gstin && <p className="font-semibold mt-1 text-sm">GSTIN: {sellerProfile.gstin}</p>}
+                <h2 className="text-lg font-bold leading-tight">{sellerProfile?.business_name || 'Your Business Name'}</h2>
+                <p className="opacity-90 text-xs leading-tight">{sellerProfile?.state}</p>
+                {sellerProfile?.business_email && <p className="opacity-90 text-[10px] leading-tight">{sellerProfile.business_email}</p>}
+                {sellerProfile?.business_phone && <p className="opacity-90 text-[10px] leading-tight">{sellerProfile.business_phone}</p>}
+                {sellerProfile?.gstin && <p className="font-semibold mt-0.5 text-xs">GSTIN: {sellerProfile.gstin}</p>}
                 </div>
             </div>
 
-            <div className="px-8 py-6 pb-16">
-                <div className="flex justify-between mb-8">
+            <div className="px-6 py-4 pb-12">
+                <div className="flex justify-between mb-6">
                 <div className="w-1/2">
-                    <h3 className="text-gray-500 text-xs uppercase font-bold mb-1">Bill To</h3>
-                    <p className="text-lg font-bold text-gray-800">{formData.buyer_name || 'Client Name'}</p>
-                    <p className="text-gray-600 text-sm whitespace-pre-wrap">{formData.buyer_address}</p>
-                    <p className="text-gray-600">{formData.buyer_state}</p>
-                    {formData.buyer_gstin && <p className="text-sm font-semibold mt-1">GSTIN: {formData.buyer_gstin}</p>}
+                    <h3 className="text-gray-500 text-[10px] uppercase font-bold mb-1">Bill To</h3>
+                    <p className="text-base font-bold text-gray-800">{formData.buyer_name || 'Client Name'}</p>
+                    <p className="text-gray-600 text-xs whitespace-pre-wrap">{formData.buyer_address}</p>
+                    <p className="text-gray-600 text-xs">{formData.buyer_state}</p>
+                    {formData.buyer_gstin && <p className="text-xs font-semibold mt-1">GSTIN: {formData.buyer_gstin}</p>}
                 </div>
                 <div className="w-1/3 text-right space-y-1">
                     <div className="flex justify-between border-b pb-1">
-                        <span className="text-gray-500 text-sm">Date:</span><span className="font-semibold">{formData.invoiceDate}</span>
+                        <span className="text-gray-500 text-xs">Date:</span><span className="font-semibold text-sm">{formData.invoiceDate}</span>
                     </div>
-                    {formData.dueDate && <div className="flex justify-between border-b pb-1"><span className="text-gray-500 text-sm">Due Date:</span><span className="font-semibold">{formData.dueDate}</span></div>}
+                    {formData.dueDate && <div className="flex justify-between border-b pb-1"><span className="text-gray-500 text-xs">Due Date:</span><span className="font-semibold text-sm">{formData.dueDate}</span></div>}
                 </div>
                 </div>
 
-                <table className="w-full mb-8">
+                <table className="w-full mb-6">
                 <thead>
                     <tr style={{ backgroundColor: theme.hex, color: theme.text }}>
-                    <th className="text-left py-2 px-2 text-sm uppercase w-5/12">Item</th>
-                    <th className="text-left py-2 px-2 text-sm uppercase w-2/12">HSN</th>
-                    <th className="text-center py-2 px-2 text-sm uppercase w-1/12">Qty</th>
-                    <th className="text-right py-2 px-2 text-sm uppercase w-2/12">Price</th>
-                    <th className="text-right py-2 px-2 text-sm uppercase w-2/12">Total</th>
+                    <th className="text-left py-1.5 px-2 text-xs uppercase w-5/12">Item</th>
+                    <th className="text-left py-1.5 px-2 text-xs uppercase w-2/12">HSN</th>
+                    <th className="text-center py-1.5 px-2 text-xs uppercase w-1/12">Qty</th>
+                    <th className="text-right py-1.5 px-2 text-xs uppercase w-2/12">Price</th>
+                    <th className="text-right py-1.5 px-2 text-xs uppercase w-2/12">Total</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -440,13 +440,13 @@ export default function CreateInvoice() {
                     const amount = ((item.quantity||0) * (item.price||0));
                     return (
                         <tr key={i} className="border-b border-gray-200">
-                        <td className="py-3 px-2">
-                            <p className="font-semibold text-gray-800">{item.description}</p>
+                        <td className="py-2 px-2">
+                            <p className="font-semibold text-gray-800 text-sm">{item.description}</p>
                         </td>
-                        <td className="py-3 px-2 text-sm text-gray-600">{item.hsn}</td>
-                        <td className="text-center py-3 px-2">{item.quantity}</td>
-                        <td className="text-right py-3 px-2">₹{item.price}</td>
-                        <td className="text-right py-3 px-2 font-bold text-gray-800">
+                        <td className="py-2 px-2 text-xs text-gray-600">{item.hsn}</td>
+                        <td className="text-center py-2 px-2 text-sm">{item.quantity}</td>
+                        <td className="text-right py-2 px-2 text-sm">₹{item.price}</td>
+                        <td className="text-right py-2 px-2 font-bold text-gray-800 text-sm">
                             ₹{(amount).toFixed(2)}
                         </td>
                         </tr>
@@ -456,31 +456,47 @@ export default function CreateInvoice() {
                 </table>
                 
                 <div className="flex justify-end">
-                    <div className="w-5/12 space-y-2 border-b pb-4">
-                        <div className="flex justify-between text-gray-600"><span>Subtotal</span><span>₹{totals.subtotal}</span></div>
+                    <div className="w-5/12 space-y-1 border-b pb-3">
+                        <div className="flex justify-between text-gray-600 text-sm"><span>Subtotal</span><span>₹{totals.subtotal}</span></div>
                         {parseFloat(totals.igst) > 0 ? (
-                        <div className="flex justify-between text-gray-600 text-sm"><span>IGST</span><span>₹{totals.igst}</span></div>
+                        <div className="flex justify-between text-gray-600 text-xs"><span>IGST</span><span>₹{totals.igst}</span></div>
                         ) : (
                         <>
-                            <div className="flex justify-between text-gray-600 text-sm"><span>CGST</span><span>₹{totals.cgst}</span></div>
-                            <div className="flex justify-between text-gray-600 text-sm"><span>SGST</span><span>₹{totals.sgst}</span></div>
+                            <div className="flex justify-between text-gray-600 text-xs"><span>CGST</span><span>₹{totals.cgst}</span></div>
+                            <div className="flex justify-between text-gray-600 text-xs"><span>SGST</span><span>₹{totals.sgst}</span></div>
                         </>
                         )}
-                        <div className="flex justify-between py-3 text-2xl font-bold" style={{ color: theme.hex }}>
+                        <div className="flex justify-between py-2 text-xl font-bold" style={{ color: theme.hex }}>
                             <span>Total</span><span>₹{totals.grandTotal}</span>
                         </div>
                     </div>
                 </div>
+                
+                {/* BANK DETAILS & SIGNATURE ROW */}
+                <div className="flex justify-between mt-8 items-end">
+                    {/* Bank Details Display */}
+                    <div className="text-xs text-gray-600">
+                        {sellerProfile?.bank_name && (
+                            <div className="border p-2 rounded bg-gray-50 inline-block pr-8">
+                                <p className="font-bold text-gray-700 mb-1 border-b pb-1">Bank Details</p>
+                                <p><span className="font-semibold">Bank:</span> {sellerProfile.bank_name}</p>
+                                <p><span className="font-semibold">A/c No:</span> {sellerProfile.account_number}</p>
+                                <p><span className="font-semibold">IFSC:</span> {sellerProfile.ifsc_code}</p>
+                                {sellerProfile.branch_name && <p><span className="font-semibold">Branch:</span> {sellerProfile.branch_name}</p>}
+                            </div>
+                        )}
+                    </div>
 
-                <div className="mt-8 text-right">
-                    {signaturePreview && <img src={signaturePreview} alt="Sign" className="h-16 ml-auto mb-2 object-contain" />}
-                    <p className="text-xs font-bold uppercase">Authorized Signatory</p>
-                    <p className="text-xs text-gray-500">{sellerProfile?.business_name}</p>
+                    <div className="text-right">
+                        {signaturePreview && <img src={signaturePreview} alt="Sign" className="h-12 ml-auto mb-1 object-contain" />}
+                        <p className="text-[10px] font-bold uppercase">Authorized Signatory</p>
+                        <p className="text-[10px] text-gray-500">{sellerProfile?.business_name}</p>
+                    </div>
                 </div>
                 
-                <div className="mt-8 pt-4 border-t text-sm text-gray-600">
+                <div className="mt-6 pt-3 border-t text-xs text-gray-600">
                     <h4 className="font-bold text-gray-800 mb-1">Terms & Conditions</h4>
-                    <p className="whitespace-pre-wrap text-xs">{formData.terms}</p>
+                    <p className="whitespace-pre-wrap text-[10px]">{formData.terms}</p>
                 </div>
             </div>
 
@@ -490,7 +506,7 @@ export default function CreateInvoice() {
                  </p>
             </div>
 
-            <div className="h-4 w-full absolute bottom-0" style={{ backgroundColor: theme.hex }}></div>
+            <div className="h-3 w-full absolute bottom-0" style={{ backgroundColor: theme.hex }}></div>
             </div>
         </div>
       </div>
