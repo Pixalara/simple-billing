@@ -485,12 +485,16 @@ export default function CreateInvoice() {
                 <table className="w-full mb-6">
                 <thead>
                     <tr style={{ backgroundColor: theme.hex, color: theme.text }}>
-                        {/* UPDATED: Fixed Height 32px (Small Bar) with Perfect Centering */}
-                        <th className="text-left px-3 text-xs font-bold uppercase w-5/12" style={{ height: '32px', verticalAlign: 'middle', paddingTop: '0', paddingBottom: '0' }}>Item</th>
-                        <th className="text-left px-3 text-xs font-bold uppercase w-2/12" style={{ height: '32px', verticalAlign: 'middle', paddingTop: '0', paddingBottom: '0' }}>HSN</th>
-                        <th className="text-center px-3 text-xs font-bold uppercase w-1/12" style={{ height: '32px', verticalAlign: 'middle', paddingTop: '0', paddingBottom: '0' }}>Qty</th>
-                        <th className="text-right px-3 text-xs font-bold uppercase w-2/12" style={{ height: '32px', verticalAlign: 'middle', paddingTop: '0', paddingBottom: '0' }}>Price</th>
-                        <th className="text-right px-3 text-xs font-bold uppercase w-2/12" style={{ height: '32px', verticalAlign: 'middle', paddingTop: '0', paddingBottom: '0' }}>Total</th>
+                        {/* UPDATED FOR PDF VERTICAL CENTERING:
+                           1. height: '32px' - Fixed small bar height
+                           2. lineHeight: '32px' - Forces text to be exactly centered vertically
+                           3. paddingBlock: '0' - Removes padding interference
+                        */}
+                        <th className="text-left px-3 text-xs font-bold uppercase w-5/12" style={{ height: '32px', lineHeight: '32px', paddingBlock: '0', verticalAlign: 'middle' }}>Item</th>
+                        <th className="text-left px-3 text-xs font-bold uppercase w-2/12" style={{ height: '32px', lineHeight: '32px', paddingBlock: '0', verticalAlign: 'middle' }}>HSN</th>
+                        <th className="text-center px-3 text-xs font-bold uppercase w-1/12" style={{ height: '32px', lineHeight: '32px', paddingBlock: '0', verticalAlign: 'middle' }}>Qty</th>
+                        <th className="text-right px-3 text-xs font-bold uppercase w-2/12" style={{ height: '32px', lineHeight: '32px', paddingBlock: '0', verticalAlign: 'middle' }}>Price</th>
+                        <th className="text-right px-3 text-xs font-bold uppercase w-2/12" style={{ height: '32px', lineHeight: '32px', paddingBlock: '0', verticalAlign: 'middle' }}>Total</th>
                     </tr>
                 </thead>
                 <tbody>
