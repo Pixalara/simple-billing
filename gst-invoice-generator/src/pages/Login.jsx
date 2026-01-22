@@ -80,7 +80,7 @@ export default function Login() {
       const { error } = await supabase.auth.verifyOtp({
         email,
         token: otp,
-        type: 'email' // 'email' type works for magic link/code logins
+        type: 'email'
       })
       if (error) throw error
 
@@ -113,8 +113,18 @@ export default function Login() {
       const { error } = await supabase.auth.updateUser({ password })
       if (error) throw error
       
-      alert('Password updated! Redirecting to Dashboard...')
-      navigate('/dashboard')
+      // Force Sign Out so they have to log in with the new password
+      await supabase.auth.signOut() 
+      
+      alert('Password updated successfully! Please log in with your new password.')
+      
+      // Clear fields
+      setPassword('')
+      setConfirmPassword('')
+      
+      // Redirect back to Login View
+      setView('LOGIN') 
+      
     } catch (error) {
       alert(error.message)
     } finally {
@@ -227,8 +237,19 @@ export default function Login() {
                 <form onSubmit={handleVerifyOtp} className="space-y-5">
                     <div>
                         <label className="block text-xs font-semibold text-slate-300 uppercase mb-1 ml-1">One Time Password</label>
-                        <input type="text" placeholder="Enter OTP code" className="w-full bg-slate-900/50 border border-slate-600 rounded-xl px-4 py-3.5 text-white focus:ring-2 focus:ring-blue-500 outline-none tracking-widest text-center text-xl font-mono"
-                            value={otp} onChange={(e) => setOtp(e.target.value)} required />
+                        <input 
+                            type="text" 
+                            placeholder="000000" 
+                            className="w-full bg-slate-900/50 border border-slate-600 rounded-xl px-4 py-3.5 text-white focus:ring-2 focus:ring-blue-500 outline-none tracking-[0.5em] text-center text-2xl font-mono placeholder-slate-600"
+                            value={otp} 
+                            onChange={(e) => {
+                                // Only allow numbers and max 6 digits
+                                const val = e.target.value.replace(/\D/g, '');
+                                if (val.length <= 6) setOtp(val);
+                            }} 
+                            required 
+                            maxLength={6}
+                        />
                     </div>
                     <button type="submit" disabled={loading} className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold py-4 rounded-xl shadow-lg transform transition hover:scale-[1.02] disabled:opacity-70 mt-2">
                         {loading ? 'Verifying...' : 'Verify & Proceed'}
