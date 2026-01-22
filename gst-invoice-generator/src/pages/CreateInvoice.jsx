@@ -174,38 +174,32 @@ export default function CreateInvoice() {
     return ''; 
   }
 
-  // --- STRICT PDF GENERATION FIX ---
+  // --- PDF GENERATION ---
   const generatePdfBlob = async () => {
       const originalElement = invoiceRef.current
       if (!originalElement) return null;
 
-      // 1. Clone the invoice
       const clone = originalElement.cloneNode(true)
       
-      // 2. STRIP Responsive Classes that mess up alignment
-      // We remove classes that might constrain width or center it flex-wise
-      clone.classList.remove('shadow-2xl', 'relative', 'shrink-0') 
-      
-      // 3. FORCE Desktop Dimensions & Reset positioning
-      // This forces the clone to be exactly A4 width, ignoring mobile constraints
-      clone.style.width = '794px' 
-      clone.style.minHeight = '1120px' // Just under A4 height
+      // Force Desktop Dimensions and Grid Layout on Clone
+      clone.style.width = '796px' // Force exact A4 width
+      clone.style.minHeight = '1120px' 
       clone.style.height = 'auto'
-      clone.style.maxHeight = '1120px' 
+      clone.style.maxHeight = '1122px' // Strict A4 limit
       clone.style.overflow = 'hidden'
       clone.style.transform = 'none'
       clone.style.margin = '0'
-      clone.style.padding = '0'
       clone.style.backgroundColor = 'white'
       
-      // 4. Create a temporary container at TOP LEFT (z-index -1)
-      // Positioning at -10000px can sometimes confuse html2canvas coordinate calculation
+      // Fix Layout Classes on Clone if necessary (removal of responsive scaling)
+      clone.classList.remove('w-full', 'lg:w-7/12', 'flex', 'justify-center') 
+      
       const container = document.createElement('div')
       container.style.position = 'absolute'
       container.style.top = '0'
       container.style.left = '0'
       container.style.zIndex = '-1000'
-      container.style.width = '794px' // Match clone width
+      container.style.width = '796px'
       container.appendChild(clone)
       document.body.appendChild(container)
 
@@ -213,14 +207,16 @@ export default function CreateInvoice() {
         margin: 0,
         filename: `Invoice_${formData.buyer_name || 'Customer'}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
+        enableLinks: false, // Disable links to prevent layout shifts
         html2canvas: { 
             scale: 2, 
             useCORS: true, 
             scrollY: 0,
-            width: 794, // Force canvas width
-            windowWidth: 1200 // Simulate desktop window
+            width: 796,
+            windowWidth: 1200 
         },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] } // Aggressive page break prevention
       }
       
       try {
@@ -458,36 +454,36 @@ export default function CreateInvoice() {
                 style={{ width: '210mm', minHeight: '297mm', padding: '0' }}
             >
             
-            <div className="px-6 py-4 flex justify-between items-start" style={{ backgroundColor: theme.hex, color: theme.text }}>
+            {/* 1. HEADER (Grid to force side-by-side) */}
+            <div className="px-6 py-4 grid grid-cols-2" style={{ backgroundColor: theme.hex, color: theme.text }}>
                 <div>
-                {sellerProfile?.logo_url && <img src={sellerProfile.logo_url} alt="Logo" className="h-12 w-auto mb-1 object-contain bg-white rounded p-0.5" />}
-                <h1 className="text-2xl font-bold uppercase tracking-wide">Invoice</h1>
-                <p className="opacity-80 text-xs"># {existingInvoiceNo || 'DRAFT'}</p>
+                    {sellerProfile?.logo_url && <img src={sellerProfile.logo_url} alt="Logo" className="h-12 w-auto mb-1 object-contain bg-white rounded p-0.5" />}
+                    <h1 className="text-2xl font-bold uppercase tracking-wide">Invoice</h1>
+                    <p className="opacity-80 text-xs"># {existingInvoiceNo || 'DRAFT'}</p>
                 </div>
                 <div className="text-right">
-                <h2 className="text-lg font-bold leading-tight">{sellerProfile?.business_name || 'Your Business Name'}</h2>
-                <p className="opacity-90 text-xs leading-tight">{sellerProfile?.state}</p>
-                {sellerProfile?.business_email && <p className="opacity-90 text-[10px] leading-tight">{sellerProfile.business_email}</p>}
-                {sellerProfile?.business_phone && <p className="opacity-90 text-[10px] leading-tight">{sellerProfile.business_phone}</p>}
-                {sellerProfile?.gstin && <p className="font-semibold mt-0.5 text-xs">GSTIN: {sellerProfile.gstin}</p>}
+                    <h2 className="text-lg font-bold leading-tight">{sellerProfile?.business_name || 'Your Business Name'}</h2>
+                    <p className="opacity-90 text-xs leading-tight">{sellerProfile?.state}</p>
+                    {sellerProfile?.business_email && <p className="opacity-90 text-[10px] leading-tight">{sellerProfile.business_email}</p>}
+                    {sellerProfile?.business_phone && <p className="opacity-90 text-[10px] leading-tight">{sellerProfile.business_phone}</p>}
+                    {sellerProfile?.gstin && <p className="font-semibold mt-0.5 text-xs">GSTIN: {sellerProfile.gstin}</p>}
                 </div>
             </div>
 
             <div className="px-6 py-4 pb-12">
-                <div className="flex justify-between mb-6">
-                <div className="w-1/2">
-                    <h3 className="text-gray-500 text-[10px] uppercase font-bold mb-1">Bill To</h3>
-                    <p className="text-base font-bold text-gray-800">{formData.buyer_name || 'Client Name'}</p>
-                    <p className="text-gray-600 text-xs whitespace-pre-wrap">{formData.buyer_address}</p>
-                    <p className="text-gray-600 text-xs">{formData.buyer_state}</p>
-                    {formData.buyer_gstin && <p className="text-xs font-semibold mt-1">GSTIN: {formData.buyer_gstin}</p>}
-                </div>
-                <div className="w-1/3 text-right space-y-1">
-                    <div className="flex justify-between border-b pb-1">
-                        <span className="text-gray-500 text-xs">Date:</span><span className="font-semibold text-sm">{formData.invoiceDate}</span>
+                {/* 2. BILL TO ROW (Grid) */}
+                <div className="grid grid-cols-2 gap-4 mb-6">
+                    <div>
+                        <h3 className="text-gray-500 text-[10px] uppercase font-bold mb-1">Bill To</h3>
+                        <p className="text-base font-bold text-gray-800 leading-tight">{formData.buyer_name || 'Client Name'}</p>
+                        <p className="text-gray-600 text-xs whitespace-pre-wrap leading-tight">{formData.buyer_address}</p>
+                        <p className="text-gray-600 text-xs">{formData.buyer_state}</p>
+                        {formData.buyer_gstin && <p className="text-xs font-semibold mt-1">GSTIN: {formData.buyer_gstin}</p>}
                     </div>
-                    {formData.dueDate && <div className="flex justify-between border-b pb-1"><span className="text-gray-500 text-xs">Due Date:</span><span className="font-semibold text-sm">{formData.dueDate}</span></div>}
-                </div>
+                    <div className="text-right">
+                        <div className="mb-1"><span className="text-gray-500 text-xs mr-2">Date:</span><span className="font-semibold text-sm">{formData.invoiceDate}</span></div>
+                        {formData.dueDate && <div><span className="text-gray-500 text-xs mr-2">Due Date:</span><span className="font-semibold text-sm">{formData.dueDate}</span></div>}
+                    </div>
                 </div>
 
                 <table className="w-full mb-6">
@@ -554,8 +550,9 @@ export default function CreateInvoice() {
                     <p className="text-xs font-bold text-gray-800">{amountInWords}</p>
                 </div>
                 
-                <div className="flex justify-between mt-8 items-end">
-                    <div className="text-xs text-black w-7/12">
+                {/* 3. FOOTER ROW (Grid) */}
+                <div className="grid grid-cols-2 mt-8 items-end gap-4">
+                    <div className="text-xs text-black">
                         {sellerProfile?.bank_name && (
                             <div className="border p-2 rounded bg-gray-50">
                                 <p className="font-bold text-gray-700 mb-1 border-b border-gray-300 pb-1">Bank Details</p>
@@ -580,7 +577,7 @@ export default function CreateInvoice() {
                         )}
                     </div>
 
-                    <div className="text-right w-4/12">
+                    <div className="text-right">
                         {signaturePreview && <img src={signaturePreview} alt="Sign" className="h-12 ml-auto mb-1 object-contain" />}
                         <p className="text-[10px] font-bold uppercase">Authorized Signatory</p>
                         <p className="text-[10px] text-gray-500">{sellerProfile?.business_name}</p>
