@@ -113,20 +113,31 @@ export default function Login() {
       const { error } = await supabase.auth.updateUser({ password })
       if (error) throw error
       
-      // Force Sign Out so they have to log in with the new password
+      // Success: Force Sign Out so they have to log in with the new password
       await supabase.auth.signOut() 
       
       alert('Password updated successfully! Please log in with your new password.')
       
-      // Clear fields
+      // Clear fields & Redirect
       setPassword('')
       setConfirmPassword('')
-      
-      // Redirect back to Login View
       setView('LOGIN') 
       
     } catch (error) {
-      alert(error.message)
+      // --- LOGIC FIX: Handle "Same Password" as a Success Case ---
+      if (error.message.includes("different from the old password")) {
+          await supabase.auth.signOut()
+          
+          // Friendly message instead of error
+          alert("You entered your current password. Redirecting to Login...") 
+          
+          setPassword('')
+          setConfirmPassword('')
+          setView('LOGIN')
+      } else {
+          // Real error
+          alert(error.message)
+      }
     } finally {
       setLoading(false)
     }
@@ -243,7 +254,6 @@ export default function Login() {
                             className="w-full bg-slate-900/50 border border-slate-600 rounded-xl px-4 py-3.5 text-white focus:ring-2 focus:ring-blue-500 outline-none tracking-[0.5em] text-center text-2xl font-mono placeholder-slate-600"
                             value={otp} 
                             onChange={(e) => {
-                                // Only allow numbers and max 6 digits
                                 const val = e.target.value.replace(/\D/g, '');
                                 if (val.length <= 6) setOtp(val);
                             }} 
@@ -276,6 +286,9 @@ export default function Login() {
                     <button type="submit" disabled={loading} className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold py-4 rounded-xl shadow-lg transform transition hover:scale-[1.02] disabled:opacity-70 mt-2">
                         {loading ? 'Updating...' : 'Set New Password'}
                     </button>
+                    <div className="text-center pt-4">
+                        <button type="button" onClick={() => { supabase.auth.signOut(); setView('LOGIN'); }} className="text-slate-400 text-sm hover:text-white">Cancel / Back to Login</button>
+                    </div>
                 </form>
             )}
 
