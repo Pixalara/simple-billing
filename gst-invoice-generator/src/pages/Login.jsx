@@ -1,20 +1,30 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '../supabaseClient'
 import { useNavigate } from 'react-router-dom'
 
 export default function Login() {
   const navigate = useNavigate()
   
-  // VIEW STATES: 'LOGIN', 'SIGNUP', 'FORGOT_PASS', 'OTP_VERIFY', 'RESET_PASS'
+  // VIEW STATES
   const [view, setView] = useState('LOGIN')
   const [loading, setLoading] = useState(false)
-  const [otpContext, setOtpContext] = useState('') // 'SIGNUP' or 'RECOVERY'
+  const [otpContext, setOtpContext] = useState('') 
   
   // Form Data
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [otp, setOtp] = useState('')
+
+  // --- PREMIUM NOTIFICATION STATE ---
+  const [toast, setToast] = useState(null) // { message, type: 'success' | 'error' }
+
+  // Helper to show toast
+  const showToast = (message, type = 'error') => {
+    setToast({ message, type })
+    // Auto-hide after 4 seconds
+    setTimeout(() => setToast(null), 4000)
+  }
 
   // --- HANDLERS ---
 
@@ -25,36 +35,37 @@ export default function Login() {
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) throw error
-      navigate('/dashboard')
+      
+      showToast('Welcome back! Redirecting...', 'success')
+      setTimeout(() => navigate('/dashboard'), 1500)
     } catch (error) {
-      alert(error.message)
+      showToast(error.message, 'error')
     } finally {
       setLoading(false)
     }
   }
 
-  // 2. INITIATE SIGNUP (Send OTP)
+  // 2. INITIATE SIGNUP
   const handleSignupStart = async (e) => {
     e.preventDefault()
-    if (password !== confirmPassword) return alert("Passwords do not match!")
+    if (password !== confirmPassword) return showToast("Passwords do not match!", 'error')
     
     setLoading(true)
     try {
-      // We use signInWithOtp to verify email existence/ownership first
       const { error } = await supabase.auth.signInWithOtp({ email })
       if (error) throw error
       
       setOtpContext('SIGNUP')
       setView('OTP_VERIFY')
-      alert('OTP sent to your email!')
+      showToast('6-digit OTP sent to your email!', 'success')
     } catch (error) {
-      alert(error.message)
+      showToast(error.message, 'error')
     } finally {
       setLoading(false)
     }
   }
 
-  // 3. INITIATE FORGOT PASSWORD (Send OTP)
+  // 3. INITIATE FORGOT PASSWORD
   const handleForgotStart = async (e) => {
     e.preventDefault()
     setLoading(true)
@@ -64,15 +75,15 @@ export default function Login() {
       
       setOtpContext('RECOVERY')
       setView('OTP_VERIFY')
-      alert('OTP sent to your email!')
+      showToast('Recovery OTP sent to your email!', 'success')
     } catch (error) {
-      alert(error.message)
+      showToast(error.message, 'error')
     } finally {
       setLoading(false)
     }
   }
 
-  // 4. VERIFY OTP (Common for Signup & Recovery)
+  // 4. VERIFY OTP
   const handleVerifyOtp = async (e) => {
     e.preventDefault()
     setLoading(true)
@@ -84,59 +95,55 @@ export default function Login() {
       })
       if (error) throw error
 
-      // If successful, user is now logged in.
       if (otpContext === 'SIGNUP') {
-        // Set the password immediately for the new account
         const { error: updateError } = await supabase.auth.updateUser({ password })
         if (updateError) throw updateError
         
-        alert('Account created successfully!')
-        navigate('/dashboard')
+        showToast('Account created! Entering Dashboard...', 'success')
+        setTimeout(() => navigate('/dashboard'), 2000)
       } else if (otpContext === 'RECOVERY') {
-        // Move to Reset Password Screen
         setView('RESET_PASS')
+        showToast('OTP Verified. Please set a new password.', 'success')
       }
     } catch (error) {
-      alert(error.message)
+      showToast(error.message, 'error')
     } finally {
       setLoading(false)
     }
   }
 
-  // 5. RESET PASSWORD (Final Step of Recovery)
+  // 5. RESET PASSWORD
   const handleResetPassword = async (e) => {
     e.preventDefault()
-    if (password !== confirmPassword) return alert("Passwords do not match!")
+    if (password !== confirmPassword) return showToast("Passwords do not match!", 'error')
     
     setLoading(true)
     try {
       const { error } = await supabase.auth.updateUser({ password })
       if (error) throw error
       
-      // Success: Force Sign Out so they have to log in with the new password
       await supabase.auth.signOut() 
       
-      alert('Password updated successfully! Please log in with your new password.')
+      showToast('Password updated! Please log in.', 'success')
       
-      // Clear fields & Redirect
-      setPassword('')
-      setConfirmPassword('')
-      setView('LOGIN') 
-      
-    } catch (error) {
-      // --- LOGIC FIX: Handle "Same Password" as a Success Case ---
-      if (error.message.includes("different from the old password")) {
-          await supabase.auth.signOut()
-          
-          // Friendly message instead of error
-          alert("You entered your current password. Redirecting to Login...") 
-          
+      // Delay switch to give user time to read success message
+      setTimeout(() => {
           setPassword('')
           setConfirmPassword('')
-          setView('LOGIN')
+          setView('LOGIN') 
+      }, 2000)
+      
+    } catch (error) {
+      if (error.message.includes("different from the old password")) {
+          await supabase.auth.signOut()
+          showToast("New password cannot be the same as old. Redirecting...", 'error')
+          setTimeout(() => {
+            setPassword('')
+            setConfirmPassword('')
+            setView('LOGIN')
+          }, 2000)
       } else {
-          // Real error
-          alert(error.message)
+          showToast(error.message, 'error')
       }
     } finally {
       setLoading(false)
@@ -147,8 +154,35 @@ export default function Login() {
     <div className="min-h-screen w-full flex items-center justify-center bg-cover bg-center relative" 
          style={{ backgroundImage: "url('https://images.unsplash.com/photo-1497366216548-37526070297c?q=80&w=2301&auto=format&fit=crop')" }}>
       
-      {/* Overlay */}
+      {/* Background Overlay */}
       <div className="absolute inset-0 bg-gradient-to-br from-slate-900/95 via-blue-900/90 to-slate-900/95"></div>
+
+      {/* --- PREMIUM TOAST NOTIFICATION COMPONENT --- */}
+      {toast && (
+        <div className={`fixed top-6 right-6 z-50 flex items-center gap-4 px-6 py-4 rounded-2xl shadow-2xl backdrop-blur-xl border animate-bounce-in transition-all duration-300 transform ${
+            toast.type === 'success' 
+            ? 'bg-emerald-500/20 border-emerald-500/30 text-emerald-100' 
+            : 'bg-red-500/20 border-red-500/30 text-red-100'
+        }`}>
+            {/* Icon */}
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${toast.type === 'success' ? 'bg-emerald-500' : 'bg-red-500'}`}>
+                {toast.type === 'success' ? (
+                    <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" /></svg>
+                ) : (
+                    <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M6 18L18 6M6 6l12 12" /></svg>
+                )}
+            </div>
+            
+            {/* Message */}
+            <div>
+                <h4 className="font-bold text-sm">{toast.type === 'success' ? 'Success' : 'Error'}</h4>
+                <p className="text-xs opacity-90">{toast.message}</p>
+            </div>
+
+            {/* Close Button */}
+            <button onClick={() => setToast(null)} className="ml-2 opacity-50 hover:opacity-100">✕</button>
+        </div>
+      )}
 
       {/* Main Container */}
       <div className="relative z-10 w-full max-w-md p-6">
@@ -156,7 +190,6 @@ export default function Login() {
         {/* Card */}
         <div className="bg-white/10 backdrop-blur-xl border border-white/20 p-8 rounded-3xl shadow-2xl">
             
-            {/* Header Text Dynamic */}
             <div className="text-center mb-8">
                 <h2 className="text-3xl font-bold text-white mb-2">
                     {view === 'LOGIN' && 'Welcome Back'}
@@ -226,7 +259,7 @@ export default function Login() {
                 </form>
             )}
 
-            {/* --- VIEW: FORGOT PASSWORD (Enter Email) --- */}
+            {/* --- VIEW: FORGOT PASSWORD --- */}
             {view === 'FORGOT_PASS' && (
                 <form onSubmit={handleForgotStart} className="space-y-5">
                     <div>
@@ -294,7 +327,6 @@ export default function Login() {
 
         </div>
         
-        {/* Footer */}
         <div className="w-full text-center z-20 py-4">
             <p className="text-[11px] text-slate-400 opacity-60">
                 Powered by <a href="https://pixalara.com" target="_blank" rel="noreferrer" className="hover:text-white transition-colors underline">pixalara.com</a>
