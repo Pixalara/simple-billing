@@ -191,7 +191,7 @@ export default function CreateInvoice() {
       clone.style.margin = '0'
       clone.style.backgroundColor = 'white'
       
-      // Fix Layout Classes on Clone if necessary (removal of responsive scaling)
+      // Fix Layout Classes on Clone
       clone.classList.remove('w-full', 'lg:w-7/12', 'flex', 'justify-center') 
       
       const container = document.createElement('div')
@@ -207,7 +207,7 @@ export default function CreateInvoice() {
         margin: 0,
         filename: `Invoice_${formData.buyer_name || 'Customer'}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
-        enableLinks: false, // Disable links to prevent layout shifts
+        enableLinks: false, 
         html2canvas: { 
             scale: 2, 
             useCORS: true, 
@@ -216,7 +216,7 @@ export default function CreateInvoice() {
             windowWidth: 1200 
         },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] } // Aggressive page break prevention
+        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] } 
       }
       
       try {
@@ -454,7 +454,6 @@ export default function CreateInvoice() {
                 style={{ width: '210mm', minHeight: '297mm', padding: '0' }}
             >
             
-            {/* 1. HEADER (Grid to force side-by-side) */}
             <div className="px-6 py-4 grid grid-cols-2" style={{ backgroundColor: theme.hex, color: theme.text }}>
                 <div>
                     {sellerProfile?.logo_url && <img src={sellerProfile.logo_url} alt="Logo" className="h-12 w-auto mb-1 object-contain bg-white rounded p-0.5" />}
@@ -471,7 +470,6 @@ export default function CreateInvoice() {
             </div>
 
             <div className="px-6 py-4 pb-12">
-                {/* 2. BILL TO ROW (Grid) */}
                 <div className="grid grid-cols-2 gap-4 mb-6">
                     <div>
                         <h3 className="text-gray-500 text-[10px] uppercase font-bold mb-1">Bill To</h3>
@@ -489,11 +487,12 @@ export default function CreateInvoice() {
                 <table className="w-full mb-6">
                 <thead>
                     <tr style={{ backgroundColor: theme.hex, color: theme.text }}>
-                    <th className="text-left py-1.5 px-2 text-xs uppercase w-5/12">Item</th>
-                    <th className="text-left py-1.5 px-2 text-xs uppercase w-2/12">HSN</th>
-                    <th className="text-center py-1.5 px-2 text-xs uppercase w-1/12">Qty</th>
-                    <th className="text-right py-1.5 px-2 text-xs uppercase w-2/12">Price</th>
-                    <th className="text-right py-1.5 px-2 text-xs uppercase w-2/12">Total</th>
+                        {/* UPDATED: Increased Padding (py-3) and Added Vertical Alignment (align-middle) */}
+                        <th className="text-left py-3 px-3 text-xs font-bold uppercase w-5/12 align-middle">Item</th>
+                        <th className="text-left py-3 px-3 text-xs font-bold uppercase w-2/12 align-middle">HSN</th>
+                        <th className="text-center py-3 px-3 text-xs font-bold uppercase w-1/12 align-middle">Qty</th>
+                        <th className="text-right py-3 px-3 text-xs font-bold uppercase w-2/12 align-middle">Price</th>
+                        <th className="text-right py-3 px-3 text-xs font-bold uppercase w-2/12 align-middle">Total</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -519,8 +518,6 @@ export default function CreateInvoice() {
                 <div className="flex justify-end">
                     <div className="w-5/12 space-y-1 border-b pb-3">
                         <div className="flex justify-between text-gray-600 text-sm"><span>Subtotal</span><span>₹{totals.subtotal}</span></div>
-                        
-                        {/* TAX SECTION */}
                         {parseFloat(totals.igst) > 0 ? (
                         <div className="flex justify-between text-gray-600 text-xs">
                             <span>IGST {getTaxRateText('IGST')}</span>
@@ -538,7 +535,6 @@ export default function CreateInvoice() {
                             </div>
                         </>
                         )}
-                        
                         <div className="flex justify-between py-2 text-xl font-bold" style={{ color: theme.hex }}>
                             <span>Total</span><span>₹{totals.grandTotal}</span>
                         </div>
@@ -550,7 +546,6 @@ export default function CreateInvoice() {
                     <p className="text-xs font-bold text-gray-800">{amountInWords}</p>
                 </div>
                 
-                {/* 3. FOOTER ROW (Grid) */}
                 <div className="grid grid-cols-2 mt-8 items-end gap-4">
                     <div className="text-xs text-black">
                         {sellerProfile?.bank_name && (
