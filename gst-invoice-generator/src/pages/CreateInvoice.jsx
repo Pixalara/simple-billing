@@ -163,7 +163,6 @@ export default function CreateInvoice() {
   const totals = calculateTotals()
   const amountInWords = totals.grandTotal ? numberToWords(totals.grandTotal) : '';
 
-  // --- HELPER: GET TAX RATE DISPLAY ---
   const getTaxRateText = (type) => {
     const rates = new Set(formData.items?.map(i => parseFloat(i.gstRate)).filter(r => r > 0));
     if (rates.size === 1) {
@@ -171,7 +170,7 @@ export default function CreateInvoice() {
         if (type === 'IGST') return `(${rate}%)`;
         if (type === 'CGST' || type === 'SGST') return `(${rate / 2}%)`;
     }
-    return ''; // Return empty string if mixed rates (or implement mixed logic if needed)
+    return ''; 
   }
 
   const generatePdfBlob = async () => {
@@ -420,7 +419,8 @@ export default function CreateInvoice() {
             style={{ 
                 transform: `scale(${previewScale})`, 
                 transformOrigin: 'top center',
-                height: previewScale < 1 ? `${297 * 3.78 * previewScale}px` : 'auto' 
+                // Increased Buffer (+20px) to prevent bottom bar clipping
+                height: previewScale < 1 ? `${(297 * 3.78 * previewScale) + 20}px` : 'auto' 
             }}
         >
             <div 
@@ -430,7 +430,7 @@ export default function CreateInvoice() {
                 style={{ width: '210mm', minHeight: '297mm', padding: '0' }}
             >
             
-            {/* UPDATED COMPACT HEADER */}
+            {/* COMPACT HEADER */}
             <div className="px-6 py-4 flex justify-between items-start" style={{ backgroundColor: theme.hex, color: theme.text }}>
                 <div>
                 {sellerProfile?.logo_url && <img src={sellerProfile.logo_url} alt="Logo" className="h-12 w-auto mb-1 object-contain bg-white rounded p-0.5" />}
@@ -497,7 +497,7 @@ export default function CreateInvoice() {
                     <div className="w-5/12 space-y-1 border-b pb-3">
                         <div className="flex justify-between text-gray-600 text-sm"><span>Subtotal</span><span>₹{totals.subtotal}</span></div>
                         
-                        {/* --- MODIFIED TAX SECTION WITH PERCENTAGES --- */}
+                        {/* TAX SECTION */}
                         {parseFloat(totals.igst) > 0 ? (
                         <div className="flex justify-between text-gray-600 text-xs">
                             <span>IGST {getTaxRateText('IGST')}</span>
@@ -553,13 +553,15 @@ export default function CreateInvoice() {
                 </div>
             </div>
 
-            <div className="absolute bottom-6 w-full text-center">
+            {/* POWERED BY - Moved higher up */}
+            <div className="absolute bottom-8 w-full text-center">
                  <p className="text-[10px] text-gray-400">
                      Powered by <a href="https://pixalara.com/" target="_blank" rel="noreferrer" className="font-semibold text-gray-500 no-underline">pixalara.com</a>
                  </p>
             </div>
 
-            <div className="h-3 w-full absolute bottom-0" style={{ backgroundColor: theme.hex }}></div>
+            {/* BOTTOM BAR - Increased height to h-6 (24px) */}
+            <div className="h-6 w-full absolute bottom-0" style={{ backgroundColor: theme.hex }}></div>
             </div>
         </div>
       </div>
