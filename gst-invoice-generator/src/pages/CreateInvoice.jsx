@@ -64,7 +64,6 @@ export default function CreateInvoice() {
       invoiceDate: new Date().toISOString().split('T')[0],
       dueDate: '',
       items: [{ description: '', hsn: '', quantity: 1, price: 0, gstRate: 18 }],
-      // --- UPDATED TERMS HERE ---
       terms: '1. Payment must be made within 7 days from the invoice date.\n2. Goods once sold will not be taken back.\n3. Interest @ 18% p.a. will be charged if payment is delayed.',
     }
   })
@@ -72,7 +71,6 @@ export default function CreateInvoice() {
   const formData = watch()
   const { fields, append, remove } = useFieldArray({ control, name: 'items' })
 
-  // 1. Fetch Data
   useEffect(() => {
     const loadData = async () => {
       const { data: { user } } = await supabase.auth.getUser()
@@ -96,7 +94,6 @@ export default function CreateInvoice() {
     loadData()
   }, [id, navigate, reset])
 
-  // 2. Auto-Scale Logic
   useEffect(() => {
     const handleResize = () => {
       if (containerRef.current) {
@@ -166,7 +163,17 @@ export default function CreateInvoice() {
   const totals = calculateTotals()
   const amountInWords = totals.grandTotal ? numberToWords(totals.grandTotal) : '';
 
-  // --- PDF GENERATION ---
+  // --- HELPER: GET TAX RATE DISPLAY ---
+  const getTaxRateText = (type) => {
+    const rates = new Set(formData.items?.map(i => parseFloat(i.gstRate)).filter(r => r > 0));
+    if (rates.size === 1) {
+        const rate = [...rates][0];
+        if (type === 'IGST') return `(${rate}%)`;
+        if (type === 'CGST' || type === 'SGST') return `(${rate / 2}%)`;
+    }
+    return ''; // Return empty string if mixed rates (or implement mixed logic if needed)
+  }
+
   const generatePdfBlob = async () => {
       const originalElement = invoiceRef.current
       if (!originalElement) return null;
@@ -489,27 +496,37 @@ export default function CreateInvoice() {
                 <div className="flex justify-end">
                     <div className="w-5/12 space-y-1 border-b pb-3">
                         <div className="flex justify-between text-gray-600 text-sm"><span>Subtotal</span><span>₹{totals.subtotal}</span></div>
+                        
+                        {/* --- MODIFIED TAX SECTION WITH PERCENTAGES --- */}
                         {parseFloat(totals.igst) > 0 ? (
-                        <div className="flex justify-between text-gray-600 text-xs"><span>IGST</span><span>₹{totals.igst}</span></div>
+                        <div className="flex justify-between text-gray-600 text-xs">
+                            <span>IGST {getTaxRateText('IGST')}</span>
+                            <span>₹{totals.igst}</span>
+                        </div>
                         ) : (
                         <>
-                            <div className="flex justify-between text-gray-600 text-xs"><span>CGST</span><span>₹{totals.cgst}</span></div>
-                            <div className="flex justify-between text-gray-600 text-xs"><span>SGST</span><span>₹{totals.sgst}</span></div>
+                            <div className="flex justify-between text-gray-600 text-xs">
+                                <span>CGST {getTaxRateText('CGST')}</span>
+                                <span>₹{totals.cgst}</span>
+                            </div>
+                            <div className="flex justify-between text-gray-600 text-xs">
+                                <span>SGST {getTaxRateText('SGST')}</span>
+                                <span>₹{totals.sgst}</span>
+                            </div>
                         </>
                         )}
+                        
                         <div className="flex justify-between py-2 text-xl font-bold" style={{ color: theme.hex }}>
                             <span>Total</span><span>₹{totals.grandTotal}</span>
                         </div>
                     </div>
                 </div>
 
-                {/* Amount in Words */}
                 <div className="mt-2 text-right">
                     <p className="text-xs text-gray-500 font-semibold italic">Amount in Words:</p>
                     <p className="text-xs font-bold text-gray-800">{amountInWords}</p>
                 </div>
                 
-                {/* BANK DETAILS & SIGNATURE ROW */}
                 <div className="flex justify-between mt-8 items-end">
                     <div className="text-xs text-gray-600">
                         {sellerProfile?.bank_name && (
