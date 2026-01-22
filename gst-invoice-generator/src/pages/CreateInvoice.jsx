@@ -71,13 +71,20 @@ export default function CreateInvoice() {
   const formData = watch()
   const { fields, append, remove } = useFieldArray({ control, name: 'items' })
 
+  // 1. Fetch Data
   useEffect(() => {
     const loadData = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return navigate('/login')
       
       const { data: profile } = await supabase.from('users').select('*').eq('id', user.id).single()
-      if (profile) setSellerProfile(profile)
+      if (profile) {
+          setSellerProfile(profile)
+          // --- AUTO LOAD SIGNATURE ---
+          if (profile.signature_url) {
+              setSignaturePreview(profile.signature_url)
+          }
+      }
 
       if (id) {
         const { data: invoice } = await supabase.from('invoices').select('*').eq('id', id).single()
@@ -94,6 +101,7 @@ export default function CreateInvoice() {
     loadData()
   }, [id, navigate, reset])
 
+  // 2. Auto-Scale Logic
   useEffect(() => {
     const handleResize = () => {
       if (containerRef.current) {
@@ -118,6 +126,7 @@ export default function CreateInvoice() {
     }
   }, [mobileTab])
 
+  // Manual Override for Signature
   const handleImageUpload = (e) => {
     const file = e.target.files[0]
     if (file) {
@@ -296,7 +305,6 @@ export default function CreateInvoice() {
       {/* --- LEFT SIDE: EDITOR --- */}
       <div className={`no-print w-full lg:w-5/12 bg-white p-4 md:p-6 rounded-lg shadow-lg h-fit overflow-y-auto max-h-screen custom-scrollbar ${mobileTab === 'preview' ? 'hidden lg:block' : 'block'}`}>
         
-        {/* BACK BUTTON */}
         <button 
           onClick={() => navigate('/dashboard')}
           className="flex items-center text-sm text-gray-500 hover:text-gray-800 mb-4 transition-colors font-medium"
@@ -379,7 +387,12 @@ export default function CreateInvoice() {
 
           <div className="space-y-3">
              <div className="bg-gray-50 p-3 rounded border">
-                <label className="text-xs font-bold text-gray-500">Signature</label>
+                {/* Shows Signature if available from Profile, else Input */}
+                <div className="flex justify-between items-center mb-2">
+                    <label className="text-xs font-bold text-gray-500">Signature</label>
+                    {signaturePreview && <span className="text-xs text-green-600 font-semibold">✓ Loaded from Profile</span>}
+                </div>
+                {/* Always allow manual override */}
                 <input type="file" accept="image/*" onChange={handleImageUpload} className="block w-full text-sm text-gray-500 mt-1" />
             </div>
             <div>
@@ -419,7 +432,6 @@ export default function CreateInvoice() {
             style={{ 
                 transform: `scale(${previewScale})`, 
                 transformOrigin: 'top center',
-                // Increased Buffer (+20px) to prevent bottom bar clipping
                 height: previewScale < 1 ? `${(297 * 3.78 * previewScale) + 20}px` : 'auto' 
             }}
         >
@@ -430,7 +442,6 @@ export default function CreateInvoice() {
                 style={{ width: '210mm', minHeight: '297mm', padding: '0' }}
             >
             
-            {/* COMPACT HEADER */}
             <div className="px-6 py-4 flex justify-between items-start" style={{ backgroundColor: theme.hex, color: theme.text }}>
                 <div>
                 {sellerProfile?.logo_url && <img src={sellerProfile.logo_url} alt="Logo" className="h-12 w-auto mb-1 object-contain bg-white rounded p-0.5" />}
@@ -553,14 +564,13 @@ export default function CreateInvoice() {
                 </div>
             </div>
 
-            {/* POWERED BY - Moved higher up */}
             <div className="absolute bottom-8 w-full text-center">
                  <p className="text-[10px] text-gray-400">
                      Powered by <a href="https://pixalara.com/" target="_blank" rel="noreferrer" className="font-semibold text-gray-500 no-underline">pixalara.com</a>
                  </p>
             </div>
 
-            {/* BOTTOM BAR - Increased height to h-6 (24px) */}
+            {/* BOTTOM BAR (Increased height to h-6) */}
             <div className="h-6 w-full absolute bottom-0" style={{ backgroundColor: theme.hex }}></div>
             </div>
         </div>
