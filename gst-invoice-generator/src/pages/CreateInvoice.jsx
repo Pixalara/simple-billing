@@ -72,7 +72,6 @@ export default function CreateInvoice() {
     const handleResize = () => {
       const screenWidth = window.innerWidth
       if (screenWidth < 1024) { // Mobile/Tablet
-         // A4 width is approx 794px. We scale it down to fit.
          const scale = (screenWidth - 32) / 794
          setPreviewScale(scale < 1 ? scale : 1)
       } else {
@@ -133,7 +132,6 @@ export default function CreateInvoice() {
       const originalElement = invoiceRef.current
       if (!originalElement) return null;
 
-      // Clone to ensure full A4 size capture even if scaled down on mobile
       const clone = originalElement.cloneNode(true)
       clone.style.transform = 'none'
       clone.style.margin = '0'
@@ -252,7 +250,16 @@ export default function CreateInvoice() {
 
       {/* --- LEFT SIDE: EDITOR --- */}
       <div className={`no-print w-full lg:w-5/12 bg-white p-4 md:p-6 rounded-lg shadow-lg h-fit overflow-y-auto max-h-screen custom-scrollbar ${mobileTab === 'preview' ? 'hidden lg:block' : 'block'}`}>
-        <div className="flex justify-between items-center mb-4">
+        
+        {/* BACK BUTTON */}
+        <button 
+          onClick={() => navigate('/dashboard')}
+          className="flex items-center text-sm text-gray-500 hover:text-gray-800 mb-4 transition-colors font-medium"
+        >
+          ← Back to Dashboard
+        </button>
+
+        <div className="flex justify-between items-center mb-4 border-t pt-4">
           <h2 className="text-xl font-bold text-gray-800">{id ? 'Edit Invoice' : 'New Invoice'}</h2>
           <div className="flex gap-2">
             {THEMES.map((t) => (
@@ -355,7 +362,7 @@ export default function CreateInvoice() {
 
         {/* WEBSITE FOOTER */}
         <div className="mt-8 text-center text-xs text-gray-400">
-           <p>Powered by <a href="https://pixalara.com" target="_blank" className="text-blue-500 hover:underline">pixalara.com</a></p>
+           <p>Powered by <a href="https://pixalara.com" target="_blank" rel="noreferrer" className="text-blue-500 hover:underline">pixalara.com</a></p>
         </div>
       </div>
 
@@ -392,7 +399,7 @@ export default function CreateInvoice() {
                 </div>
             </div>
 
-            <div className="p-8 pb-16"> {/* Added padding bottom to make room for footer */}
+            <div className="p-8 pb-16">
                 <div className="flex justify-between mb-8">
                 <div className="w-1/2">
                     <h3 className="text-gray-500 text-xs uppercase font-bold mb-1">Bill To</h3>
