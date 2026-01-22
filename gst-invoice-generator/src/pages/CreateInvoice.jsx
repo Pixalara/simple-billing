@@ -14,6 +14,35 @@ const THEMES = [
   { name: 'Orange', hex: '#ea580c', text: 'white' },
 ]
 
+// --- HELPER: NUMBER TO WORDS (INDIAN FORMAT) ---
+const numberToWords = (num) => {
+    const a = ['', 'One ', 'Two ', 'Three ', 'Four ', 'Five ', 'Six ', 'Seven ', 'Eight ', 'Nine ', 'Ten ', 'Eleven ', 'Twelve ', 'Thirteen ', 'Fourteen ', 'Fifteen ', 'Sixteen ', 'Seventeen ', 'Eighteen ', 'Nineteen '];
+    const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+
+    const regex = /^(\d{2})(\d{2})(\d{2})(\d{1})(\d{2})$/;
+    const getLT20 = (n) => a[Number(n)];
+    const get20Plus = (n) => b[n[0]] + ' ' + a[n[1]];
+
+    const convert = (num) => {
+        if (num === 0) return '';
+        if (num < 20) return getLT20(num);
+        if (num < 100) return get20Plus(String(num));
+        if (num < 1000) return getLT20(String(num)[0]) + 'Hundred ' + convert(num % 100);
+        if (num < 100000) return convert(Math.floor(num / 1000)) + 'Thousand ' + convert(num % 1000);
+        if (num < 10000000) return convert(Math.floor(num / 100000)) + 'Lakh ' + convert(num % 100000);
+        return convert(Math.floor(num / 10000000)) + 'Crore ' + convert(num % 10000000);
+    }
+
+    const [rupees, paise] = Number(num).toFixed(2).split('.');
+    let str = convert(Number(rupees)) + 'Rupees ';
+    
+    if (Number(paise) > 0) {
+        str += 'and ' + convert(Number(paise)) + 'Paise ';
+    }
+    
+    return str + 'Only';
+}
+
 export default function CreateInvoice() {
   const navigate = useNavigate()
   const { id } = useParams()
@@ -134,6 +163,8 @@ export default function CreateInvoice() {
     }
   }
   const totals = calculateTotals()
+  // Calculate Amount in Words based on Grand Total
+  const amountInWords = totals.grandTotal ? numberToWords(totals.grandTotal) : '';
 
   // --- PDF GENERATION ---
   const generatePdfBlob = async () => {
@@ -471,10 +502,15 @@ export default function CreateInvoice() {
                         </div>
                     </div>
                 </div>
+
+                {/* NEW: Amount in Words */}
+                <div className="mt-2 text-right">
+                    <p className="text-xs text-gray-500 font-semibold italic">Amount in Words:</p>
+                    <p className="text-xs font-bold text-gray-800">{amountInWords}</p>
+                </div>
                 
                 {/* BANK DETAILS & SIGNATURE ROW */}
                 <div className="flex justify-between mt-8 items-end">
-                    {/* Bank Details Display */}
                     <div className="text-xs text-gray-600">
                         {sellerProfile?.bank_name && (
                             <div className="border p-2 rounded bg-gray-50 inline-block pr-8">
