@@ -487,12 +487,16 @@ export default function CreateInvoice() {
                 <table className="w-full mb-6">
                 <thead>
                     <tr style={{ backgroundColor: theme.hex, color: theme.text }}>
-                        {/* UPDATED: Increased Padding (py-3) and Added Vertical Alignment (align-middle) */}
-                        <th className="text-left py-3 px-3 text-xs font-bold uppercase w-5/12 align-middle">Item</th>
-                        <th className="text-left py-3 px-3 text-xs font-bold uppercase w-2/12 align-middle">HSN</th>
-                        <th className="text-center py-3 px-3 text-xs font-bold uppercase w-1/12 align-middle">Qty</th>
-                        <th className="text-right py-3 px-3 text-xs font-bold uppercase w-2/12 align-middle">Price</th>
-                        <th className="text-right py-3 px-3 text-xs font-bold uppercase w-2/12 align-middle">Total</th>
+                        {/* UPDATED HEADER CELLS:
+                           1. py-3 to py-4: Increased height of blue bar as requested.
+                           2. style={{ verticalAlign: 'middle' }}: Force vertical centering for PDF engine.
+                           3. leading-normal: Fix line-height issues.
+                        */}
+                        <th className="text-left py-4 px-3 text-xs font-bold uppercase w-5/12 align-middle leading-normal" style={{ verticalAlign: 'middle' }}>Item</th>
+                        <th className="text-left py-4 px-3 text-xs font-bold uppercase w-2/12 align-middle leading-normal" style={{ verticalAlign: 'middle' }}>HSN</th>
+                        <th className="text-center py-4 px-3 text-xs font-bold uppercase w-1/12 align-middle leading-normal" style={{ verticalAlign: 'middle' }}>Qty</th>
+                        <th className="text-right py-4 px-3 text-xs font-bold uppercase w-2/12 align-middle leading-normal" style={{ verticalAlign: 'middle' }}>Price</th>
+                        <th className="text-right py-4 px-3 text-xs font-bold uppercase w-2/12 align-middle leading-normal" style={{ verticalAlign: 'middle' }}>Total</th>
                     </tr>
                 </thead>
                 <tbody>
