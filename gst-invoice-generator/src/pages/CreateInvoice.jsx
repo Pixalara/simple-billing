@@ -178,20 +178,26 @@ export default function CreateInvoice() {
     return ''; 
   }
 
-  // --- PDF GENERATION (FIXED) ---
+  // --- PDF GENERATION (FIXED & ALIGNMENT CORRECTED) ---
   const generatePdfBlob = async () => {
       const originalElement = invoiceRef.current
       if (!originalElement) return null;
 
+      // 1. Clone node
       const clone = originalElement.cloneNode(true)
       
-      // FIX 1: Reset transform & set explicit dimensions for A4 to prevent overflow
+      // 2. FORCE STYLES for PDF consistency
+      // We force width to 794px (A4 width in px at 96 DPI) to mimic Desktop view
+      clone.style.width = '794px'
+      clone.style.minHeight = '1122px' // A4 Height
+      clone.style.height = 'auto'      // Let content flow, but we cut it off below
+      clone.style.maxHeight = '1118px' // STRICT limit slightly less than full page to prevent overflow
+      clone.style.overflow = 'hidden'  // Crop anything extra
       clone.style.transform = 'none'
       clone.style.margin = '0'
-      clone.style.width = '210mm'
-      clone.style.height = '296.5mm' // Slightly less than 297mm to prevent 2nd page
-      clone.style.overflow = 'hidden' // Crop anything that spills over
+      clone.style.backgroundColor = 'white'
       
+      // 3. Put in container
       const container = document.createElement('div')
       container.style.position = 'fixed'
       container.style.top = '-10000px'
@@ -203,8 +209,15 @@ export default function CreateInvoice() {
         margin: 0,
         filename: `Invoice_${formData.buyer_name || 'Customer'}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, scrollY: 0 },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        html2canvas: { 
+            scale: 2, 
+            useCORS: true, 
+            scrollY: 0,
+            windowWidth: 1024 // FORCE DESKTOP LAYOUT rendering
+        },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+        // STRICT page break rules to stop 2nd page
+        pagebreak: { mode: 'avoid-all', before: '#page2custom' } 
       }
       
       try {
@@ -432,7 +445,7 @@ export default function CreateInvoice() {
             style={{ 
                 transform: `scale(${previewScale})`, 
                 transformOrigin: 'top center',
-                // Added buffer to height to ensure bottom bar is visible on mobile
+                // Increased Buffer to prevent mobile clipping in PREVIEW ONLY
                 height: previewScale < 1 ? `${(297 * 3.78 * previewScale) + 30}px` : 'auto' 
             }}
         >
@@ -539,9 +552,8 @@ export default function CreateInvoice() {
                     <p className="text-xs font-bold text-gray-800">{amountInWords}</p>
                 </div>
                 
-                {/* FIX 2: Simplified Bank Details Structure */}
                 <div className="flex justify-between mt-8 items-end">
-                    <div className="text-xs text-black w-7/12"> {/* Explicit text-black */}
+                    <div className="text-xs text-black w-7/12">
                         {sellerProfile?.bank_name && (
                             <div className="border p-2 rounded bg-gray-50">
                                 <p className="font-bold text-gray-700 mb-1 border-b border-gray-300 pb-1">Bank Details</p>
@@ -585,7 +597,6 @@ export default function CreateInvoice() {
                  </p>
             </div>
 
-            {/* Thicker Bottom Bar */}
             <div className="h-6 w-full absolute bottom-0" style={{ backgroundColor: theme.hex }}></div>
             </div>
         </div>
