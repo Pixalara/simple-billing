@@ -18,10 +18,11 @@ export default function CreateInvoice() {
   const navigate = useNavigate()
   const { id } = useParams()
   const invoiceRef = useRef()
+  const containerRef = useRef() // Ref to measure available space
   
   // Mobile Tab State
   const [mobileTab, setMobileTab] = useState('edit')
-  // Scale State for Mobile Preview
+  // Scale State for Preview
   const [previewScale, setPreviewScale] = useState(1)
   
   const [loading, setLoading] = useState(false)
@@ -67,21 +68,37 @@ export default function CreateInvoice() {
     loadData()
   }, [id, navigate, reset])
 
-  // 2. Auto-Scale Logic for Mobile
+  // 2. SMART AUTO-SCALE LOGIC (Fits A4 into any container width)
   useEffect(() => {
     const handleResize = () => {
-      const screenWidth = window.innerWidth
-      if (screenWidth < 1024) { // Mobile/Tablet
-         const scale = (screenWidth - 32) / 794
-         setPreviewScale(scale < 1 ? scale : 1)
-      } else {
-        setPreviewScale(1)
+      if (containerRef.current) {
+        const availableWidth = containerRef.current.offsetWidth
+        // A4 width is ~794px. We allow 32px padding.
+        const requiredWidth = 794
+        const padding = 32 // space for margins
+        
+        // Calculate scale: Available Space / Required A4 Space
+        let scale = (availableWidth - padding) / requiredWidth
+        
+        // Cap scale at 1 (don't zoom in if screen is huge)
+        if (scale > 1) scale = 1
+        
+        setPreviewScale(scale)
       }
     }
+    
+    // Run initially and on resize
     handleResize()
     window.addEventListener('resize', handleResize)
-    return () => window.removeEventListener('resize', handleResize)
-  }, [])
+    
+    // Also run when switching tabs (for mobile)
+    const timeout = setTimeout(handleResize, 100) 
+    
+    return () => {
+        window.removeEventListener('resize', handleResize)
+        clearTimeout(timeout)
+    }
+  }, [mobileTab]) // Re-run when tab changes
 
   const handleImageUpload = (e) => {
     const file = e.target.files[0]
@@ -366,10 +383,13 @@ export default function CreateInvoice() {
         </div>
       </div>
 
-      {/* --- RIGHT SIDE: PREVIEW --- */}
-      <div className={`w-full lg:w-7/12 flex justify-center bg-gray-300 p-0 md:p-8 overflow-y-auto ${mobileTab === 'edit' ? 'hidden lg:flex' : 'flex'}`}>
+      {/* --- RIGHT SIDE: PREVIEW (Now uses ref to Auto-Scale) --- */}
+      <div 
+        ref={containerRef} // Added REF here to measure width
+        className={`w-full lg:w-7/12 flex justify-center bg-gray-300 p-0 md:p-8 overflow-hidden ${mobileTab === 'edit' ? 'hidden lg:flex' : 'flex'}`}
+      >
         <div 
-            className="w-full flex justify-center origin-top p-4 md:p-0"
+            className="flex justify-center origin-top p-4 md:p-0 transition-transform duration-200 ease-out"
             style={{ 
                 transform: `scale(${previewScale})`, 
                 transformOrigin: 'top center',
