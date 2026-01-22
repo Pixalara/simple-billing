@@ -485,12 +485,12 @@ export default function CreateInvoice() {
                 <table className="w-full mb-6">
                 <thead>
                     <tr style={{ backgroundColor: theme.hex, color: theme.text }}>
-                        {/* UPDATED: py-2 for small bar, leading-none for exact vertical center */}
-                        <th className="text-left py-2 px-3 text-xs font-bold uppercase w-5/12 align-middle leading-none" style={{ verticalAlign: 'middle' }}>Item</th>
-                        <th className="text-left py-2 px-3 text-xs font-bold uppercase w-2/12 align-middle leading-none" style={{ verticalAlign: 'middle' }}>HSN</th>
-                        <th className="text-center py-2 px-3 text-xs font-bold uppercase w-1/12 align-middle leading-none" style={{ verticalAlign: 'middle' }}>Qty</th>
-                        <th className="text-right py-2 px-3 text-xs font-bold uppercase w-2/12 align-middle leading-none" style={{ verticalAlign: 'middle' }}>Price</th>
-                        <th className="text-right py-2 px-3 text-xs font-bold uppercase w-2/12 align-middle leading-none" style={{ verticalAlign: 'middle' }}>Total</th>
+                        {/* UPDATED: Fixed Height 32px (Small Bar) with Perfect Centering */}
+                        <th className="text-left px-3 text-xs font-bold uppercase w-5/12" style={{ height: '32px', verticalAlign: 'middle', paddingTop: '0', paddingBottom: '0' }}>Item</th>
+                        <th className="text-left px-3 text-xs font-bold uppercase w-2/12" style={{ height: '32px', verticalAlign: 'middle', paddingTop: '0', paddingBottom: '0' }}>HSN</th>
+                        <th className="text-center px-3 text-xs font-bold uppercase w-1/12" style={{ height: '32px', verticalAlign: 'middle', paddingTop: '0', paddingBottom: '0' }}>Qty</th>
+                        <th className="text-right px-3 text-xs font-bold uppercase w-2/12" style={{ height: '32px', verticalAlign: 'middle', paddingTop: '0', paddingBottom: '0' }}>Price</th>
+                        <th className="text-right px-3 text-xs font-bold uppercase w-2/12" style={{ height: '32px', verticalAlign: 'middle', paddingTop: '0', paddingBottom: '0' }}>Total</th>
                     </tr>
                 </thead>
                 <tbody>
