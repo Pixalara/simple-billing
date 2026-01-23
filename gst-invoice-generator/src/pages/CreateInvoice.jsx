@@ -174,6 +174,26 @@ export default function CreateInvoice() {
     return ''; 
   }
 
+  // --- REUSABLE STYLE OBJECTS FOR TABLE ALIGNMENT ---
+  const thBase = {
+    backgroundColor: theme.hex,
+    color: theme.text,
+    height: '35px',
+    verticalAlign: 'middle',
+    paddingTop: '0px',
+    paddingBottom: '0px',
+    paddingLeft: '12px',
+    paddingRight: '12px',
+    border: 'none',
+    fontSize: '11px',
+    fontWeight: 'bold',
+    textTransform: 'uppercase'
+  }
+
+  const thLeft = { ...thBase, textAlign: 'left' }
+  const thCenter = { ...thBase, textAlign: 'center' }
+  const thRight = { ...thBase, textAlign: 'right' }
+
   // --- PDF GENERATION ---
   const generatePdfBlob = async () => {
       const originalElement = invoiceRef.current
@@ -181,6 +201,7 @@ export default function CreateInvoice() {
 
       const clone = originalElement.cloneNode(true)
       
+      // Force dimensions and clear conflicting classes
       clone.style.width = '794px' 
       clone.style.minHeight = '1122px'
       clone.style.height = 'auto'
@@ -205,9 +226,10 @@ export default function CreateInvoice() {
         image: { type: 'jpeg', quality: 0.98 },
         enableLinks: true, 
         html2canvas: { 
-            scale: 2, 
+            scale: 1.5, // REDUCED SCALE TO PREVENT ROUNDING ERRORS
             useCORS: true, 
             scrollY: 0,
+            letterRendering: true, // IMPROVES TEXT RENDERING
             width: 794,
             windowWidth: 794 
         },
@@ -494,35 +516,14 @@ export default function CreateInvoice() {
                     </div>
                 </div>
 
-                <table className="w-full mb-6 border-collapse">
+                <table className="w-full mb-6 border-collapse" style={{ tableLayout: 'fixed' }}>
                 <thead>
-                    <tr style={{ color: theme.text }}>
-                        {/* FIXED PDF VERTICAL ALIGNMENT WITH FLEXBOX */}
-                        <th style={{ backgroundColor: theme.hex, width: '41.6%', padding: 0, border: 'none' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', height: '35px', paddingLeft: '12px', fontSize: '11px', fontWeight: 'bold' }}>
-                                ITEM
-                            </div>
-                        </th>
-                        <th style={{ backgroundColor: theme.hex, width: '16.6%', padding: 0, border: 'none' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', height: '35px', paddingLeft: '8px', fontSize: '11px', fontWeight: 'bold' }}>
-                                HSN
-                            </div>
-                        </th>
-                        <th style={{ backgroundColor: theme.hex, width: '8.33%', padding: 0, border: 'none' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '35px', fontSize: '11px', fontWeight: 'bold' }}>
-                                QTY
-                            </div>
-                        </th>
-                        <th style={{ backgroundColor: theme.hex, width: '16.6%', padding: 0, border: 'none' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', height: '35px', paddingRight: '12px', fontSize: '11px', fontWeight: 'bold' }}>
-                                PRICE
-                            </div>
-                        </th>
-                        <th style={{ backgroundColor: theme.hex, width: '16.6%', padding: 0, border: 'none' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', height: '35px', paddingRight: '12px', fontSize: '11px', fontWeight: 'bold' }}>
-                                TOTAL
-                            </div>
-                        </th>
+                    <tr>
+                        <th style={{ ...thLeft, width: '40%' }}>Item</th>
+                        <th style={{ ...thLeft, width: '15%' }}>HSN</th>
+                        <th style={{ ...thCenter, width: '10%' }}>Qty</th>
+                        <th style={{ ...thRight, width: '17.5%' }}>Price</th>
+                        <th style={{ ...thRight, width: '17.5%' }}>Total</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -530,13 +531,13 @@ export default function CreateInvoice() {
                     const amount = ((item.quantity||0) * (item.price||0));
                     return (
                         <tr key={i} className="border-b border-gray-200">
-                        <td className="py-2 px-2">
+                        <td className="py-2 px-2 text-left" style={{ width: '40%' }}>
                             <p className="font-semibold text-gray-800 text-sm">{item.description}</p>
                         </td>
-                        <td className="py-2 px-2 text-xs text-gray-600">{item.hsn}</td>
-                        <td className="text-center py-2 px-2 text-sm">{item.quantity}</td>
-                        <td className="text-right py-2 px-2 text-sm">₹{item.price}</td>
-                        <td className="text-right py-2 px-2 font-bold text-gray-800 text-sm">
+                        <td className="py-2 px-2 text-xs text-gray-600 text-left" style={{ width: '15%' }}>{item.hsn}</td>
+                        <td className="text-center py-2 px-2 text-sm" style={{ width: '10%' }}>{item.quantity}</td>
+                        <td className="text-right py-2 px-2 text-sm" style={{ width: '17.5%' }}>₹{item.price}</td>
+                        <td className="text-right py-2 px-2 font-bold text-gray-800 text-sm" style={{ width: '17.5%' }}>
                             ₹{(amount).toFixed(2)}
                         </td>
                         </tr>
