@@ -246,9 +246,10 @@ export default function CreateInvoice() {
         image: { type: 'jpeg', quality: 0.98 },
         enableLinks: true, 
         html2canvas: { 
-            scale: 1.25, 
+            scale: 2, // INCREASED SCALE FOR HIGH QUALITY
             useCORS: true, 
             scrollY: 0,
+            letterRendering: true, // Improves font rendering
             width: 794,
             windowWidth: 794 
         },
@@ -518,7 +519,6 @@ export default function CreateInvoice() {
                     <h1 className="text-2xl font-bold uppercase tracking-wide">Invoice</h1>
                     <p className="opacity-80 text-xs"># {existingInvoiceNo || 'DRAFT'}</p>
                 </div>
-                {/* INCREASED FONT SIZE SECTION */}
                 <div className="text-right" style={{ width: '50%' }}>
                     <h2 className="text-3xl font-bold leading-tight mb-1">{sellerProfile?.business_name || 'Your Business Name'}</h2>
                     <p className="opacity-90 text-sm leading-tight">{sellerProfile?.state}</p>
