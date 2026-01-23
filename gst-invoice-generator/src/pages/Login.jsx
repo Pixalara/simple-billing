@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { useNavigate } from 'react-router-dom'
 
@@ -16,28 +16,23 @@ export default function Login() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [otp, setOtp] = useState('')
 
-  // --- PREMIUM NOTIFICATION STATE ---
-  const [toast, setToast] = useState(null) // { message, type: 'success' | 'error' }
+  // TOAST STATE
+  const [toast, setToast] = useState(null) 
 
-  // Helper to show toast
   const showToast = (message, type = 'error') => {
     setToast({ message, type })
-    // Auto-hide after 4 seconds
     setTimeout(() => setToast(null), 4000)
   }
 
-  // --- HANDLERS ---
-
-  // 1. LOGIN
+  // --- LOGIC HANDLERS (Same as before) ---
   const handleLogin = async (e) => {
     e.preventDefault()
     setLoading(true)
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) throw error
-      
-      showToast('Welcome back! Redirecting...', 'success')
-      setTimeout(() => navigate('/dashboard'), 1500)
+      showToast('Welcome back!', 'success')
+      setTimeout(() => navigate('/dashboard'), 1000)
     } catch (error) {
       showToast(error.message, 'error')
     } finally {
@@ -45,19 +40,16 @@ export default function Login() {
     }
   }
 
-  // 2. INITIATE SIGNUP
   const handleSignupStart = async (e) => {
     e.preventDefault()
     if (password !== confirmPassword) return showToast("Passwords do not match!", 'error')
-    
     setLoading(true)
     try {
       const { error } = await supabase.auth.signInWithOtp({ email })
       if (error) throw error
-      
       setOtpContext('SIGNUP')
       setView('OTP_VERIFY')
-      showToast('6-digit OTP sent to your email!', 'success')
+      showToast('OTP sent to email!', 'success')
     } catch (error) {
       showToast(error.message, 'error')
     } finally {
@@ -65,17 +57,15 @@ export default function Login() {
     }
   }
 
-  // 3. INITIATE FORGOT PASSWORD
   const handleForgotStart = async (e) => {
     e.preventDefault()
     setLoading(true)
     try {
       const { error } = await supabase.auth.signInWithOtp({ email })
       if (error) throw error
-      
       setOtpContext('RECOVERY')
       setView('OTP_VERIFY')
-      showToast('Recovery OTP sent to your email!', 'success')
+      showToast('Recovery OTP sent!', 'success')
     } catch (error) {
       showToast(error.message, 'error')
     } finally {
@@ -83,27 +73,20 @@ export default function Login() {
     }
   }
 
-  // 4. VERIFY OTP
   const handleVerifyOtp = async (e) => {
     e.preventDefault()
     setLoading(true)
     try {
-      const { error } = await supabase.auth.verifyOtp({
-        email,
-        token: otp,
-        type: 'email'
-      })
+      const { error } = await supabase.auth.verifyOtp({ email, token: otp, type: 'email' })
       if (error) throw error
 
       if (otpContext === 'SIGNUP') {
         const { error: updateError } = await supabase.auth.updateUser({ password })
         if (updateError) throw updateError
-        
-        showToast('Account created! Entering Dashboard...', 'success')
-        setTimeout(() => navigate('/dashboard'), 2000)
+        showToast('Account created!', 'success')
+        setTimeout(() => navigate('/dashboard'), 1500)
       } else if (otpContext === 'RECOVERY') {
         setView('RESET_PASS')
-        showToast('OTP Verified. Please set a new password.', 'success')
       }
     } catch (error) {
       showToast(error.message, 'error')
@@ -112,36 +95,21 @@ export default function Login() {
     }
   }
 
-  // 5. RESET PASSWORD
   const handleResetPassword = async (e) => {
     e.preventDefault()
     if (password !== confirmPassword) return showToast("Passwords do not match!", 'error')
-    
     setLoading(true)
     try {
       const { error } = await supabase.auth.updateUser({ password })
       if (error) throw error
-      
       await supabase.auth.signOut() 
-      
       showToast('Password updated! Please log in.', 'success')
-      
-      // Delay switch to give user time to read success message
-      setTimeout(() => {
-          setPassword('')
-          setConfirmPassword('')
-          setView('LOGIN') 
-      }, 2000)
-      
+      setTimeout(() => { setPassword(''); setConfirmPassword(''); setView('LOGIN') }, 2000)
     } catch (error) {
       if (error.message.includes("different from the old password")) {
           await supabase.auth.signOut()
-          showToast("New password cannot be the same as old. Redirecting...", 'error')
-          setTimeout(() => {
-            setPassword('')
-            setConfirmPassword('')
-            setView('LOGIN')
-          }, 2000)
+          showToast("Same as old password. Redirecting to login...", 'success')
+          setTimeout(() => { setPassword(''); setConfirmPassword(''); setView('LOGIN') }, 2000)
       } else {
           showToast(error.message, 'error')
       }
@@ -150,187 +118,205 @@ export default function Login() {
     }
   }
 
+  // --- UI COMPONENTS ---
+  const CheckItem = ({ text }) => (
+    <div className="flex items-center gap-3 mb-3">
+        <div className="w-6 h-6 rounded-full bg-green-500/20 flex items-center justify-center border border-green-500/50">
+            <svg className="w-3.5 h-3.5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+        </div>
+        <span className="text-slate-200 font-medium">{text}</span>
+    </div>
+  )
+
+  const InputField = ({ label, type, placeholder, value, onChange, ...props }) => (
+    <div className="mb-4">
+        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 ml-1">{label}</label>
+        <input 
+            type={type} 
+            placeholder={placeholder}
+            className="w-full bg-[#1e293b]/80 border border-slate-700/50 rounded-xl px-4 py-3.5 text-white placeholder-slate-500 focus:ring-2 focus:ring-blue-500 focus:bg-[#1e293b] outline-none transition-all duration-200 shadow-inner"
+            value={value} 
+            onChange={onChange} 
+            {...props}
+        />
+    </div>
+  )
+
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-cover bg-center relative" 
-         style={{ backgroundImage: "url('https://images.unsplash.com/photo-1497366216548-37526070297c?q=80&w=2301&auto=format&fit=crop')" }}>
+    <div className="min-h-screen w-full flex items-center justify-center bg-[#0f172a] relative overflow-hidden font-sans">
       
-      {/* Background Overlay */}
-      <div className="absolute inset-0 bg-gradient-to-br from-slate-900/95 via-blue-900/90 to-slate-900/95"></div>
+      {/* Background Image & Overlay */}
+      <div className="absolute inset-0 z-0">
+        <img src="https://images.unsplash.com/photo-1497366216548-37526070297c?q=80&w=2301&auto=format&fit=crop" className="w-full h-full object-cover opacity-20" alt="Office" />
+        <div className="absolute inset-0 bg-gradient-to-br from-[#0f172a] via-[#1e1b4b]/90 to-[#0f172a]"></div>
+      </div>
 
-      {/* --- PREMIUM TOAST NOTIFICATION COMPONENT --- */}
+      {/* Toast Notification */}
       {toast && (
-        <div className={`fixed top-6 right-6 z-50 flex items-center gap-4 px-6 py-4 rounded-2xl shadow-2xl backdrop-blur-xl border animate-bounce-in transition-all duration-300 transform ${
-            toast.type === 'success' 
-            ? 'bg-emerald-500/20 border-emerald-500/30 text-emerald-100' 
-            : 'bg-red-500/20 border-red-500/30 text-red-100'
-        }`}>
-            {/* Icon */}
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${toast.type === 'success' ? 'bg-emerald-500' : 'bg-red-500'}`}>
-                {toast.type === 'success' ? (
-                    <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" /></svg>
-                ) : (
-                    <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M6 18L18 6M6 6l12 12" /></svg>
-                )}
-            </div>
-            
-            {/* Message */}
-            <div>
-                <h4 className="font-bold text-sm">{toast.type === 'success' ? 'Success' : 'Error'}</h4>
-                <p className="text-xs opacity-90">{toast.message}</p>
-            </div>
-
-            {/* Close Button */}
-            <button onClick={() => setToast(null)} className="ml-2 opacity-50 hover:opacity-100">✕</button>
+        <div className={`fixed top-6 right-6 z-50 flex items-center gap-4 px-6 py-4 rounded-xl shadow-2xl backdrop-blur-xl border animate-bounce-in ${toast.type === 'success' ? 'bg-emerald-900/80 border-emerald-500/30 text-emerald-100' : 'bg-red-900/80 border-red-500/30 text-red-100'}`}>
+            <span className="font-bold">{toast.message}</span>
         </div>
       )}
 
-      {/* Main Container */}
-      <div className="relative z-10 w-full max-w-md p-6">
+      {/* Main Content Grid */}
+      <div className="relative z-10 w-full max-w-6xl mx-auto p-4 lg:p-8 flex flex-col lg:flex-row items-center justify-center gap-12 lg:gap-20">
         
-        {/* Card */}
-        <div className="bg-white/10 backdrop-blur-xl border border-white/20 p-8 rounded-3xl shadow-2xl">
+        {/* LEFT SIDE: Marketing Info */}
+        <div className="w-full max-w-md lg:max-w-lg text-center lg:text-left space-y-6">
             
-            <div className="text-center mb-8">
-                <h2 className="text-3xl font-bold text-white mb-2">
-                    {view === 'LOGIN' && 'Welcome Back'}
-                    {view === 'SIGNUP' && 'Create Account'}
-                    {view === 'FORGOT_PASS' && 'Reset Password'}
-                    {view === 'OTP_VERIFY' && 'Verify OTP'}
-                    {view === 'RESET_PASS' && 'New Password'}
-                </h2>
-                <p className="text-slate-300 text-sm">
-                    {view === 'LOGIN' && 'Enter your details to access your dashboard.'}
-                    {view === 'SIGNUP' && 'Enter your email and create a password.'}
-                    {view === 'FORGOT_PASS' && 'We will send a code to your email.'}
-                    {view === 'OTP_VERIFY' && `Enter the code sent to ${email}`}
-                    {view === 'RESET_PASS' && 'Create your new strong password.'}
-                </p>
+            {/* Badge */}
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-600/20 border border-blue-500/30 backdrop-blur-sm mx-auto lg:mx-0">
+                <span className="text-xs font-bold text-blue-300 tracking-wide">🚀 #1 GST BILLING PLATFORM</span>
             </div>
 
-            {/* --- VIEW: LOGIN --- */}
-            {view === 'LOGIN' && (
-                <form onSubmit={handleLogin} className="space-y-5">
-                    <div>
-                        <label className="block text-xs font-semibold text-slate-300 uppercase mb-1 ml-1">Email</label>
-                        <input type="email" placeholder="name@company.com" className="w-full bg-slate-900/50 border border-slate-600 rounded-xl px-4 py-3.5 text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                            value={email} onChange={(e) => setEmail(e.target.value)} required />
-                    </div>
-                    <div>
-                        <label className="block text-xs font-semibold text-slate-300 uppercase mb-1 ml-1">Password</label>
-                        <input type="password" placeholder="••••••••" className="w-full bg-slate-900/50 border border-slate-600 rounded-xl px-4 py-3.5 text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                            value={password} onChange={(e) => setPassword(e.target.value)} required />
-                        <div className="text-right mt-1">
-                            <button type="button" onClick={() => setView('FORGOT_PASS')} className="text-xs text-blue-300 hover:text-white transition-colors">Forgot Password?</button>
+            {/* Heading */}
+            <h1 className="text-4xl md:text-5xl font-extrabold text-white leading-tight">
+                Create <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400">Professional Invoices</span> in Seconds.
+            </h1>
+
+            {/* Subtext */}
+            <p className="text-slate-400 text-lg leading-relaxed">
+                Join thousands of businesses who trust <span className="text-white font-semibold">Pixalara</span> for GST billing and automated WhatsApp sharing.
+            </p>
+
+            {/* Checkmarks */}
+            <div className="pt-2 flex flex-col items-center lg:items-start gap-1">
+                <CheckItem text="100% GST Compliant" />
+                <CheckItem text="Secure Cloud Storage" />
+                <CheckItem text="Mobile & Desktop Ready" />
+            </div>
+        </div>
+
+        {/* RIGHT SIDE: Auth Card */}
+        <div className="w-full max-w-[420px]">
+            <div className="bg-white/5 backdrop-blur-2xl border border-white/10 p-8 rounded-3xl shadow-2xl relative overflow-hidden group">
+                
+                {/* Subtle gradient blob inside card */}
+                <div className="absolute -top-20 -right-20 w-40 h-40 bg-blue-500/20 rounded-full blur-3xl pointer-events-none group-hover:bg-blue-500/30 transition-all duration-700"></div>
+
+                <div className="text-center mb-8 relative z-10">
+                    <h2 className="text-2xl font-bold text-white mb-2">
+                        {view === 'LOGIN' && 'Welcome Back'}
+                        {view === 'SIGNUP' && 'Get Started Free'}
+                        {view === 'FORGOT_PASS' && 'Reset Password'}
+                        {view === 'OTP_VERIFY' && 'Verify It\'s You'}
+                        {view === 'RESET_PASS' && 'New Password'}
+                    </h2>
+                    <p className="text-slate-400 text-xs">
+                        {view === 'LOGIN' && 'Enter your details to access your dashboard.'}
+                        {view === 'SIGNUP' && 'Create your account in 30 seconds.'}
+                        {view === 'FORGOT_PASS' && 'We\'ll send a code to your email.'}
+                        {view === 'OTP_VERIFY' && `Code sent to ${email}`}
+                        {view === 'RESET_PASS' && 'Secure your account with a new password.'}
+                    </p>
+                </div>
+
+                {/* --- LOGIN FORM --- */}
+                {view === 'LOGIN' && (
+                    <form onSubmit={handleLogin}>
+                        <InputField label="Business Email" type="email" placeholder="name@company.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                        <InputField label="Password" type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                        
+                        <div className="text-right -mt-2 mb-6">
+                            <button type="button" onClick={() => setView('FORGOT_PASS')} className="text-[11px] font-semibold text-blue-400 hover:text-blue-300 transition-colors">Forgot Password?</button>
                         </div>
-                    </div>
-                    <button type="submit" disabled={loading} className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold py-4 rounded-xl shadow-lg transform transition hover:scale-[1.02] disabled:opacity-70 mt-2">
-                        {loading ? 'Processing...' : 'Sign In'}
-                    </button>
-                    <div className="text-center pt-4">
-                        <p className="text-slate-300 text-sm">Don't have an account? <button type="button" onClick={() => setView('SIGNUP')} className="text-blue-400 font-bold hover:underline ml-1">Sign Up</button></p>
-                    </div>
-                </form>
-            )}
 
-            {/* --- VIEW: SIGNUP --- */}
-            {view === 'SIGNUP' && (
-                <form onSubmit={handleSignupStart} className="space-y-5">
-                    <div>
-                        <label className="block text-xs font-semibold text-slate-300 uppercase mb-1 ml-1">Email</label>
-                        <input type="email" placeholder="name@company.com" className="w-full bg-slate-900/50 border border-slate-600 rounded-xl px-4 py-3.5 text-white focus:ring-2 focus:ring-blue-500 outline-none"
-                            value={email} onChange={(e) => setEmail(e.target.value)} required />
-                    </div>
-                    <div>
-                        <label className="block text-xs font-semibold text-slate-300 uppercase mb-1 ml-1">Create Password</label>
-                        <input type="password" placeholder="••••••••" className="w-full bg-slate-900/50 border border-slate-600 rounded-xl px-4 py-3.5 text-white focus:ring-2 focus:ring-blue-500 outline-none"
-                            value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
-                    </div>
-                    <div>
-                        <label className="block text-xs font-semibold text-slate-300 uppercase mb-1 ml-1">Re-enter Password</label>
-                        <input type="password" placeholder="••••••••" className="w-full bg-slate-900/50 border border-slate-600 rounded-xl px-4 py-3.5 text-white focus:ring-2 focus:ring-blue-500 outline-none"
-                            value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required minLength={6} />
-                    </div>
-                    <button type="submit" disabled={loading} className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold py-4 rounded-xl shadow-lg transform transition hover:scale-[1.02] disabled:opacity-70 mt-2">
-                        {loading ? 'Sending OTP...' : 'Send OTP'}
-                    </button>
-                    <div className="text-center pt-4">
-                        <p className="text-slate-300 text-sm">Already have an account? <button type="button" onClick={() => setView('LOGIN')} className="text-blue-400 font-bold hover:underline ml-1">Log In</button></p>
-                    </div>
-                </form>
-            )}
+                        <button type="submit" disabled={loading} className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-blue-500/20 transform transition active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed">
+                            {loading ? 'Signing In...' : 'Sign In to Dashboard'}
+                        </button>
 
-            {/* --- VIEW: FORGOT PASSWORD --- */}
-            {view === 'FORGOT_PASS' && (
-                <form onSubmit={handleForgotStart} className="space-y-5">
-                    <div>
-                        <label className="block text-xs font-semibold text-slate-300 uppercase mb-1 ml-1">Registered Email</label>
-                        <input type="email" placeholder="name@company.com" className="w-full bg-slate-900/50 border border-slate-600 rounded-xl px-4 py-3.5 text-white focus:ring-2 focus:ring-blue-500 outline-none"
-                            value={email} onChange={(e) => setEmail(e.target.value)} required />
-                    </div>
-                    <button type="submit" disabled={loading} className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold py-4 rounded-xl shadow-lg transform transition hover:scale-[1.02] disabled:opacity-70 mt-2">
-                        {loading ? 'Sending...' : 'Send OTP'}
-                    </button>
-                    <div className="text-center pt-4">
-                        <button type="button" onClick={() => setView('LOGIN')} className="text-slate-400 text-sm hover:text-white">← Back to Login</button>
-                    </div>
-                </form>
-            )}
+                        <div className="mt-6 pt-6 border-t border-white/10 text-center">
+                            <p className="text-xs text-slate-400">Don't have an account? <button type="button" onClick={() => setView('SIGNUP')} className="text-blue-400 font-bold hover:text-blue-300 ml-1">Sign Up Free</button></p>
+                        </div>
+                    </form>
+                )}
 
-            {/* --- VIEW: OTP VERIFY --- */}
-            {view === 'OTP_VERIFY' && (
-                <form onSubmit={handleVerifyOtp} className="space-y-5">
-                    <div>
-                        <label className="block text-xs font-semibold text-slate-300 uppercase mb-1 ml-1">One Time Password</label>
-                        <input 
+                {/* --- SIGNUP FORM --- */}
+                {view === 'SIGNUP' && (
+                    <form onSubmit={handleSignupStart}>
+                        <InputField label="Business Email" type="email" placeholder="name@company.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                        <InputField label="Create Password" type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
+                        <InputField label="Confirm Password" type="password" placeholder="••••••••" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required minLength={6} />
+
+                        <button type="submit" disabled={loading} className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-blue-500/20 transform transition active:scale-[0.98] mt-2">
+                            {loading ? 'Processing...' : 'Create Account'}
+                        </button>
+
+                        <div className="mt-6 pt-6 border-t border-white/10 text-center">
+                            <p className="text-xs text-slate-400">Already have an account? <button type="button" onClick={() => setView('LOGIN')} className="text-blue-400 font-bold hover:text-blue-300 ml-1">Sign In</button></p>
+                        </div>
+                    </form>
+                )}
+
+                {/* --- FORGOT PASSWORD --- */}
+                {view === 'FORGOT_PASS' && (
+                    <form onSubmit={handleForgotStart}>
+                        <InputField label="Registered Email" type="email" placeholder="name@company.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                        
+                        <button type="submit" disabled={loading} className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-blue-500/20 transform transition active:scale-[0.98] mt-2">
+                            {loading ? 'Sending Code...' : 'Send Verification Code'}
+                        </button>
+
+                        <div className="mt-6 text-center">
+                            <button type="button" onClick={() => setView('LOGIN')} className="text-xs font-bold text-slate-400 hover:text-white transition-colors">← Back to Login</button>
+                        </div>
+                    </form>
+                )}
+
+                {/* --- OTP VERIFY --- */}
+                {view === 'OTP_VERIFY' && (
+                    <form onSubmit={handleVerifyOtp}>
+                        <InputField 
+                            label="6-Digit Code" 
                             type="text" 
                             placeholder="000000" 
-                            className="w-full bg-slate-900/50 border border-slate-600 rounded-xl px-4 py-3.5 text-white focus:ring-2 focus:ring-blue-500 outline-none tracking-[0.5em] text-center text-2xl font-mono placeholder-slate-600"
                             value={otp} 
-                            onChange={(e) => {
-                                const val = e.target.value.replace(/\D/g, '');
-                                if (val.length <= 6) setOtp(val);
-                            }} 
-                            required 
+                            onChange={(e) => { const val = e.target.value.replace(/\D/g, ''); if(val.length <= 6) setOtp(val); }} 
                             maxLength={6}
+                            required 
+                            className="w-full bg-[#1e293b]/80 border border-slate-700/50 rounded-xl px-4 py-3.5 text-white text-center text-2xl font-mono tracking-[0.5em] focus:ring-2 focus:ring-blue-500 outline-none transition-all shadow-inner"
                         />
-                    </div>
-                    <button type="submit" disabled={loading} className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold py-4 rounded-xl shadow-lg transform transition hover:scale-[1.02] disabled:opacity-70 mt-2">
-                        {loading ? 'Verifying...' : 'Verify & Proceed'}
-                    </button>
-                    <div className="text-center pt-4">
-                        <button type="button" onClick={() => setView('LOGIN')} className="text-slate-400 text-sm hover:text-white">Cancel</button>
-                    </div>
-                </form>
-            )}
+                        
+                        <button type="submit" disabled={loading} className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-blue-500/20 transform transition active:scale-[0.98] mt-4">
+                            {loading ? 'Verifying...' : 'Verify & Continue'}
+                        </button>
 
-            {/* --- VIEW: RESET PASSWORD --- */}
-            {view === 'RESET_PASS' && (
-                <form onSubmit={handleResetPassword} className="space-y-5">
-                    <div>
-                        <label className="block text-xs font-semibold text-slate-300 uppercase mb-1 ml-1">New Password</label>
-                        <input type="password" placeholder="••••••••" className="w-full bg-slate-900/50 border border-slate-600 rounded-xl px-4 py-3.5 text-white focus:ring-2 focus:ring-blue-500 outline-none"
-                            value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
-                    </div>
-                    <div>
-                        <label className="block text-xs font-semibold text-slate-300 uppercase mb-1 ml-1">Confirm New Password</label>
-                        <input type="password" placeholder="••••••••" className="w-full bg-slate-900/50 border border-slate-600 rounded-xl px-4 py-3.5 text-white focus:ring-2 focus:ring-blue-500 outline-none"
-                            value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required minLength={6} />
-                    </div>
-                    <button type="submit" disabled={loading} className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold py-4 rounded-xl shadow-lg transform transition hover:scale-[1.02] disabled:opacity-70 mt-2">
-                        {loading ? 'Updating...' : 'Set New Password'}
-                    </button>
-                    <div className="text-center pt-4">
-                        <button type="button" onClick={() => { supabase.auth.signOut(); setView('LOGIN'); }} className="text-slate-400 text-sm hover:text-white">Cancel / Back to Login</button>
-                    </div>
-                </form>
-            )}
+                        <div className="mt-6 text-center">
+                            <button type="button" onClick={() => setView('LOGIN')} className="text-xs font-bold text-slate-400 hover:text-white transition-colors">Cancel</button>
+                        </div>
+                    </form>
+                )}
 
-        </div>
-        
-        <div className="w-full text-center z-20 py-4">
-            <p className="text-[11px] text-slate-400 opacity-60">
-                Powered by <a href="https://pixalara.com" target="_blank" rel="noreferrer" className="hover:text-white transition-colors underline">pixalara.com</a>
-            </p>
+                {/* --- RESET PASSWORD --- */}
+                {view === 'RESET_PASS' && (
+                    <form onSubmit={handleResetPassword}>
+                        <InputField label="New Password" type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
+                        <InputField label="Confirm New Password" type="password" placeholder="••••••••" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required minLength={6} />
+
+                        <button type="submit" disabled={loading} className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-blue-500/20 transform transition active:scale-[0.98] mt-2">
+                            {loading ? 'Updating...' : 'Set New Password'}
+                        </button>
+                        
+                        <div className="mt-6 text-center">
+                            <button type="button" onClick={() => { supabase.auth.signOut(); setView('LOGIN'); }} className="text-xs font-bold text-slate-400 hover:text-white transition-colors">Cancel</button>
+                        </div>
+                    </form>
+                )}
+
+                {/* Security Badge */}
+                <div className="mt-8 flex items-center justify-center gap-2 opacity-50">
+                    <svg className="w-3 h-3 text-yellow-500" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" /></svg>
+                    <span className="text-[10px] text-slate-400 font-medium">256-bit SSL Encrypted • Trusted by 10,000+ Businesses</span>
+                </div>
+
+            </div>
+            
+            {/* Footer */}
+            <div className="mt-6 text-center">
+                <p className="text-[10px] text-slate-500">
+                    Powered by <a href="https://pixalara.com" target="_blank" rel="noreferrer" className="hover:text-blue-400 transition-colors">pixalara.com</a>
+                </p>
+            </div>
         </div>
 
       </div>
