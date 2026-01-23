@@ -310,11 +310,32 @@ export default function CreateInvoice() {
     }
   }
 
-  // --- SEND EMAIL HANDLER (Replaces Print) ---
-  const handleSendEmail = () => {
-    const subject = `Invoice ${existingInvoiceNo || ''} from ${sellerProfile?.business_name || 'Us'}`
-    const body = `Dear ${formData.buyer_name || 'Customer'},\n\nPlease find the invoice attached.\n\nBest Regards,\n${sellerProfile?.business_name || ''}`
-    window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
+  // --- SEND EMAIL HANDLER (AUTO-DOWNLOAD + OPEN DRAFT) ---
+  const handleSendEmail = async () => {
+    // 1. Generate & Download PDF First
+    try {
+        const result = await generatePdfBlob()
+        if (result) {
+            const url = URL.createObjectURL(result.blob)
+            const a = document.createElement('a')
+            a.href = url
+            a.download = result.filename
+            a.click()
+        }
+    } catch (e) {
+        alert('Error generating PDF for email')
+        return
+    }
+
+    // 2. Open Email Client
+    setTimeout(() => {
+        const subject = `Invoice ${existingInvoiceNo || ''} from ${sellerProfile?.business_name || 'Us'}`
+        const body = `Dear ${formData.buyer_name || 'Customer'},\n\nPlease find the invoice attached.\n\nBest Regards,\n${sellerProfile?.business_name || ''}`
+        window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
+        
+        // 3. Inform User
+        alert('PDF has been downloaded. Please attach the file to the email draft that opened.')
+    }, 1000)
   }
 
   const onSubmit = async (data) => {
