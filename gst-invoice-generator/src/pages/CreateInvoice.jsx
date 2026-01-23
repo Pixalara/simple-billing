@@ -538,18 +538,16 @@ export default function CreateInvoice() {
                         {formData.buyer_gstin && <p className="text-xs font-semibold mt-1">GSTIN: {formData.buyer_gstin}</p>}
                     </div>
                     <div className="text-right" style={{ width: '35%' }}>
-                        {/* PROFESSIONALLY ALIGNED DATE SECTION USING GRID & BASELINE */}
-                        <div className="grid grid-cols-[auto_auto] gap-x-3 justify-end items-baseline">
-                            <span className="text-gray-500 text-xs text-right">Date:</span>
-                            <span className="font-semibold text-sm text-right">{formatDate(formData.invoiceDate)}</span>
-                            
-                            {formData.dueDate && (
-                                <>
-                                    <span className="text-gray-500 text-xs text-right">Due Date:</span>
-                                    <span className="font-semibold text-sm text-right">{formatDate(formData.dueDate)}</span>
-                                </>
-                            )}
+                        <div className="mb-1 flex justify-end gap-2 items-center">
+                            <span className="text-gray-500 text-xs">Date:</span>
+                            <span className="font-semibold text-sm">{formatDate(formData.invoiceDate)}</span>
                         </div>
+                        {formData.dueDate && (
+                            <div className="flex justify-end gap-2 items-center">
+                                <span className="text-gray-500 text-xs">Due Date:</span>
+                                <span className="font-semibold text-sm">{formatDate(formData.dueDate)}</span>
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -557,25 +555,28 @@ export default function CreateInvoice() {
                     <table style={{ width: '740px', tableLayout: 'fixed', borderCollapse: 'collapse' }}>
                         <thead>
                             <tr style={{ backgroundColor: theme.hex, color: theme.text }}>
+                                {/* FIXED HEIGHT PDF HEADER CELL */}
                                 <th style={{ 
                                     width: '300px', 
-                                    height: '20px', 
+                                    height: '35px', 
+                                    maxHeight: '35px',
+                                    overflow: 'hidden',
                                     verticalAlign: 'middle', 
                                     backgroundColor: theme.hex, 
                                     color: theme.text 
                                 }}>
                                     <div style={{ display: 'flex', alignItems: 'center', height: '100%', paddingLeft: '12px', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }}>ITEM</div>
                                 </th>
-                                <th style={{ width: '110px', height: '20px', verticalAlign: 'middle', backgroundColor: theme.hex, color: theme.text }}>
+                                <th style={{ width: '110px', height: '35px', maxHeight: '35px', overflow: 'hidden', verticalAlign: 'middle', backgroundColor: theme.hex, color: theme.text }}>
                                     <div style={{ display: 'flex', alignItems: 'center', height: '100%', paddingLeft: '8px', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }}>HSN</div>
                                 </th>
-                                <th style={{ width: '70px', height: '40px', verticalAlign: 'middle', backgroundColor: theme.hex, color: theme.text }}>
+                                <th style={{ width: '70px', height: '35px', maxHeight: '35px', overflow: 'hidden', verticalAlign: 'middle', backgroundColor: theme.hex, color: theme.text }}>
                                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }}>QTY</div>
                                 </th>
-                                <th style={{ width: '120px', height: '40px', verticalAlign: 'middle', backgroundColor: theme.hex, color: theme.text }}>
+                                <th style={{ width: '120px', height: '35px', maxHeight: '35px', overflow: 'hidden', verticalAlign: 'middle', backgroundColor: theme.hex, color: theme.text }}>
                                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', height: '100%', paddingRight: '12px', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }}>PRICE</div>
                                 </th>
-                                <th style={{ width: '140px', height: '40px', verticalAlign: 'middle', backgroundColor: theme.hex, color: theme.text }}>
+                                <th style={{ width: '140px', height: '35px', maxHeight: '35px', overflow: 'hidden', verticalAlign: 'middle', backgroundColor: theme.hex, color: theme.text }}>
                                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', height: '100%', paddingRight: '12px', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }}>TOTAL</div>
                                 </th>
                             </tr>
