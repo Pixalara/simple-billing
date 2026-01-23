@@ -2,13 +2,14 @@ import { useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { useNavigate } from 'react-router-dom'
 
-// --- COMPONENTS DEFINED OUTSIDE TO FIX INPUT BUG ---
+// --- COMPONENTS MOVED OUTSIDE TO FIX TYPING BUG ---
+
 const CheckItem = ({ text }) => (
-  <div className="flex items-center gap-3 mb-4">
-      <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center border border-green-500/50 shrink-0">
-          <svg className="w-5 h-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+  <div className="flex items-center gap-3 mb-3">
+      <div className="w-6 h-6 rounded-full bg-green-500/20 flex items-center justify-center border border-green-500/50 shrink-0">
+          <svg className="w-3.5 h-3.5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
       </div>
-      <span className="text-slate-100 text-lg md:text-xl font-medium tracking-wide">{text}</span>
+      <span className="text-slate-200 text-lg font-medium tracking-wide text-left">{text}</span>
   </div>
 )
 
@@ -159,28 +160,28 @@ export default function Login() {
       )}
 
       {/* Main Content Grid */}
-      <div className="relative z-10 w-full max-w-7xl mx-auto p-6 lg:p-12 flex flex-col lg:flex-row items-center justify-between gap-12 lg:gap-20">
+      <div className="relative z-10 w-full max-w-7xl mx-auto p-4 lg:p-12 flex flex-col lg:flex-row items-center justify-between gap-12 lg:gap-24">
         
-        {/* LEFT SIDE: Marketing Info (Increased Size) */}
-        <div className="w-full lg:w-1/2 text-center lg:text-left space-y-8">
+        {/* LEFT SIDE: Marketing Info */}
+        <div className="w-full lg:w-1/2 text-center lg:text-left space-y-8 mt-8 lg:mt-0">
             
             {/* Badge */}
             <div className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-blue-600/20 border border-blue-500/30 backdrop-blur-sm mx-auto lg:mx-0">
                 <span className="text-sm font-bold text-blue-300 tracking-wider">🚀 #1 GST BILLING PLATFORM</span>
             </div>
 
-            {/* Heading - Increased Font Size significantly */}
-            <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold text-white leading-[1.1] tracking-tight">
+            {/* Heading - Large on Mobile as requested */}
+            <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold text-white leading-tight tracking-tight">
                 Create <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400">Professional Invoices</span> in Seconds.
             </h1>
 
-            {/* Subtext - Increased Font Size */}
-            <p className="text-slate-300 text-xl md:text-2xl leading-relaxed max-w-2xl mx-auto lg:mx-0">
+            {/* Subtext */}
+            <p className="text-slate-300 text-xl leading-relaxed max-w-2xl mx-auto lg:mx-0">
                 Join thousands of businesses who trust <span className="text-white font-semibold">Pixalara</span> for GST billing and automated WhatsApp sharing.
             </p>
 
-            {/* Checkmarks */}
-            <div className="pt-4 flex flex-col items-center lg:items-start gap-2">
+            {/* Checkmarks - Fixed Alignment Logic: Centered Block, Left Aligned Items */}
+            <div className="pt-4 flex flex-col gap-1 w-fit mx-auto lg:mx-0 items-start">
                 <CheckItem text="100% GST Compliant" />
                 <CheckItem text="Secure Cloud Storage" />
                 <CheckItem text="Mobile & Desktop Ready" />
@@ -188,7 +189,7 @@ export default function Login() {
         </div>
 
         {/* RIGHT SIDE: Auth Card */}
-        <div className="w-full max-w-[480px]">
+        <div className="w-full max-w-[480px] mx-auto lg:mx-0">
             <div className="bg-white/5 backdrop-blur-2xl border border-white/10 p-8 md:p-10 rounded-3xl shadow-2xl relative overflow-hidden group">
                 
                 {/* Subtle gradient blob */}
