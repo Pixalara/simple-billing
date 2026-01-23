@@ -174,7 +174,7 @@ export default function CreateInvoice() {
     return ''; 
   }
 
-  // --- PDF GENERATION (ROBUST FIX) ---
+  // --- PDF GENERATION ---
   const generatePdfBlob = async () => {
       const originalElement = invoiceRef.current
       if (!originalElement) return null;
@@ -185,7 +185,7 @@ export default function CreateInvoice() {
       clone.style.width = '794px' 
       clone.style.minHeight = '1122px' // A4 height
       clone.style.height = 'auto'
-      clone.style.overflow = 'visible' // Ensure content isn't clipped inside
+      clone.style.overflow = 'visible'
       clone.style.transform = 'none'
       clone.style.margin = '0'
       clone.style.backgroundColor = 'white'
@@ -196,7 +196,7 @@ export default function CreateInvoice() {
       container.style.top = '0'
       container.style.left = '0'
       container.style.zIndex = '-1000'
-      container.style.width = '794px' // Match A4 width
+      container.style.width = '794px' 
       container.appendChild(clone)
       document.body.appendChild(container)
 
@@ -204,10 +204,10 @@ export default function CreateInvoice() {
         margin: 0,
         filename: `Invoice_${formData.buyer_name || 'Customer'}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
-        enableLinks: false, 
+        enableLinks: true, // ENABLED LINKS HERE
         html2canvas: { 
             scale: 2, 
-            useCORS: true, // Critical for images
+            useCORS: true, 
             scrollY: 0,
             width: 794,
             windowWidth: 794 
@@ -450,14 +450,13 @@ export default function CreateInvoice() {
                 style={{ width: '210mm', minHeight: '297mm', padding: '0' }}
             >
             
-            {/* Header: Flex Row instead of Grid */}
             <div className="px-6 py-4 flex justify-between" style={{ backgroundColor: theme.hex, color: theme.text }}>
                 <div style={{ width: '50%' }}>
                     {sellerProfile?.logo_url && (
                         <img 
                             src={sellerProfile.logo_url} 
                             alt="Logo" 
-                            crossOrigin="anonymous" // FIX for CORS images in PDF
+                            crossOrigin="anonymous" 
                             className="h-12 w-auto mb-1 object-contain bg-white rounded p-0.5" 
                         />
                     )}
@@ -474,7 +473,6 @@ export default function CreateInvoice() {
             </div>
 
             <div className="px-6 py-4 pb-12">
-                {/* Bill To: Flex Row */}
                 <div className="flex justify-between mb-6">
                     <div style={{ width: '60%' }}>
                         <h3 className="text-gray-500 text-[10px] uppercase font-bold mb-1">Bill To</h3>
@@ -500,12 +498,15 @@ export default function CreateInvoice() {
                 <table className="w-full mb-6 border-collapse">
                 <thead>
                     <tr style={{ color: theme.text }}>
-                        {/* STYLE APPLIED DIRECTLY TO CELLS FOR PDF COMPATIBILITY */}
-                        <th className="text-left px-3 text-xs font-bold uppercase w-5/12" style={{ backgroundColor: theme.hex, height: '32px', lineHeight: '32px', verticalAlign: 'middle', padding: 0 }}>Item</th>
-                        <th className="text-left px-3 text-xs font-bold uppercase w-2/12" style={{ backgroundColor: theme.hex, height: '32px', lineHeight: '32px', verticalAlign: 'middle', padding: 0 }}>HSN</th>
-                        <th className="text-center px-3 text-xs font-bold uppercase w-1/12" style={{ backgroundColor: theme.hex, height: '32px', lineHeight: '32px', verticalAlign: 'middle', padding: 0 }}>Qty</th>
-                        <th className="text-right px-3 text-xs font-bold uppercase w-2/12" style={{ backgroundColor: theme.hex, height: '32px', lineHeight: '32px', verticalAlign: 'middle', padding: 0 }}>Price</th>
-                        <th className="text-right px-3 text-xs font-bold uppercase w-2/12" style={{ backgroundColor: theme.hex, height: '32px', lineHeight: '32px', verticalAlign: 'middle', padding: 0 }}>Total</th>
+                        {/* UPDATED HEADER STYLES FOR PDF:
+                            1. Padding '8px' instead of explicit line-height for safer centering.
+                            2. VerticalAlign 'middle' for standard tables.
+                        */}
+                        <th className="text-left px-3 text-xs font-bold uppercase w-5/12" style={{ backgroundColor: theme.hex, padding: '8px', verticalAlign: 'middle' }}>Item</th>
+                        <th className="text-left px-3 text-xs font-bold uppercase w-2/12" style={{ backgroundColor: theme.hex, padding: '8px', verticalAlign: 'middle' }}>HSN</th>
+                        <th className="text-center px-3 text-xs font-bold uppercase w-1/12" style={{ backgroundColor: theme.hex, padding: '8px', verticalAlign: 'middle' }}>Qty</th>
+                        <th className="text-right px-3 text-xs font-bold uppercase w-2/12" style={{ backgroundColor: theme.hex, padding: '8px', verticalAlign: 'middle' }}>Price</th>
+                        <th className="text-right px-3 text-xs font-bold uppercase w-2/12" style={{ backgroundColor: theme.hex, padding: '8px', verticalAlign: 'middle' }}>Total</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -528,7 +529,6 @@ export default function CreateInvoice() {
                 </tbody>
                 </table>
                 
-                {/* Totals Section */}
                 <div className="flex justify-end">
                     <div className="w-5/12 space-y-1 border-b pb-3">
                         <div className="flex justify-between text-gray-600 text-sm"><span>Subtotal</span><span>₹{totals.subtotal}</span></div>
@@ -560,7 +560,6 @@ export default function CreateInvoice() {
                     <p className="text-xs font-bold text-gray-800">{amountInWords}</p>
                 </div>
                 
-                {/* Footer / Bank Info */}
                 <div className="flex justify-between mt-8 items-end">
                     <div className="text-xs text-black w-7/12">
                         {sellerProfile?.bank_name && (
@@ -589,7 +588,7 @@ export default function CreateInvoice() {
                             <img 
                                 src={signaturePreview} 
                                 alt="Sign" 
-                                crossOrigin="anonymous" // FIX for CORS images
+                                crossOrigin="anonymous" 
                                 className="h-12 ml-auto mb-1 object-contain" 
                             />
                         )}
