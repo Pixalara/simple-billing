@@ -101,19 +101,14 @@ export default function Dashboard() {
     }
   }
 
-  // --- DELETE FUNCTION ---
   const handleDeleteInvoice = async (id, e) => {
-    e.stopPropagation() // Prevent triggering the row click (Edit)
-    
+    e.stopPropagation() 
     if (!window.confirm("Are you sure you want to delete this invoice? This cannot be undone.")) {
         return
     }
-
     try {
         const { error } = await supabase.from('invoices').delete().eq('id', id)
         if (error) throw error
-        
-        // Remove from local state instantly
         setInvoices(prev => prev.filter(inv => inv.id !== id))
     } catch (error) {
         alert('Error deleting: ' + error.message)
@@ -123,6 +118,31 @@ export default function Dashboard() {
   const handleLogout = async () => {
     await supabase.auth.signOut()
     navigate('/login')
+  }
+
+  // --- INPUT HANDLERS ---
+  const enforceLettersOnly = (e, fieldName) => {
+    // Allows letters and spaces only
+    const val = e.target.value.replace(/[^A-Za-z\s]/g, '')
+    setValue(fieldName, val)
+  }
+
+  const enforceNumbersOnly = (e, fieldName) => {
+    // Allows numbers only
+    const val = e.target.value.replace(/\D/g, '')
+    setValue(fieldName, val)
+  }
+
+  const enforceUpperCase = (e, fieldName) => {
+    // Forces uppercase
+    const val = e.target.value.toUpperCase()
+    setValue(fieldName, val)
+  }
+
+  const enforceCapitalLetters = (e, fieldName) => {
+    // Forces uppercase AND letters/spaces only (for Bank/Branch Name)
+    const val = e.target.value.replace(/[^A-Za-z\s]/g, '').toUpperCase()
+    setValue(fieldName, val)
   }
 
   if (loading) return <div className="p-10 text-center">Loading...</div>
@@ -166,11 +186,32 @@ export default function Dashboard() {
                 </div>
 
                 <form onSubmit={handleSubmit(updateProfile)} className="space-y-3">
-                    {['business_name', 'business_email', 'business_phone', 'website', 'gstin'].map(field => (
-                        <div key={field}>
-                            <input {...register(field)} placeholder={field.replace('_', ' ').toUpperCase()} className="w-full p-2 border rounded text-sm bg-gray-50 focus:bg-white transition-colors outline-none focus:ring-2 focus:ring-blue-100" />
-                        </div>
-                    ))}
+                    
+                    {/* Business Name: Letters Only */}
+                    <div>
+                        <input {...register('business_name')} placeholder="BUSINESS NAME" onChange={(e) => enforceLettersOnly(e, 'business_name')} className="w-full p-2 border rounded text-sm bg-gray-50 focus:bg-white transition-colors outline-none focus:ring-2 focus:ring-blue-100" />
+                    </div>
+
+                    {/* Email: Standard */}
+                    <div>
+                        <input {...register('business_email')} placeholder="BUSINESS EMAIL" className="w-full p-2 border rounded text-sm bg-gray-50 focus:bg-white transition-colors outline-none focus:ring-2 focus:ring-blue-100" />
+                    </div>
+
+                    {/* Phone: Numbers Only */}
+                    <div>
+                        <input {...register('business_phone')} placeholder="BUSINESS PHONE" onChange={(e) => enforceNumbersOnly(e, 'business_phone')} maxLength={10} className="w-full p-2 border rounded text-sm bg-gray-50 focus:bg-white transition-colors outline-none focus:ring-2 focus:ring-blue-100" />
+                    </div>
+
+                    {/* Website: Standard */}
+                    <div>
+                        <input {...register('website')} placeholder="WEBSITE" className="w-full p-2 border rounded text-sm bg-gray-50 focus:bg-white transition-colors outline-none focus:ring-2 focus:ring-blue-100" />
+                    </div>
+
+                    {/* GSTIN: Auto Uppercase */}
+                    <div>
+                        <input {...register('gstin')} placeholder="GSTIN" onChange={(e) => enforceUpperCase(e, 'gstin')} className="w-full p-2 border rounded text-sm bg-gray-50 focus:bg-white transition-colors outline-none focus:ring-2 focus:ring-blue-100" />
+                    </div>
+
                     <select {...register('state')} className="w-full p-2 border rounded text-sm bg-gray-50">
                         <option value="">Select State</option>
                         {INDIAN_STATES.map((s) => <option key={s} value={s}>{s}</option>)}
@@ -179,10 +220,18 @@ export default function Dashboard() {
                     <div className="pt-4 border-t mt-4">
                         <h3 className="text-xs font-bold text-gray-500 uppercase mb-2">Bank Details</h3>
                         <div className="space-y-2">
-                            <input {...register('bank_name')} placeholder="Bank Name" className="w-full p-2 border rounded text-sm bg-gray-50" />
-                            <input {...register('account_number')} placeholder="Account Number" className="w-full p-2 border rounded text-sm bg-gray-50" />
-                            <input {...register('ifsc_code')} placeholder="IFSC Code" className="w-full p-2 border rounded text-sm bg-gray-50" />
-                            <input {...register('branch_name')} placeholder="Branch Name" className="w-full p-2 border rounded text-sm bg-gray-50" />
+                            
+                            {/* Bank Name: Auto Capital + Letters Only */}
+                            <input {...register('bank_name')} placeholder="BANK NAME" onChange={(e) => enforceCapitalLetters(e, 'bank_name')} className="w-full p-2 border rounded text-sm bg-gray-50" />
+                            
+                            {/* Account Number: Numbers Only */}
+                            <input {...register('account_number')} placeholder="ACCOUNT NUMBER" onChange={(e) => enforceNumbersOnly(e, 'account_number')} className="w-full p-2 border rounded text-sm bg-gray-50" />
+                            
+                            {/* IFSC: Auto Capital */}
+                            <input {...register('ifsc_code')} placeholder="IFSC CODE" onChange={(e) => enforceUpperCase(e, 'ifsc_code')} className="w-full p-2 border rounded text-sm bg-gray-50" />
+                            
+                            {/* Branch Name: Auto Capital + Letters Only */}
+                            <input {...register('branch_name')} placeholder="BRANCH NAME" onChange={(e) => enforceCapitalLetters(e, 'branch_name')} className="w-full p-2 border rounded text-sm bg-gray-50" />
                         </div>
                     </div>
 
@@ -250,7 +299,6 @@ export default function Dashboard() {
                                             <span className="text-gray-900 font-bold text-base">₹{inv.total_amount}</span>
                                         </div>
                                         
-                                        {/* Mobile Delete Button (Absolute positioned) */}
                                         <button 
                                             onClick={(e) => handleDeleteInvoice(inv.id, e)}
                                             className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-600 p-2"
