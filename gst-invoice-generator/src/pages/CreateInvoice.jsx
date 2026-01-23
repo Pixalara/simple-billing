@@ -310,7 +310,12 @@ export default function CreateInvoice() {
     }
   }
 
-  const handlePrint = () => window.print()
+  // --- SEND EMAIL HANDLER (Replaces Print) ---
+  const handleSendEmail = () => {
+    const subject = `Invoice ${existingInvoiceNo || ''} from ${sellerProfile?.business_name || 'Us'}`
+    const body = `Dear ${formData.buyer_name || 'Customer'},\n\nPlease find the invoice attached.\n\nBest Regards,\n${sellerProfile?.business_name || ''}`
+    window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
+  }
 
   const onSubmit = async (data) => {
     setLoading(true)
@@ -339,14 +344,6 @@ export default function CreateInvoice() {
 
   return (
     <div className="min-h-screen bg-gray-100 p-0 md:p-4 lg:p-8 flex flex-col lg:flex-row gap-6">
-      <style>{`
-        @media print {
-          body * { visibility: hidden; }
-          #invoice-preview, #invoice-preview * { visibility: visible; }
-          #invoice-preview { position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0; box-shadow: none; transform: none !important; }
-          .no-print { display: none !important; }
-        }
-      `}</style>
       
       {/* --- MOBILE TABS --- */}
       <div className="lg:hidden sticky top-0 z-20 bg-white border-b flex text-sm font-bold shadow-sm">
@@ -355,7 +352,7 @@ export default function CreateInvoice() {
       </div>
 
       {/* --- LEFT SIDE: EDITOR --- */}
-      <div className={`no-print w-full lg:w-5/12 bg-white p-4 md:p-6 rounded-lg shadow-lg h-fit overflow-y-auto max-h-screen custom-scrollbar ${mobileTab === 'preview' ? 'hidden lg:block' : 'block'}`}>
+      <div className={`w-full lg:w-5/12 bg-white p-4 md:p-6 rounded-lg shadow-lg h-fit overflow-y-auto max-h-screen custom-scrollbar ${mobileTab === 'preview' ? 'hidden lg:block' : 'block'}`}>
         
         <button 
           onClick={() => navigate('/dashboard')}
@@ -472,7 +469,7 @@ export default function CreateInvoice() {
             </button>
 
             <div className="flex gap-2">
-                <button type="button" onClick={handlePrint} className="flex-1 bg-gray-200 text-gray-800 py-3 rounded hover:bg-gray-300 font-bold">Print</button>
+                <button type="button" onClick={handleSendEmail} className="flex-1 bg-gray-200 text-gray-800 py-3 rounded hover:bg-gray-300 font-bold">Send Email</button>
                 <button type="button" onClick={handleDownloadPDF} className="flex-1 bg-gray-900 text-white py-3 rounded hover:bg-black font-bold">PDF</button>
                 <button type="submit" disabled={loading} className="flex-1 bg-blue-600 text-white py-3 rounded hover:bg-blue-700 font-bold">
                     {loading ? '...' : (id ? 'Update' : 'Save')}
