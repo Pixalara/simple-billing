@@ -2,6 +2,30 @@ import { useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { useNavigate } from 'react-router-dom'
 
+// --- COMPONENTS DEFINED OUTSIDE TO FIX INPUT BUG ---
+const CheckItem = ({ text }) => (
+  <div className="flex items-center gap-3 mb-4">
+      <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center border border-green-500/50 shrink-0">
+          <svg className="w-5 h-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+      </div>
+      <span className="text-slate-100 text-lg md:text-xl font-medium tracking-wide">{text}</span>
+  </div>
+)
+
+const InputField = ({ label, type, placeholder, value, onChange, className, ...props }) => (
+  <div className="mb-5">
+      <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 ml-1">{label}</label>
+      <input 
+          type={type} 
+          placeholder={placeholder}
+          className={className || "w-full bg-[#1e293b]/80 border border-slate-700/50 rounded-xl px-5 py-4 text-white text-lg placeholder-slate-500 focus:ring-2 focus:ring-blue-500 focus:bg-[#1e293b] outline-none transition-all duration-200 shadow-inner"}
+          value={value} 
+          onChange={onChange} 
+          {...props}
+      />
+  </div>
+)
+
 export default function Login() {
   const navigate = useNavigate()
   
@@ -24,7 +48,7 @@ export default function Login() {
     setTimeout(() => setToast(null), 4000)
   }
 
-  // --- LOGIC HANDLERS (Same as before) ---
+  // --- LOGIC HANDLERS ---
   const handleLogin = async (e) => {
     e.preventDefault()
     setLoading(true)
@@ -118,30 +142,6 @@ export default function Login() {
     }
   }
 
-  // --- UI COMPONENTS ---
-  const CheckItem = ({ text }) => (
-    <div className="flex items-center gap-3 mb-3">
-        <div className="w-6 h-6 rounded-full bg-green-500/20 flex items-center justify-center border border-green-500/50">
-            <svg className="w-3.5 h-3.5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-        </div>
-        <span className="text-slate-200 font-medium">{text}</span>
-    </div>
-  )
-
-  const InputField = ({ label, type, placeholder, value, onChange, ...props }) => (
-    <div className="mb-4">
-        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 ml-1">{label}</label>
-        <input 
-            type={type} 
-            placeholder={placeholder}
-            className="w-full bg-[#1e293b]/80 border border-slate-700/50 rounded-xl px-4 py-3.5 text-white placeholder-slate-500 focus:ring-2 focus:ring-blue-500 focus:bg-[#1e293b] outline-none transition-all duration-200 shadow-inner"
-            value={value} 
-            onChange={onChange} 
-            {...props}
-        />
-    </div>
-  )
-
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-[#0f172a] relative overflow-hidden font-sans">
       
@@ -159,28 +159,28 @@ export default function Login() {
       )}
 
       {/* Main Content Grid */}
-      <div className="relative z-10 w-full max-w-6xl mx-auto p-4 lg:p-8 flex flex-col lg:flex-row items-center justify-center gap-12 lg:gap-20">
+      <div className="relative z-10 w-full max-w-7xl mx-auto p-6 lg:p-12 flex flex-col lg:flex-row items-center justify-between gap-12 lg:gap-20">
         
-        {/* LEFT SIDE: Marketing Info */}
-        <div className="w-full max-w-md lg:max-w-lg text-center lg:text-left space-y-6">
+        {/* LEFT SIDE: Marketing Info (Increased Size) */}
+        <div className="w-full lg:w-1/2 text-center lg:text-left space-y-8">
             
             {/* Badge */}
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-600/20 border border-blue-500/30 backdrop-blur-sm mx-auto lg:mx-0">
-                <span className="text-xs font-bold text-blue-300 tracking-wide">🚀 #1 GST BILLING PLATFORM</span>
+            <div className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-blue-600/20 border border-blue-500/30 backdrop-blur-sm mx-auto lg:mx-0">
+                <span className="text-sm font-bold text-blue-300 tracking-wider">🚀 #1 GST BILLING PLATFORM</span>
             </div>
 
-            {/* Heading */}
-            <h1 className="text-4xl md:text-5xl font-extrabold text-white leading-tight">
+            {/* Heading - Increased Font Size significantly */}
+            <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold text-white leading-[1.1] tracking-tight">
                 Create <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400">Professional Invoices</span> in Seconds.
             </h1>
 
-            {/* Subtext */}
-            <p className="text-slate-400 text-lg leading-relaxed">
+            {/* Subtext - Increased Font Size */}
+            <p className="text-slate-300 text-xl md:text-2xl leading-relaxed max-w-2xl mx-auto lg:mx-0">
                 Join thousands of businesses who trust <span className="text-white font-semibold">Pixalara</span> for GST billing and automated WhatsApp sharing.
             </p>
 
             {/* Checkmarks */}
-            <div className="pt-2 flex flex-col items-center lg:items-start gap-1">
+            <div className="pt-4 flex flex-col items-center lg:items-start gap-2">
                 <CheckItem text="100% GST Compliant" />
                 <CheckItem text="Secure Cloud Storage" />
                 <CheckItem text="Mobile & Desktop Ready" />
@@ -188,21 +188,21 @@ export default function Login() {
         </div>
 
         {/* RIGHT SIDE: Auth Card */}
-        <div className="w-full max-w-[420px]">
-            <div className="bg-white/5 backdrop-blur-2xl border border-white/10 p-8 rounded-3xl shadow-2xl relative overflow-hidden group">
+        <div className="w-full max-w-[480px]">
+            <div className="bg-white/5 backdrop-blur-2xl border border-white/10 p-8 md:p-10 rounded-3xl shadow-2xl relative overflow-hidden group">
                 
-                {/* Subtle gradient blob inside card */}
+                {/* Subtle gradient blob */}
                 <div className="absolute -top-20 -right-20 w-40 h-40 bg-blue-500/20 rounded-full blur-3xl pointer-events-none group-hover:bg-blue-500/30 transition-all duration-700"></div>
 
-                <div className="text-center mb-8 relative z-10">
-                    <h2 className="text-2xl font-bold text-white mb-2">
+                <div className="text-center mb-10 relative z-10">
+                    <h2 className="text-3xl font-bold text-white mb-2">
                         {view === 'LOGIN' && 'Welcome Back'}
                         {view === 'SIGNUP' && 'Get Started Free'}
                         {view === 'FORGOT_PASS' && 'Reset Password'}
                         {view === 'OTP_VERIFY' && 'Verify It\'s You'}
                         {view === 'RESET_PASS' && 'New Password'}
                     </h2>
-                    <p className="text-slate-400 text-xs">
+                    <p className="text-slate-400 text-sm">
                         {view === 'LOGIN' && 'Enter your details to access your dashboard.'}
                         {view === 'SIGNUP' && 'Create your account in 30 seconds.'}
                         {view === 'FORGOT_PASS' && 'We\'ll send a code to your email.'}
@@ -217,16 +217,16 @@ export default function Login() {
                         <InputField label="Business Email" type="email" placeholder="name@company.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
                         <InputField label="Password" type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} required />
                         
-                        <div className="text-right -mt-2 mb-6">
-                            <button type="button" onClick={() => setView('FORGOT_PASS')} className="text-[11px] font-semibold text-blue-400 hover:text-blue-300 transition-colors">Forgot Password?</button>
+                        <div className="text-right -mt-3 mb-8">
+                            <button type="button" onClick={() => setView('FORGOT_PASS')} className="text-sm font-semibold text-blue-400 hover:text-blue-300 transition-colors">Forgot Password?</button>
                         </div>
 
-                        <button type="submit" disabled={loading} className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-blue-500/20 transform transition active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed">
+                        <button type="submit" disabled={loading} className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-lg py-4 rounded-xl shadow-lg shadow-blue-500/20 transform transition active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed">
                             {loading ? 'Signing In...' : 'Sign In to Dashboard'}
                         </button>
 
-                        <div className="mt-6 pt-6 border-t border-white/10 text-center">
-                            <p className="text-xs text-slate-400">Don't have an account? <button type="button" onClick={() => setView('SIGNUP')} className="text-blue-400 font-bold hover:text-blue-300 ml-1">Sign Up Free</button></p>
+                        <div className="mt-8 pt-6 border-t border-white/10 text-center">
+                            <p className="text-sm text-slate-400">Don't have an account? <button type="button" onClick={() => setView('SIGNUP')} className="text-blue-400 font-bold hover:text-blue-300 ml-1">Sign Up Free</button></p>
                         </div>
                     </form>
                 )}
@@ -238,12 +238,12 @@ export default function Login() {
                         <InputField label="Create Password" type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
                         <InputField label="Confirm Password" type="password" placeholder="••••••••" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required minLength={6} />
 
-                        <button type="submit" disabled={loading} className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-blue-500/20 transform transition active:scale-[0.98] mt-2">
+                        <button type="submit" disabled={loading} className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-lg py-4 rounded-xl shadow-lg shadow-blue-500/20 transform transition active:scale-[0.98] mt-4">
                             {loading ? 'Processing...' : 'Create Account'}
                         </button>
 
-                        <div className="mt-6 pt-6 border-t border-white/10 text-center">
-                            <p className="text-xs text-slate-400">Already have an account? <button type="button" onClick={() => setView('LOGIN')} className="text-blue-400 font-bold hover:text-blue-300 ml-1">Sign In</button></p>
+                        <div className="mt-8 pt-6 border-t border-white/10 text-center">
+                            <p className="text-sm text-slate-400">Already have an account? <button type="button" onClick={() => setView('LOGIN')} className="text-blue-400 font-bold hover:text-blue-300 ml-1">Sign In</button></p>
                         </div>
                     </form>
                 )}
@@ -253,12 +253,12 @@ export default function Login() {
                     <form onSubmit={handleForgotStart}>
                         <InputField label="Registered Email" type="email" placeholder="name@company.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
                         
-                        <button type="submit" disabled={loading} className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-blue-500/20 transform transition active:scale-[0.98] mt-2">
+                        <button type="submit" disabled={loading} className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-lg py-4 rounded-xl shadow-lg shadow-blue-500/20 transform transition active:scale-[0.98] mt-4">
                             {loading ? 'Sending Code...' : 'Send Verification Code'}
                         </button>
 
-                        <div className="mt-6 text-center">
-                            <button type="button" onClick={() => setView('LOGIN')} className="text-xs font-bold text-slate-400 hover:text-white transition-colors">← Back to Login</button>
+                        <div className="mt-8 text-center">
+                            <button type="button" onClick={() => setView('LOGIN')} className="text-sm font-bold text-slate-400 hover:text-white transition-colors">← Back to Login</button>
                         </div>
                     </form>
                 )}
@@ -274,15 +274,15 @@ export default function Login() {
                             onChange={(e) => { const val = e.target.value.replace(/\D/g, ''); if(val.length <= 6) setOtp(val); }} 
                             maxLength={6}
                             required 
-                            className="w-full bg-[#1e293b]/80 border border-slate-700/50 rounded-xl px-4 py-3.5 text-white text-center text-2xl font-mono tracking-[0.5em] focus:ring-2 focus:ring-blue-500 outline-none transition-all shadow-inner"
+                            className="w-full bg-[#1e293b]/80 border border-slate-700/50 rounded-xl px-4 py-4 text-white text-center text-3xl font-mono tracking-[0.5em] focus:ring-2 focus:ring-blue-500 outline-none transition-all shadow-inner"
                         />
                         
-                        <button type="submit" disabled={loading} className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-blue-500/20 transform transition active:scale-[0.98] mt-4">
+                        <button type="submit" disabled={loading} className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-lg py-4 rounded-xl shadow-lg shadow-blue-500/20 transform transition active:scale-[0.98] mt-6">
                             {loading ? 'Verifying...' : 'Verify & Continue'}
                         </button>
 
-                        <div className="mt-6 text-center">
-                            <button type="button" onClick={() => setView('LOGIN')} className="text-xs font-bold text-slate-400 hover:text-white transition-colors">Cancel</button>
+                        <div className="mt-8 text-center">
+                            <button type="button" onClick={() => setView('LOGIN')} className="text-sm font-bold text-slate-400 hover:text-white transition-colors">Cancel</button>
                         </div>
                     </form>
                 )}
@@ -293,27 +293,27 @@ export default function Login() {
                         <InputField label="New Password" type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
                         <InputField label="Confirm New Password" type="password" placeholder="••••••••" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required minLength={6} />
 
-                        <button type="submit" disabled={loading} className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-blue-500/20 transform transition active:scale-[0.98] mt-2">
+                        <button type="submit" disabled={loading} className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-lg py-4 rounded-xl shadow-lg shadow-blue-500/20 transform transition active:scale-[0.98] mt-4">
                             {loading ? 'Updating...' : 'Set New Password'}
                         </button>
                         
-                        <div className="mt-6 text-center">
-                            <button type="button" onClick={() => { supabase.auth.signOut(); setView('LOGIN'); }} className="text-xs font-bold text-slate-400 hover:text-white transition-colors">Cancel</button>
+                        <div className="mt-8 text-center">
+                            <button type="button" onClick={() => { supabase.auth.signOut(); setView('LOGIN'); }} className="text-sm font-bold text-slate-400 hover:text-white transition-colors">Cancel</button>
                         </div>
                     </form>
                 )}
 
                 {/* Security Badge */}
                 <div className="mt-8 flex items-center justify-center gap-2 opacity-50">
-                    <svg className="w-3 h-3 text-yellow-500" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" /></svg>
-                    <span className="text-[10px] text-slate-400 font-medium">256-bit SSL Encrypted • Trusted by 10,000+ Businesses</span>
+                    <svg className="w-4 h-4 text-yellow-500" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" /></svg>
+                    <span className="text-[11px] text-slate-400 font-medium tracking-wide">256-bit SSL Encrypted • Trusted by 10,000+ Businesses</span>
                 </div>
 
             </div>
             
             {/* Footer */}
-            <div className="mt-6 text-center">
-                <p className="text-[10px] text-slate-500">
+            <div className="mt-8 text-center">
+                <p className="text-xs text-slate-500">
                     Powered by <a href="https://pixalara.com" target="_blank" rel="noreferrer" className="hover:text-blue-400 transition-colors">pixalara.com</a>
                 </p>
             </div>
