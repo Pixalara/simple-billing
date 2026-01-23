@@ -83,7 +83,6 @@ export default function CreateInvoice() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return navigate('/login')
       
-      // Load Seller Profile
       const { data: profile } = await supabase.from('users').select('*').eq('id', user.id).single()
       if (profile) {
           setSellerProfile(profile)
@@ -93,7 +92,6 @@ export default function CreateInvoice() {
       }
 
       if (id) {
-        // --- EDIT MODE ---
         const { data: invoice } = await supabase.from('invoices').select('*').eq('id', id).single()
         if (invoice) {
           reset(invoice.invoice_data)
@@ -104,15 +102,14 @@ export default function CreateInvoice() {
           }
         }
       } else {
-        // --- NEW INVOICE MODE: GENERATE NUMBER IMMEDIATELY ---
+        // --- NEW INVOICE NUMBER GENERATION (DDMMYYSS) ---
         try {
             const date = new Date();
             const day = String(date.getDate()).padStart(2, '0');
             const month = String(date.getMonth() + 1).padStart(2, '0');
             const year = String(date.getFullYear()).slice(-2);
-            const prefix = `${day}${month}${year}`; // e.g., 230126
+            const prefix = `${day}${month}${year}`; 
 
-            // Get last invoice with this prefix to determine sequence
             const { data: lastInvoice } = await supabase
                 .from('invoices')
                 .select('invoice_no')
@@ -124,7 +121,6 @@ export default function CreateInvoice() {
 
             let sequence = '01';
             if (lastInvoice && lastInvoice.invoice_no) {
-                // Extract suffix sequence from existing invoice
                 const lastSeqStr = lastInvoice.invoice_no.replace(prefix, '');
                 const lastSeqNum = parseInt(lastSeqStr, 10);
                 if (!isNaN(lastSeqNum)) {
@@ -241,7 +237,6 @@ export default function CreateInvoice() {
       container.appendChild(clone)
       document.body.appendChild(container)
 
-      // Filename: BuyerName_INR_Amount_InvoiceNumber.pdf
       const buyerName = formData.buyer_name || 'Customer'
       const invoiceNum = existingInvoiceNo || 'DRAFT'
       const safeFileName = `${buyerName}_INR_${totals.grandTotal}_${invoiceNum}.pdf`
@@ -321,8 +316,6 @@ export default function CreateInvoice() {
     setLoading(true)
     try {
       const { data: { user } } = await supabase.auth.getUser()
-      
-      // Use the invoice number already generated/loaded in state
       const invoiceNo = existingInvoiceNo;
 
       const payload = {
@@ -394,12 +387,28 @@ export default function CreateInvoice() {
 
           <div className="bg-gray-50 p-3 rounded border">
             <h3 className="text-sm font-semibold mb-2 text-gray-700">Bill To</h3>
-            <input {...register('buyer_name')} placeholder="Client Name" className="w-full p-2 border rounded mb-2 text-sm" />
+            
+            {/* UPDATED: BUYER NAME AUTO-CAPITALIZE */}
+            <input 
+                {...register('buyer_name')} 
+                placeholder="Client Name" 
+                className="w-full p-2 border rounded mb-2 text-sm" 
+                onChange={(e) => setValue('buyer_name', e.target.value.toUpperCase())}
+            />
+            
             <select {...register('buyer_state')} className="w-full p-2 border rounded mb-2 text-sm">
                 <option value="">Select State</option>
                 {INDIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
-            <input {...register('buyer_gstin')} placeholder="GSTIN (Optional)" className="w-full p-2 border rounded text-sm" />
+            
+            {/* UPDATED: GSTIN AUTO-CAPITALIZE */}
+            <input 
+                {...register('buyer_gstin')} 
+                placeholder="GSTIN (Optional)" 
+                className="w-full p-2 border rounded text-sm" 
+                onChange={(e) => setValue('buyer_gstin', e.target.value.toUpperCase())}
+            />
+            
             <input {...register('buyer_address')} placeholder="Address" className="w-full p-2 border rounded mt-2 text-sm" />
           </div>
 
@@ -510,7 +519,7 @@ export default function CreateInvoice() {
                         />
                     )}
                     <h1 className="text-2xl font-bold uppercase tracking-wide">Invoice</h1>
-                    <p className="opacity-80 text-xs"># {existingInvoiceNo || '...'}</p>
+                    <p className="opacity-80 text-xs"># {existingInvoiceNo || 'DRAFT'}</p>
                 </div>
                 <div className="text-right" style={{ width: '50%' }}>
                     <h2 className="text-lg font-bold leading-tight">{sellerProfile?.business_name || 'Your Business Name'}</h2>
@@ -531,12 +540,12 @@ export default function CreateInvoice() {
                         {formData.buyer_gstin && <p className="text-xs font-semibold mt-1">GSTIN: {formData.buyer_gstin}</p>}
                     </div>
                     <div className="text-right" style={{ width: '35%' }}>
-                        <div className="mb-1 flex justify-end items-center gap-2"> {/* UPDATED ALIGNMENT */}
+                        <div className="mb-1 flex justify-end gap-2 items-center">
                             <span className="text-gray-500 text-xs">Date:</span>
                             <span className="font-semibold text-sm">{formatDate(formData.invoiceDate)}</span>
                         </div>
                         {formData.dueDate && (
-                            <div className="flex justify-end items-center gap-2"> {/* UPDATED ALIGNMENT */}
+                            <div className="flex justify-end gap-2 items-center">
                                 <span className="text-gray-500 text-xs">Due Date:</span>
                                 <span className="font-semibold text-sm">{formatDate(formData.dueDate)}</span>
                             </div>
@@ -621,7 +630,6 @@ export default function CreateInvoice() {
                     <p className="text-xs font-bold text-gray-800">{amountInWords}</p>
                 </div>
                 
-                {/* Footer / Bank Info & Signature */}
                 <div className="flex justify-between items-end mt-10 pt-6 border-t border-gray-100">
                     <div className="w-[55%]">
                         {sellerProfile?.bank_name && (
