@@ -339,37 +339,11 @@ export default function CreateInvoice() {
 
   return (
     <div className="min-h-screen bg-gray-100 p-0 md:p-4 lg:p-8 flex flex-col lg:flex-row gap-6">
-      {/* --- FIXED PRINT STYLES --- */}
       <style>{`
         @media print {
-          /* Hide everything first */
           body * { visibility: hidden; }
-          
-          /* Unhide the scaling container and RESET transforms */
-          #print-scaler {
-            visibility: visible;
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: auto !important;
-            transform: none !important; /* CRITICAL FIX FOR BLANK PAGE */
-            margin: 0 !important;
-            padding: 0 !important;
-            overflow: visible !important;
-          }
-
-          /* Make the invoice itself visible */
-          #invoice-preview, #invoice-preview * { 
-            visibility: visible; 
-          }
-          
-          #invoice-preview { 
-            width: 210mm !important; 
-            margin: 0 auto !important; 
-            box-shadow: none !important;
-          }
-          
+          #invoice-preview, #invoice-preview * { visibility: visible; }
+          #invoice-preview { position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0; box-shadow: none; transform: none !important; }
           .no-print { display: none !important; }
         }
       `}</style>
@@ -518,7 +492,6 @@ export default function CreateInvoice() {
         className={`w-full lg:w-7/12 flex justify-center bg-gray-300 p-0 md:p-8 overflow-hidden ${mobileTab === 'edit' ? 'hidden lg:flex' : 'flex'}`}
       >
         <div 
-            id="print-scaler" 
             className="flex justify-center origin-top p-4 md:p-0 transition-transform duration-200 ease-out"
             style={{ 
                 transform: `scale(${previewScale})`, 
@@ -565,16 +538,17 @@ export default function CreateInvoice() {
                         {formData.buyer_gstin && <p className="text-xs font-semibold mt-1">GSTIN: {formData.buyer_gstin}</p>}
                     </div>
                     <div className="text-right" style={{ width: '35%' }}>
-                        <div className="mb-1 flex justify-end gap-2 items-center">
-                            <span className="text-gray-500 text-xs">Date:</span>
-                            <span className="font-semibold text-sm">{formatDate(formData.invoiceDate)}</span>
+                        <div className="grid grid-cols-[auto_auto] gap-x-3 justify-end items-baseline">
+                            <span className="text-gray-500 text-xs text-right">Date:</span>
+                            <span className="font-semibold text-sm text-right">{formatDate(formData.invoiceDate)}</span>
+                            
+                            {formData.dueDate && (
+                                <>
+                                    <span className="text-gray-500 text-xs text-right">Due Date:</span>
+                                    <span className="font-semibold text-sm text-right">{formatDate(formData.dueDate)}</span>
+                                </>
+                            )}
                         </div>
-                        {formData.dueDate && (
-                            <div className="flex justify-end gap-2 items-center">
-                                <span className="text-gray-500 text-xs">Due Date:</span>
-                                <span className="font-semibold text-sm">{formatDate(formData.dueDate)}</span>
-                            </div>
-                        )}
                     </div>
                 </div>
 
