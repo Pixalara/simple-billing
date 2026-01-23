@@ -102,7 +102,6 @@ export default function CreateInvoice() {
           }
         }
       } else {
-        // --- NEW INVOICE NUMBER GENERATION (DDMMYYSS) ---
         try {
             const date = new Date();
             const day = String(date.getDate()).padStart(2, '0');
@@ -388,7 +387,6 @@ export default function CreateInvoice() {
           <div className="bg-gray-50 p-3 rounded border">
             <h3 className="text-sm font-semibold mb-2 text-gray-700">Bill To</h3>
             
-            {/* UPDATED: BUYER NAME AUTO-CAPITALIZE */}
             <input 
                 {...register('buyer_name')} 
                 placeholder="Client Name" 
@@ -401,7 +399,6 @@ export default function CreateInvoice() {
                 {INDIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
             
-            {/* UPDATED: GSTIN AUTO-CAPITALIZE */}
             <input 
                 {...register('buyer_gstin')} 
                 placeholder="GSTIN (Optional)" 
@@ -521,12 +518,13 @@ export default function CreateInvoice() {
                     <h1 className="text-2xl font-bold uppercase tracking-wide">Invoice</h1>
                     <p className="opacity-80 text-xs"># {existingInvoiceNo || 'DRAFT'}</p>
                 </div>
+                {/* INCREASED FONT SIZE SECTION */}
                 <div className="text-right" style={{ width: '50%' }}>
-                    <h2 className="text-lg font-bold leading-tight">{sellerProfile?.business_name || 'Your Business Name'}</h2>
-                    <p className="opacity-90 text-xs leading-tight">{sellerProfile?.state}</p>
-                    {sellerProfile?.business_email && <p className="opacity-90 text-[10px] leading-tight">{sellerProfile.business_email}</p>}
-                    {sellerProfile?.business_phone && <p className="opacity-90 text-[10px] leading-tight">{sellerProfile.business_phone}</p>}
-                    {sellerProfile?.gstin && <p className="font-semibold mt-0.5 text-xs">GSTIN: {sellerProfile.gstin}</p>}
+                    <h2 className="text-3xl font-bold leading-tight mb-1">{sellerProfile?.business_name || 'Your Business Name'}</h2>
+                    <p className="opacity-90 text-sm leading-tight">{sellerProfile?.state}</p>
+                    {sellerProfile?.business_email && <p className="opacity-90 text-sm leading-tight">{sellerProfile.business_email}</p>}
+                    {sellerProfile?.business_phone && <p className="opacity-90 text-sm leading-tight">{sellerProfile.business_phone}</p>}
+                    {sellerProfile?.gstin && <p className="font-semibold mt-1 text-base">GSTIN: {sellerProfile.gstin}</p>}
                 </div>
             </div>
 
@@ -630,6 +628,7 @@ export default function CreateInvoice() {
                     <p className="text-xs font-bold text-gray-800">{amountInWords}</p>
                 </div>
                 
+                {/* Footer / Bank Info & Signature */}
                 <div className="flex justify-between items-end mt-10 pt-6 border-t border-gray-100">
                     <div className="w-[55%]">
                         {sellerProfile?.bank_name && (
