@@ -342,45 +342,56 @@ export default function CreateInvoice() {
       {/* --- FIXED PRINT STYLES --- */}
       <style>{`
         @media print {
-          /* Hide everything first */
-          body * { visibility: hidden; }
-          
-          /* Unhide the scaling container and RESET transforms */
-          #print-scaler {
-            visibility: visible;
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: auto !important;
-            transform: none !important; /* CRITICAL FIX FOR BLANK PAGE */
+          /* 1. HIDE ALL UI ELEMENTS */
+          .no-print, .no-print * {
+            display: none !important;
+            height: 0 !important;
+            width: 0 !important;
+            overflow: hidden !important;
+          }
+
+          /* 2. RESET BODY */
+          body {
+            background-color: white !important;
             margin: 0 !important;
             padding: 0 !important;
             overflow: visible !important;
           }
 
-          /* Make the invoice itself visible */
-          #invoice-preview, #invoice-preview * { 
-            visibility: visible; 
+          /* 3. TARGET THE INVOICE CONTAINER */
+          #print-scaler {
+            display: block !important;
+            position: relative !important;
+            width: 100% !important;
+            height: auto !important;
+            transform: none !important; /* DISABLES SCALING */
+            margin: 0 !important;
+            padding: 0 !important;
+            left: 0 !important;
+            top: 0 !important;
+            overflow: visible !important;
           }
-          
-          #invoice-preview { 
-            width: 210mm !important; 
-            margin: 0 auto !important; 
+
+          /* 4. ENSURE INVOICE IS VISIBLE */
+          #invoice-preview {
+            display: block !important;
+            visibility: visible !important;
+            width: 100% !important;
+            max-width: 210mm !important; /* Force A4 Width */
+            margin: 0 auto !important;
             box-shadow: none !important;
+            border: none !important;
           }
-          
-          .no-print { display: none !important; }
         }
       `}</style>
       
-      {/* --- MOBILE TABS --- */}
-      <div className="lg:hidden sticky top-0 z-20 bg-white border-b flex text-sm font-bold shadow-sm">
+      {/* --- MOBILE TABS (Add no-print) --- */}
+      <div className="no-print lg:hidden sticky top-0 z-20 bg-white border-b flex text-sm font-bold shadow-sm">
         <button onClick={() => setMobileTab('edit')} className={`flex-1 py-3 text-center ${mobileTab === 'edit' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500'}`}>✎ Editor</button>
         <button onClick={() => setMobileTab('preview')} className={`flex-1 py-3 text-center ${mobileTab === 'preview' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500'}`}>👁 Preview</button>
       </div>
 
-      {/* --- LEFT SIDE: EDITOR --- */}
+      {/* --- LEFT SIDE: EDITOR (Add no-print) --- */}
       <div className={`no-print w-full lg:w-5/12 bg-white p-4 md:p-6 rounded-lg shadow-lg h-fit overflow-y-auto max-h-screen custom-scrollbar ${mobileTab === 'preview' ? 'hidden lg:block' : 'block'}`}>
         
         <button 
