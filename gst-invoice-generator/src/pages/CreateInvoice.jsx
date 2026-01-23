@@ -504,7 +504,6 @@ export default function CreateInvoice() {
                 <table className="w-full mb-6 border-collapse">
                 <thead>
                     <tr style={{ color: theme.text }}>
-                        {/* FIXED PDF VERTICAL ALIGNMENT WITH FLEXBOX */}
                         <th style={{ backgroundColor: theme.hex, width: '41.6%', padding: 0, border: 'none' }}>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', height: '35px', paddingLeft: '12px', fontSize: '11px', fontWeight: 'bold' }}>
                                 ITEM
@@ -583,22 +582,27 @@ export default function CreateInvoice() {
                     <p className="text-xs font-bold text-gray-800">{amountInWords}</p>
                 </div>
                 
-                <div className="flex justify-between mt-8 items-end">
-                    <div className="text-xs text-black w-7/12">
+                {/* Footer / Bank Info & Signature */}
+                <div className="flex justify-between items-end mt-10 pt-6 border-t border-gray-100">
+                    {/* Bank Details - Professional Look */}
+                    <div className="w-[55%]">
                         {sellerProfile?.bank_name && (
-                            <div className="border p-2 rounded bg-gray-50">
-                                <p className="font-bold text-gray-700 mb-1 border-b border-gray-300 pb-1">Bank Details</p>
-                                <div className="grid grid-cols-3 gap-y-0.5">
-                                    <span className="font-semibold col-span-1">Bank:</span>
-                                    <span className="col-span-2">{sellerProfile.bank_name}</span>
-                                    <span className="font-semibold col-span-1">A/c No:</span>
-                                    <span className="col-span-2">{sellerProfile.account_number}</span>
-                                    <span className="font-semibold col-span-1">IFSC:</span>
-                                    <span className="col-span-2">{sellerProfile.ifsc_code}</span>
+                            <div className="bg-gray-50/50 border border-gray-200 rounded-lg p-3">
+                                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Bank Details</p>
+                                <div className="grid grid-cols-[60px_1fr] gap-y-1 text-xs">
+                                    <span className="text-gray-500">Bank:</span>
+                                    <span className="font-semibold text-gray-800">{sellerProfile.bank_name}</span>
+                                    
+                                    <span className="text-gray-500">A/c No:</span>
+                                    <span className="font-mono font-bold text-gray-800">{sellerProfile.account_number}</span>
+                                    
+                                    <span className="text-gray-500">IFSC:</span>
+                                    <span className="font-mono font-bold text-gray-800">{sellerProfile.ifsc_code}</span>
+                                    
                                     {sellerProfile.branch_name && (
                                         <>
-                                            <span className="font-semibold col-span-1">Branch:</span>
-                                            <span className="col-span-2">{sellerProfile.branch_name}</span>
+                                            <span className="text-gray-500">Branch:</span>
+                                            <span className="font-semibold text-gray-800">{sellerProfile.branch_name}</span>
                                         </>
                                     )}
                                 </div>
@@ -606,17 +610,19 @@ export default function CreateInvoice() {
                         )}
                     </div>
 
-                    <div className="text-right w-4/12">
+                    {/* Signature - Closer alignment */}
+                    <div className="w-[40%] text-right flex flex-col items-end">
                         {signaturePreview && (
                             <img 
                                 src={signaturePreview} 
                                 alt="Sign" 
                                 crossOrigin="anonymous" 
-                                className="h-12 ml-auto mb-1 object-contain" 
+                                className="h-14 mb-2 object-contain" 
                             />
                         )}
-                        <p className="text-[10px] font-bold uppercase">Authorized Signatory</p>
-                        <p className="text-[10px] text-gray-500">{sellerProfile?.business_name}</p>
+                        <div className="border-t border-gray-300 w-32 mt-auto"></div> 
+                        <p className="text-[10px] font-bold uppercase mt-1 text-gray-600">Authorized Signatory</p>
+                        <p className="text-[10px] text-gray-400">{sellerProfile?.business_name}</p>
                     </div>
                 </div>
                 
