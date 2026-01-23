@@ -6,6 +6,46 @@ import { INDIAN_STATES, HSN_CODES } from '../constants'
 import SearchableSelect from '../components/SearchableSelect'
 import html2pdf from 'html2pdf.js'
 
+// --- PREMIUM POPUP COMPONENT ---
+const Popup = ({ isOpen, onClose, title, message, type, actionLabel }) => {
+    if (!isOpen) return null;
+    
+    const colors = {
+        success: { iconBg: 'bg-green-100', iconColor: 'text-green-600', btn: 'bg-green-600 hover:bg-green-700' },
+        error: { iconBg: 'bg-red-100', iconColor: 'text-red-600', btn: 'bg-red-600 hover:bg-red-700' },
+        info: { iconBg: 'bg-blue-100', iconColor: 'text-blue-600', btn: 'bg-blue-600 hover:bg-blue-700' }
+    }
+    const style = colors[type] || colors.info;
+
+    return (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm transition-all duration-300">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden transform transition-all scale-100 animate-in fade-in zoom-in duration-200">
+                <div className="p-6 text-center">
+                    <div className={`mx-auto flex items-center justify-center h-16 w-16 rounded-full mb-5 ${style.iconBg}`}>
+                        {type === 'success' && (
+                            <svg className={`h-8 w-8 ${style.iconColor}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                        )}
+                        {type === 'error' && (
+                            <svg className={`h-8 w-8 ${style.iconColor}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                        )}
+                        {type === 'info' && (
+                            <svg className={`h-8 w-8 ${style.iconColor}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        )}
+                    </div>
+                    <h3 className="text-2xl font-bold text-gray-900 mb-2 tracking-tight">{title}</h3>
+                    <p className="text-gray-500 mb-8 leading-relaxed">{message}</p>
+                    <button 
+                        onClick={onClose}
+                        className={`w-full py-3.5 px-4 rounded-xl text-white font-bold shadow-lg shadow-gray-200 transition-transform active:scale-95 ${style.btn}`}
+                    >
+                        {actionLabel || 'Continue'}
+                    </button>
+                </div>
+            </div>
+        </div>
+    )
+}
+
 const THEMES = [
   { name: 'Blue', hex: '#2563eb', text: 'white' },
   { name: 'Green', hex: '#16a34a', text: 'white' },
@@ -65,6 +105,25 @@ export default function CreateInvoice() {
   const [theme, setTheme] = useState(THEMES[0])
   const [signaturePreview, setSignaturePreview] = useState(null)
   const [existingInvoiceNo, setExistingInvoiceNo] = useState(null)
+
+  // --- POPUP STATE ---
+  const [popup, setPopup] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'success', // success, error, info
+    actionLabel: 'OK',
+    onAction: null
+  })
+
+  const showPopup = (title, message, type = 'success', actionLabel = 'OK', onAction = null) => {
+      setPopup({ isOpen: true, title, message, type, actionLabel, onAction })
+  }
+
+  const closePopup = () => {
+      if (popup.onAction) popup.onAction()
+      setPopup({ ...popup, isOpen: false, onAction: null })
+  }
 
   const { register, control, handleSubmit, setValue, reset, watch } = useForm({
     defaultValues: {
@@ -246,7 +305,7 @@ export default function CreateInvoice() {
         image: { type: 'jpeg', quality: 0.98 },
         enableLinks: true, 
         html2canvas: { 
-            scale: 2, 
+            scale: 2, // High Quality Scale
             useCORS: true, 
             scrollY: 0,
             letterRendering: true,
@@ -286,10 +345,10 @@ export default function CreateInvoice() {
         a.href = url
         a.download = result.filename
         a.click()
-        alert('On Desktop/Web, please drag the downloaded file to WhatsApp/Email manually.')
+        showPopup('Download Ready', 'The file has been downloaded because your browser does not support direct sharing.', 'info', 'OK');
       }
     } catch (error) {
-      console.log('Error sharing:', error)
+      showPopup('Error', 'Failed to share invoice.', 'error');
     } finally {
       setSharing(false)
     }
@@ -306,13 +365,12 @@ export default function CreateInvoice() {
             a.click()
         }
     } catch (e) {
-        alert('Error generating PDF')
+        showPopup('Error', 'Failed to generate PDF.', 'error');
     }
   }
 
   // --- SEND EMAIL HANDLER (AUTO-DOWNLOAD + OPEN DRAFT) ---
   const handleSendEmail = async () => {
-    // 1. Generate & Download PDF First
     try {
         const result = await generatePdfBlob()
         if (result) {
@@ -323,18 +381,17 @@ export default function CreateInvoice() {
             a.click()
         }
     } catch (e) {
-        alert('Error generating PDF for email')
+        showPopup('Error', 'Failed to generate PDF for email.', 'error');
         return
     }
 
-    // 2. Open Email Client
     setTimeout(() => {
         const subject = `Invoice ${existingInvoiceNo || ''} from ${sellerProfile?.business_name || 'Us'}`
         const body = `Dear ${formData.buyer_name || 'Customer'},\n\nPlease find the invoice attached.\n\nBest Regards,\n${sellerProfile?.business_name || ''}`
         window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
         
-        // 3. Inform User
-        alert('PDF has been downloaded. Please attach the file to the email draft that opened.')
+        // Show Premium Info Popup
+        showPopup('Email Draft Opened', 'The PDF has been downloaded to your device.\n\nPlease attach it manually to the email draft that just opened.', 'info', 'Got it');
     }, 1000)
   }
 
@@ -354,10 +411,11 @@ export default function CreateInvoice() {
       if (id) await supabase.from('invoices').update(payload).eq('id', id)
       else await supabase.from('invoices').insert(payload)
 
-      alert('Invoice Saved Successfully!')
-      navigate('/dashboard')
+      // Show Premium Success Popup
+      showPopup('Success!', 'Invoice has been saved successfully.', 'success', 'Go to Dashboard', () => navigate('/dashboard'));
+      
     } catch (error) {
-      alert(error.message)
+      showPopup('Error', error.message, 'error');
     } finally {
       setLoading(false)
     }
@@ -365,6 +423,54 @@ export default function CreateInvoice() {
 
   return (
     <div className="min-h-screen bg-gray-100 p-0 md:p-4 lg:p-8 flex flex-col lg:flex-row gap-6">
+      
+      {/* --- RENDER POPUP --- */}
+      <Popup 
+        isOpen={popup.isOpen}
+        onClose={closePopup}
+        title={popup.title}
+        message={popup.message}
+        type={popup.type}
+        actionLabel={popup.actionLabel}
+      />
+
+      <style>{`
+        @media print {
+          .no-print, .no-print * {
+            display: none !important;
+            height: 0 !important;
+            width: 0 !important;
+            overflow: hidden !important;
+          }
+          body {
+            background-color: white !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            overflow: visible !important;
+          }
+          #print-scaler {
+            display: block !important;
+            position: relative !important;
+            width: 100% !important;
+            height: auto !important;
+            transform: none !important; 
+            margin: 0 !important;
+            padding: 0 !important;
+            left: 0 !important;
+            top: 0 !important;
+            overflow: visible !important;
+          }
+          #invoice-preview {
+            display: block !important;
+            visibility: visible !important;
+            width: 100% !important;
+            max-width: 210mm !important;
+            margin: 0 auto !important;
+            box-shadow: none !important;
+            border: none !important;
+          }
+        }
+      `}</style>
       
       {/* --- MOBILE TABS --- */}
       <div className="lg:hidden sticky top-0 z-20 bg-white border-b flex text-sm font-bold shadow-sm">
@@ -510,6 +616,7 @@ export default function CreateInvoice() {
         className={`w-full lg:w-7/12 flex justify-center bg-gray-300 p-0 md:p-8 overflow-hidden ${mobileTab === 'edit' ? 'hidden lg:flex' : 'flex'}`}
       >
         <div 
+            id="print-scaler" 
             className="flex justify-center origin-top p-4 md:p-0 transition-transform duration-200 ease-out"
             style={{ 
                 transform: `scale(${previewScale})`, 
