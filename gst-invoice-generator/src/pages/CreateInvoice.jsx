@@ -497,11 +497,7 @@ export default function CreateInvoice() {
                 <table className="w-full mb-6 border-collapse">
                 <thead>
                     <tr style={{ color: theme.text }}>
-                        {/* FIXED PDF ALIGNMENT using FLEXBOX WRAPPERS:
-                           - We avoid standard 'th' text-align for vertical centering.
-                           - Instead, we put a flexbox div inside the TH to force vertical center.
-                           - Explicit heights prevent collapse.
-                        */}
+                        {/* FIXED PDF VERTICAL ALIGNMENT WITH FLEXBOX */}
                         <th style={{ backgroundColor: theme.hex, width: '41.6%', padding: 0, border: 'none' }}>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', height: '35px', paddingLeft: '12px', fontSize: '11px', fontWeight: 'bold' }}>
                                 ITEM
