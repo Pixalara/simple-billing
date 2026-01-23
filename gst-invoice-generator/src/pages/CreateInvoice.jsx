@@ -181,9 +181,8 @@ export default function CreateInvoice() {
 
       const clone = originalElement.cloneNode(true)
       
-      // Force dimensions and clear conflicting classes
       clone.style.width = '794px' 
-      clone.style.minHeight = '1122px' // A4 height
+      clone.style.minHeight = '1122px'
       clone.style.height = 'auto'
       clone.style.overflow = 'visible'
       clone.style.transform = 'none'
@@ -204,7 +203,7 @@ export default function CreateInvoice() {
         margin: 0,
         filename: `Invoice_${formData.buyer_name || 'Customer'}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
-        enableLinks: true, // ENABLED LINKS HERE
+        enableLinks: true, 
         html2canvas: { 
             scale: 2, 
             useCORS: true, 
@@ -498,15 +497,36 @@ export default function CreateInvoice() {
                 <table className="w-full mb-6 border-collapse">
                 <thead>
                     <tr style={{ color: theme.text }}>
-                        {/* UPDATED HEADER STYLES FOR PDF:
-                            1. Padding '8px' instead of explicit line-height for safer centering.
-                            2. VerticalAlign 'middle' for standard tables.
+                        {/* FIXED PDF ALIGNMENT using FLEXBOX WRAPPERS:
+                           - We avoid standard 'th' text-align for vertical centering.
+                           - Instead, we put a flexbox div inside the TH to force vertical center.
+                           - Explicit heights prevent collapse.
                         */}
-                        <th className="text-left px-3 text-xs font-bold uppercase w-5/12" style={{ backgroundColor: theme.hex, padding: '8px', verticalAlign: 'middle' }}>Item</th>
-                        <th className="text-left px-3 text-xs font-bold uppercase w-2/12" style={{ backgroundColor: theme.hex, padding: '8px', verticalAlign: 'middle' }}>HSN</th>
-                        <th className="text-center px-3 text-xs font-bold uppercase w-1/12" style={{ backgroundColor: theme.hex, padding: '8px', verticalAlign: 'middle' }}>Qty</th>
-                        <th className="text-right px-3 text-xs font-bold uppercase w-2/12" style={{ backgroundColor: theme.hex, padding: '8px', verticalAlign: 'middle' }}>Price</th>
-                        <th className="text-right px-3 text-xs font-bold uppercase w-2/12" style={{ backgroundColor: theme.hex, padding: '8px', verticalAlign: 'middle' }}>Total</th>
+                        <th style={{ backgroundColor: theme.hex, width: '41.6%', padding: 0, border: 'none' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', height: '35px', paddingLeft: '12px', fontSize: '11px', fontWeight: 'bold' }}>
+                                ITEM
+                            </div>
+                        </th>
+                        <th style={{ backgroundColor: theme.hex, width: '16.6%', padding: 0, border: 'none' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', height: '35px', paddingLeft: '8px', fontSize: '11px', fontWeight: 'bold' }}>
+                                HSN
+                            </div>
+                        </th>
+                        <th style={{ backgroundColor: theme.hex, width: '8.33%', padding: 0, border: 'none' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '35px', fontSize: '11px', fontWeight: 'bold' }}>
+                                QTY
+                            </div>
+                        </th>
+                        <th style={{ backgroundColor: theme.hex, width: '16.6%', padding: 0, border: 'none' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', height: '35px', paddingRight: '12px', fontSize: '11px', fontWeight: 'bold' }}>
+                                PRICE
+                            </div>
+                        </th>
+                        <th style={{ backgroundColor: theme.hex, width: '16.6%', padding: 0, border: 'none' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', height: '35px', paddingRight: '12px', fontSize: '11px', fontWeight: 'bold' }}>
+                                TOTAL
+                            </div>
+                        </th>
                     </tr>
                 </thead>
                 <tbody>
