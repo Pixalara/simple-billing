@@ -566,7 +566,7 @@ export default function CreateInvoice() {
                                 }}>
                                     <div style={{ display: 'flex', alignItems: 'center', height: '100%', paddingLeft: '12px', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }}>ITEM</div>
                                 </th>
-                                <th style={{ width: '110px', height: '40px', verticalAlign: 'middle', backgroundColor: theme.hex, color: theme.text }}>
+                                <th style={{ width: '110px', height: '20px', verticalAlign: 'middle', backgroundColor: theme.hex, color: theme.text }}>
                                     <div style={{ display: 'flex', alignItems: 'center', height: '100%', paddingLeft: '8px', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }}>HSN</div>
                                 </th>
                                 <th style={{ width: '70px', height: '40px', verticalAlign: 'middle', backgroundColor: theme.hex, color: theme.text }}>
