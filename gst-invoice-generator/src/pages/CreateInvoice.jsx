@@ -538,16 +538,18 @@ export default function CreateInvoice() {
                         {formData.buyer_gstin && <p className="text-xs font-semibold mt-1">GSTIN: {formData.buyer_gstin}</p>}
                     </div>
                     <div className="text-right" style={{ width: '35%' }}>
-                        <div className="mb-1 flex justify-end gap-2 items-center">
-                            <span className="text-gray-500 text-xs">Date:</span>
-                            <span className="font-semibold text-sm">{formatDate(formData.invoiceDate)}</span>
+                        {/* PROFESSIONALLY ALIGNED DATE SECTION USING GRID & BASELINE */}
+                        <div className="grid grid-cols-[auto_auto] gap-x-3 justify-end items-baseline">
+                            <span className="text-gray-500 text-xs text-right">Date:</span>
+                            <span className="font-semibold text-sm text-right">{formatDate(formData.invoiceDate)}</span>
+                            
+                            {formData.dueDate && (
+                                <>
+                                    <span className="text-gray-500 text-xs text-right">Due Date:</span>
+                                    <span className="font-semibold text-sm text-right">{formatDate(formData.dueDate)}</span>
+                                </>
+                            )}
                         </div>
-                        {formData.dueDate && (
-                            <div className="flex justify-end gap-2 items-center">
-                                <span className="text-gray-500 text-xs">Due Date:</span>
-                                <span className="font-semibold text-sm">{formatDate(formData.dueDate)}</span>
-                            </div>
-                        )}
                     </div>
                 </div>
 
@@ -628,15 +630,15 @@ export default function CreateInvoice() {
                     <p className="text-xs font-bold text-gray-800">{amountInWords}</p>
                 </div>
                 
-                {/* Footer / Bank Info & Signature - PROFESSIONAL CLEAN LAYOUT */}
+                {/* Footer / Bank Info & Signature */}
                 <div className="flex justify-between items-end mt-10 pt-6 border-t border-gray-100">
                     
-                    {/* Clean Bank Details (No Box, Just Content) */}
+                    {/* Clean Bank Details - Content Only */}
                     <div className="w-[55%]">
                         {sellerProfile?.bank_name && (
                             <div className="pt-2">
-                                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2 border-b border-gray-200 pb-1 w-2/3">Bank Details</p>
-                                <div className="grid grid-cols-[80px_1fr] gap-y-1 text-xs">
+                                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2 border-b border-gray-200 pb-1 w-fit pr-8">Bank Details</p>
+                                <div className="grid grid-cols-[80px_1fr] gap-y-1 text-xs w-fit min-w-[200px]">
                                     <span className="text-gray-500 font-medium">Bank:</span>
                                     <span className="font-bold text-gray-800">{sellerProfile.bank_name}</span>
                                     
