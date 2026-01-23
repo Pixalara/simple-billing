@@ -206,13 +206,18 @@ export default function CreateInvoice() {
       container.appendChild(clone)
       document.body.appendChild(container)
 
+      // --- FILENAME CONSTRUCTION ---
+      const buyerName = formData.buyer_name || 'Customer'
+      const invoiceNum = existingInvoiceNo || 'DRAFT'
+      const safeFileName = `${buyerName}_INR_${totals.grandTotal}_${invoiceNum}.pdf`
+
       const opt = {
         margin: 0,
-        filename: `Invoice_${formData.buyer_name || 'Customer'}.pdf`,
+        filename: safeFileName,
         image: { type: 'jpeg', quality: 0.98 },
         enableLinks: true, 
         html2canvas: { 
-            scale: 2, 
+            scale: 1.25, 
             useCORS: true, 
             scrollY: 0,
             width: 794,
@@ -281,7 +286,43 @@ export default function CreateInvoice() {
     setLoading(true)
     try {
       const { data: { user } } = await supabase.auth.getUser()
-      const invoiceNo = existingInvoiceNo || `INV-${Date.now().toString().slice(-6)}`
+      
+      // --- SMART INVOICE NUMBER GENERATION (DDMMYYSS) ---
+      let invoiceNo = existingInvoiceNo;
+
+      if (!invoiceNo) {
+          const date = new Date();
+          const day = String(date.getDate()).padStart(2, '0');
+          const month = String(date.getMonth() + 1).padStart(2, '0');
+          const year = String(date.getFullYear()).slice(-2);
+          const prefix = `${day}${month}${year}`;
+
+          // Find the last invoice created today by this user to determine sequence
+          const { data: lastInvoice, error } = await supabase
+            .from('invoices')
+            .select('invoice_no')
+            .eq('user_id', user.id)
+            .ilike('invoice_no', `${prefix}%`)
+            .order('invoice_no', { ascending: false })
+            .limit(1)
+            .single()
+
+          if (error && error.code !== 'PGRST116') { // Ignore "Row not found" error
+              throw error;
+          }
+
+          let sequence = '01';
+          if (lastInvoice && lastInvoice.invoice_no) {
+              const lastSeqStr = lastInvoice.invoice_no.replace(prefix, '');
+              const lastSeqNum = parseInt(lastSeqStr);
+              if (!isNaN(lastSeqNum)) {
+                  sequence = String(lastSeqNum + 1).padStart(2, '0');
+              }
+          }
+          
+          invoiceNo = `${prefix}${sequence}`;
+      }
+
       const payload = {
         user_id: user.id,
         invoice_no: invoiceNo,
@@ -488,68 +529,64 @@ export default function CreateInvoice() {
                         {formData.buyer_gstin && <p className="text-xs font-semibold mt-1">GSTIN: {formData.buyer_gstin}</p>}
                     </div>
                     <div className="text-right" style={{ width: '35%' }}>
-                        <div className="mb-1 flex justify-between">
-                            <span className="text-gray-500 text-xs mr-2">Date:</span>
+                        <div className="mb-1 flex justify-end gap-2">
+                            <span className="text-gray-500 text-xs">Date:</span>
                             <span className="font-semibold text-sm">{formatDate(formData.invoiceDate)}</span>
                         </div>
                         {formData.dueDate && (
-                            <div className="flex justify-between">
-                                <span className="text-gray-500 text-xs mr-2">Due Date:</span>
+                            <div className="flex justify-end gap-2">
+                                <span className="text-gray-500 text-xs">Due Date:</span>
                                 <span className="font-semibold text-sm">{formatDate(formData.dueDate)}</span>
                             </div>
                         )}
                     </div>
                 </div>
 
-                <table className="w-full mb-6 border-collapse">
-                <thead>
-                    <tr style={{ color: theme.text }}>
-                        <th style={{ backgroundColor: theme.hex, width: '41.6%', padding: 0, border: 'none' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', height: '35px', paddingLeft: '12px', fontSize: '11px', fontWeight: 'bold' }}>
-                                ITEM
-                            </div>
-                        </th>
-                        <th style={{ backgroundColor: theme.hex, width: '16.6%', padding: 0, border: 'none' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', height: '35px', paddingLeft: '8px', fontSize: '11px', fontWeight: 'bold' }}>
-                                HSN
-                            </div>
-                        </th>
-                        <th style={{ backgroundColor: theme.hex, width: '8.33%', padding: 0, border: 'none' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '35px', fontSize: '11px', fontWeight: 'bold' }}>
-                                QTY
-                            </div>
-                        </th>
-                        <th style={{ backgroundColor: theme.hex, width: '16.6%', padding: 0, border: 'none' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', height: '35px', paddingRight: '12px', fontSize: '11px', fontWeight: 'bold' }}>
-                                PRICE
-                            </div>
-                        </th>
-                        <th style={{ backgroundColor: theme.hex, width: '16.6%', padding: 0, border: 'none' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', height: '35px', paddingRight: '12px', fontSize: '11px', fontWeight: 'bold' }}>
-                                TOTAL
-                            </div>
-                        </th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {formData.items?.map((item, i) => {
-                    const amount = ((item.quantity||0) * (item.price||0));
-                    return (
-                        <tr key={i} className="border-b border-gray-200">
-                        <td className="py-2 px-2">
-                            <p className="font-semibold text-gray-800 text-sm">{item.description}</p>
-                        </td>
-                        <td className="py-2 px-2 text-xs text-gray-600">{item.hsn}</td>
-                        <td className="text-center py-2 px-2 text-sm">{item.quantity}</td>
-                        <td className="text-right py-2 px-2 text-sm">₹{item.price}</td>
-                        <td className="text-right py-2 px-2 font-bold text-gray-800 text-sm">
-                            ₹{(amount).toFixed(2)}
-                        </td>
-                        </tr>
-                    )
-                    })}
-                </tbody>
-                </table>
+                <div style={{ width: '740px', display: 'block', margin: '0 auto 24px auto' }}>
+                    <table style={{ width: '740px', tableLayout: 'fixed', borderCollapse: 'collapse' }}>
+                        <thead>
+                            <tr style={{ backgroundColor: theme.hex, color: theme.text }}>
+                                <th style={{ 
+                                    width: '300px', 
+                                    height: '40px', 
+                                    verticalAlign: 'middle', 
+                                    backgroundColor: theme.hex, 
+                                    color: theme.text 
+                                }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', height: '100%', paddingLeft: '12px', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }}>ITEM</div>
+                                </th>
+                                <th style={{ width: '110px', height: '40px', verticalAlign: 'middle', backgroundColor: theme.hex, color: theme.text }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', height: '100%', paddingLeft: '8px', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }}>HSN</div>
+                                </th>
+                                <th style={{ width: '70px', height: '40px', verticalAlign: 'middle', backgroundColor: theme.hex, color: theme.text }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }}>QTY</div>
+                                </th>
+                                <th style={{ width: '120px', height: '40px', verticalAlign: 'middle', backgroundColor: theme.hex, color: theme.text }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', height: '100%', paddingRight: '12px', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }}>PRICE</div>
+                                </th>
+                                <th style={{ width: '140px', height: '40px', verticalAlign: 'middle', backgroundColor: theme.hex, color: theme.text }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', height: '100%', paddingRight: '12px', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }}>TOTAL</div>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {formData.items?.map((item, i) => {
+                                const amount = ((item.quantity||0) * (item.price||0));
+                                return (
+                                    <tr key={i} style={{ borderBottom: '1px solid #e5e7eb' }}>
+                                        <td style={{ width: '300px', padding: '8px 0 8px 12px', verticalAlign: 'top' }}>
+                                            <p style={{ fontWeight: 600, fontSize: '13px', margin: 0, color: '#1f2937' }}>{item.description}</p>
+                                        </td>
+                                        <td style={{ width: '110px', padding: '8px 0 8px 12px', verticalAlign: 'top', fontSize: '12px', color: '#4b5563' }}>{item.hsn}</td>
+                                        <td style={{ width: '70px', padding: '8px 0', textAlign: 'center', verticalAlign: 'top', fontSize: '13px', color: '#1f2937' }}>{item.quantity}</td>
+                                        <td style={{ width: '120px', padding: '8px 12px 8px 0', textAlign: 'right', verticalAlign: 'top', fontSize: '13px', color: '#1f2937' }}>₹{item.price}</td>
+                                        <td style={{ width: '140px', padding: '8px 12px 8px 0', textAlign: 'right', verticalAlign: 'top', fontWeight: 'bold', fontSize: '13px', color: '#1f2937' }}>₹{(amount).toFixed(2)}</td>
+                                    </tr>
+                                )
+                            })}
+                        </tbody>
+                    </table>
+                </div>
                 
                 <div className="flex justify-end">
                     <div className="w-5/12 space-y-1 border-b pb-3">
@@ -584,7 +621,6 @@ export default function CreateInvoice() {
                 
                 {/* Footer / Bank Info & Signature */}
                 <div className="flex justify-between items-end mt-10 pt-6 border-t border-gray-100">
-                    {/* Bank Details - Professional Look */}
                     <div className="w-[55%]">
                         {sellerProfile?.bank_name && (
                             <div className="bg-gray-50/50 border border-gray-200 rounded-lg p-3">
@@ -610,7 +646,6 @@ export default function CreateInvoice() {
                         )}
                     </div>
 
-                    {/* Signature - Closer alignment */}
                     <div className="w-[40%] text-right flex flex-col items-end">
                         {signaturePreview && (
                             <img 
