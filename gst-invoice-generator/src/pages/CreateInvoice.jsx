@@ -559,7 +559,7 @@ export default function CreateInvoice() {
                             <tr style={{ backgroundColor: theme.hex, color: theme.text }}>
                                 <th style={{ 
                                     width: '300px', 
-                                    height: '30px', 
+                                    height: '50px', 
                                     verticalAlign: 'middle', 
                                     backgroundColor: theme.hex, 
                                     color: theme.text 
