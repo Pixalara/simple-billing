@@ -43,6 +43,13 @@ const numberToWords = (num) => {
     return str + 'Only';
 }
 
+// --- HELPER: DATE FORMATTER (DD-MM-YYYY) ---
+const formatDate = (dateString) => {
+    if (!dateString) return ''
+    const [year, month, day] = dateString.split('-')
+    return `${day}-${month}-${year}`
+}
+
 export default function CreateInvoice() {
   const navigate = useNavigate()
   const { id } = useParams()
@@ -181,11 +188,11 @@ export default function CreateInvoice() {
 
       const clone = originalElement.cloneNode(true)
       
-      // Standard A4 settings
       clone.style.width = '794px' 
       clone.style.minHeight = '1122px'
       clone.style.height = 'auto'
       clone.style.overflow = 'visible'
+      clone.style.transform = 'none'
       clone.style.margin = '0'
       clone.style.backgroundColor = 'white'
       clone.classList.remove('w-full', 'lg:w-7/12', 'flex', 'justify-center', 'shadow-2xl', 'p-8') 
@@ -483,12 +490,12 @@ export default function CreateInvoice() {
                     <div className="text-right" style={{ width: '35%' }}>
                         <div className="mb-1 flex justify-between">
                             <span className="text-gray-500 text-xs mr-2">Date:</span>
-                            <span className="font-semibold text-sm">{formData.invoiceDate}</span>
+                            <span className="font-semibold text-sm">{formatDate(formData.invoiceDate)}</span>
                         </div>
                         {formData.dueDate && (
                             <div className="flex justify-between">
                                 <span className="text-gray-500 text-xs mr-2">Due Date:</span>
-                                <span className="font-semibold text-sm">{formData.dueDate}</span>
+                                <span className="font-semibold text-sm">{formatDate(formData.dueDate)}</span>
                             </div>
                         )}
                     </div>
@@ -497,11 +504,32 @@ export default function CreateInvoice() {
                 <table className="w-full mb-6 border-collapse">
                 <thead>
                     <tr style={{ color: theme.text }}>
-                        <th className="text-left px-3 text-xs font-bold uppercase w-5/12" style={{ backgroundColor: theme.hex, padding: '8px', verticalAlign: 'middle' }}>Item</th>
-                        <th className="text-left px-3 text-xs font-bold uppercase w-2/12" style={{ backgroundColor: theme.hex, padding: '8px', verticalAlign: 'middle' }}>HSN</th>
-                        <th className="text-center px-3 text-xs font-bold uppercase w-1/12" style={{ backgroundColor: theme.hex, padding: '8px', verticalAlign: 'middle' }}>Qty</th>
-                        <th className="text-right px-3 text-xs font-bold uppercase w-2/12" style={{ backgroundColor: theme.hex, padding: '8px', verticalAlign: 'middle' }}>Price</th>
-                        <th className="text-right px-3 text-xs font-bold uppercase w-2/12" style={{ backgroundColor: theme.hex, padding: '8px', verticalAlign: 'middle' }}>Total</th>
+                        {/* FIXED PDF VERTICAL ALIGNMENT WITH FLEXBOX */}
+                        <th style={{ backgroundColor: theme.hex, width: '41.6%', padding: 0, border: 'none' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', height: '35px', paddingLeft: '12px', fontSize: '11px', fontWeight: 'bold' }}>
+                                ITEM
+                            </div>
+                        </th>
+                        <th style={{ backgroundColor: theme.hex, width: '16.6%', padding: 0, border: 'none' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', height: '35px', paddingLeft: '8px', fontSize: '11px', fontWeight: 'bold' }}>
+                                HSN
+                            </div>
+                        </th>
+                        <th style={{ backgroundColor: theme.hex, width: '8.33%', padding: 0, border: 'none' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '35px', fontSize: '11px', fontWeight: 'bold' }}>
+                                QTY
+                            </div>
+                        </th>
+                        <th style={{ backgroundColor: theme.hex, width: '16.6%', padding: 0, border: 'none' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', height: '35px', paddingRight: '12px', fontSize: '11px', fontWeight: 'bold' }}>
+                                PRICE
+                            </div>
+                        </th>
+                        <th style={{ backgroundColor: theme.hex, width: '16.6%', padding: 0, border: 'none' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', height: '35px', paddingRight: '12px', fontSize: '11px', fontWeight: 'bold' }}>
+                                TOTAL
+                            </div>
+                        </th>
                     </tr>
                 </thead>
                 <tbody>
