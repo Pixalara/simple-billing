@@ -628,27 +628,28 @@ export default function CreateInvoice() {
                     <p className="text-xs font-bold text-gray-800">{amountInWords}</p>
                 </div>
                 
-                {/* Footer / Bank Info & Signature */}
+                {/* Footer / Bank Info & Signature - PROFESSIONAL CLEAN LAYOUT */}
                 <div className="flex justify-between items-end mt-10 pt-6 border-t border-gray-100">
-                    {/* Bank Details - Compact Box using w-fit */}
-                    <div className="w-auto"> 
+                    
+                    {/* Clean Bank Details (No Box, Just Content) */}
+                    <div className="w-[55%]">
                         {sellerProfile?.bank_name && (
-                            <div className="bg-gray-50/50 border border-gray-200 rounded-lg p-3 w-fit min-w-[200px]"> 
-                                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Bank Details</p>
-                                <div className="grid grid-cols-[60px_1fr] gap-y-1 text-xs">
-                                    <span className="text-gray-500">Bank:</span>
-                                    <span className="font-semibold text-gray-800">{sellerProfile.bank_name}</span>
+                            <div className="pt-2">
+                                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2 border-b border-gray-200 pb-1 w-2/3">Bank Details</p>
+                                <div className="grid grid-cols-[80px_1fr] gap-y-1 text-xs">
+                                    <span className="text-gray-500 font-medium">Bank:</span>
+                                    <span className="font-bold text-gray-800">{sellerProfile.bank_name}</span>
                                     
-                                    <span className="text-gray-500">A/c No:</span>
-                                    <span className="font-mono font-bold text-gray-800">{sellerProfile.account_number}</span>
+                                    <span className="text-gray-500 font-medium">A/c No:</span>
+                                    <span className="font-bold text-gray-800">{sellerProfile.account_number}</span>
                                     
-                                    <span className="text-gray-500">IFSC:</span>
-                                    <span className="font-mono font-bold text-gray-800">{sellerProfile.ifsc_code}</span>
+                                    <span className="text-gray-500 font-medium">IFSC:</span>
+                                    <span className="font-bold text-gray-800">{sellerProfile.ifsc_code}</span>
                                     
                                     {sellerProfile.branch_name && (
                                         <>
-                                            <span className="text-gray-500">Branch:</span>
-                                            <span className="font-semibold text-gray-800">{sellerProfile.branch_name}</span>
+                                            <span className="text-gray-500 font-medium">Branch:</span>
+                                            <span className="font-bold text-gray-800">{sellerProfile.branch_name}</span>
                                         </>
                                     )}
                                 </div>
