@@ -174,30 +174,29 @@ export default function CreateInvoice() {
     return ''; 
   }
 
-  // --- PDF GENERATION ---
+  // --- PDF GENERATION (ROBUST FIX) ---
   const generatePdfBlob = async () => {
       const originalElement = invoiceRef.current
       if (!originalElement) return null;
 
       const clone = originalElement.cloneNode(true)
       
-      clone.style.width = '796px' 
-      clone.style.minHeight = '1120px' 
+      // Force dimensions and clear conflicting classes
+      clone.style.width = '794px' 
+      clone.style.minHeight = '1122px' // A4 height
       clone.style.height = 'auto'
-      clone.style.maxHeight = '1122px'
-      clone.style.overflow = 'hidden'
+      clone.style.overflow = 'visible' // Ensure content isn't clipped inside
       clone.style.transform = 'none'
       clone.style.margin = '0'
       clone.style.backgroundColor = 'white'
-      
-      clone.classList.remove('w-full', 'lg:w-7/12', 'flex', 'justify-center') 
+      clone.classList.remove('w-full', 'lg:w-7/12', 'flex', 'justify-center', 'shadow-2xl', 'p-8') 
       
       const container = document.createElement('div')
       container.style.position = 'absolute'
       container.style.top = '0'
       container.style.left = '0'
       container.style.zIndex = '-1000'
-      container.style.width = '796px'
+      container.style.width = '794px' // Match A4 width
       container.appendChild(clone)
       document.body.appendChild(container)
 
@@ -208,13 +207,12 @@ export default function CreateInvoice() {
         enableLinks: false, 
         html2canvas: { 
             scale: 2, 
-            useCORS: true, 
+            useCORS: true, // Critical for images
             scrollY: 0,
-            width: 796,
-            windowWidth: 1200 
+            width: 794,
+            windowWidth: 794 
         },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] } 
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
       }
       
       try {
@@ -452,13 +450,21 @@ export default function CreateInvoice() {
                 style={{ width: '210mm', minHeight: '297mm', padding: '0' }}
             >
             
-            <div className="px-6 py-4 grid grid-cols-2" style={{ backgroundColor: theme.hex, color: theme.text }}>
-                <div>
-                    {sellerProfile?.logo_url && <img src={sellerProfile.logo_url} alt="Logo" className="h-12 w-auto mb-1 object-contain bg-white rounded p-0.5" />}
+            {/* Header: Flex Row instead of Grid */}
+            <div className="px-6 py-4 flex justify-between" style={{ backgroundColor: theme.hex, color: theme.text }}>
+                <div style={{ width: '50%' }}>
+                    {sellerProfile?.logo_url && (
+                        <img 
+                            src={sellerProfile.logo_url} 
+                            alt="Logo" 
+                            crossOrigin="anonymous" // FIX for CORS images in PDF
+                            className="h-12 w-auto mb-1 object-contain bg-white rounded p-0.5" 
+                        />
+                    )}
                     <h1 className="text-2xl font-bold uppercase tracking-wide">Invoice</h1>
                     <p className="opacity-80 text-xs"># {existingInvoiceNo || 'DRAFT'}</p>
                 </div>
-                <div className="text-right">
+                <div className="text-right" style={{ width: '50%' }}>
                     <h2 className="text-lg font-bold leading-tight">{sellerProfile?.business_name || 'Your Business Name'}</h2>
                     <p className="opacity-90 text-xs leading-tight">{sellerProfile?.state}</p>
                     {sellerProfile?.business_email && <p className="opacity-90 text-[10px] leading-tight">{sellerProfile.business_email}</p>}
@@ -468,33 +474,38 @@ export default function CreateInvoice() {
             </div>
 
             <div className="px-6 py-4 pb-12">
-                <div className="grid grid-cols-2 gap-4 mb-6">
-                    <div>
+                {/* Bill To: Flex Row */}
+                <div className="flex justify-between mb-6">
+                    <div style={{ width: '60%' }}>
                         <h3 className="text-gray-500 text-[10px] uppercase font-bold mb-1">Bill To</h3>
                         <p className="text-base font-bold text-gray-800 leading-tight">{formData.buyer_name || 'Client Name'}</p>
                         <p className="text-gray-600 text-xs whitespace-pre-wrap leading-tight">{formData.buyer_address}</p>
                         <p className="text-gray-600 text-xs">{formData.buyer_state}</p>
                         {formData.buyer_gstin && <p className="text-xs font-semibold mt-1">GSTIN: {formData.buyer_gstin}</p>}
                     </div>
-                    <div className="text-right">
-                        <div className="mb-1"><span className="text-gray-500 text-xs mr-2">Date:</span><span className="font-semibold text-sm">{formData.invoiceDate}</span></div>
-                        {formData.dueDate && <div><span className="text-gray-500 text-xs mr-2">Due Date:</span><span className="font-semibold text-sm">{formData.dueDate}</span></div>}
+                    <div className="text-right" style={{ width: '35%' }}>
+                        <div className="mb-1 flex justify-between">
+                            <span className="text-gray-500 text-xs mr-2">Date:</span>
+                            <span className="font-semibold text-sm">{formData.invoiceDate}</span>
+                        </div>
+                        {formData.dueDate && (
+                            <div className="flex justify-between">
+                                <span className="text-gray-500 text-xs mr-2">Due Date:</span>
+                                <span className="font-semibold text-sm">{formData.dueDate}</span>
+                            </div>
+                        )}
                     </div>
                 </div>
 
-                <table className="w-full mb-6">
+                <table className="w-full mb-6 border-collapse">
                 <thead>
-                    <tr style={{ backgroundColor: theme.hex, color: theme.text }}>
-                        {/* UPDATED FOR PDF VERTICAL CENTERING:
-                           1. height: '32px' - Fixed small bar height
-                           2. lineHeight: '32px' - Forces text to be exactly centered vertically
-                           3. paddingBlock: '0' - Removes padding interference
-                        */}
-                        <th className="text-left px-3 text-xs font-bold uppercase w-5/12" style={{ height: '32px', lineHeight: '32px', paddingBlock: '0', verticalAlign: 'middle' }}>Item</th>
-                        <th className="text-left px-3 text-xs font-bold uppercase w-2/12" style={{ height: '32px', lineHeight: '32px', paddingBlock: '0', verticalAlign: 'middle' }}>HSN</th>
-                        <th className="text-center px-3 text-xs font-bold uppercase w-1/12" style={{ height: '32px', lineHeight: '32px', paddingBlock: '0', verticalAlign: 'middle' }}>Qty</th>
-                        <th className="text-right px-3 text-xs font-bold uppercase w-2/12" style={{ height: '32px', lineHeight: '32px', paddingBlock: '0', verticalAlign: 'middle' }}>Price</th>
-                        <th className="text-right px-3 text-xs font-bold uppercase w-2/12" style={{ height: '32px', lineHeight: '32px', paddingBlock: '0', verticalAlign: 'middle' }}>Total</th>
+                    <tr style={{ color: theme.text }}>
+                        {/* STYLE APPLIED DIRECTLY TO CELLS FOR PDF COMPATIBILITY */}
+                        <th className="text-left px-3 text-xs font-bold uppercase w-5/12" style={{ backgroundColor: theme.hex, height: '32px', lineHeight: '32px', verticalAlign: 'middle', padding: 0 }}>Item</th>
+                        <th className="text-left px-3 text-xs font-bold uppercase w-2/12" style={{ backgroundColor: theme.hex, height: '32px', lineHeight: '32px', verticalAlign: 'middle', padding: 0 }}>HSN</th>
+                        <th className="text-center px-3 text-xs font-bold uppercase w-1/12" style={{ backgroundColor: theme.hex, height: '32px', lineHeight: '32px', verticalAlign: 'middle', padding: 0 }}>Qty</th>
+                        <th className="text-right px-3 text-xs font-bold uppercase w-2/12" style={{ backgroundColor: theme.hex, height: '32px', lineHeight: '32px', verticalAlign: 'middle', padding: 0 }}>Price</th>
+                        <th className="text-right px-3 text-xs font-bold uppercase w-2/12" style={{ backgroundColor: theme.hex, height: '32px', lineHeight: '32px', verticalAlign: 'middle', padding: 0 }}>Total</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -517,6 +528,7 @@ export default function CreateInvoice() {
                 </tbody>
                 </table>
                 
+                {/* Totals Section */}
                 <div className="flex justify-end">
                     <div className="w-5/12 space-y-1 border-b pb-3">
                         <div className="flex justify-between text-gray-600 text-sm"><span>Subtotal</span><span>₹{totals.subtotal}</span></div>
@@ -548,21 +560,19 @@ export default function CreateInvoice() {
                     <p className="text-xs font-bold text-gray-800">{amountInWords}</p>
                 </div>
                 
-                <div className="grid grid-cols-2 mt-8 items-end gap-4">
-                    <div className="text-xs text-black">
+                {/* Footer / Bank Info */}
+                <div className="flex justify-between mt-8 items-end">
+                    <div className="text-xs text-black w-7/12">
                         {sellerProfile?.bank_name && (
                             <div className="border p-2 rounded bg-gray-50">
                                 <p className="font-bold text-gray-700 mb-1 border-b border-gray-300 pb-1">Bank Details</p>
                                 <div className="grid grid-cols-3 gap-y-0.5">
                                     <span className="font-semibold col-span-1">Bank:</span>
                                     <span className="col-span-2">{sellerProfile.bank_name}</span>
-                                    
                                     <span className="font-semibold col-span-1">A/c No:</span>
                                     <span className="col-span-2">{sellerProfile.account_number}</span>
-                                    
                                     <span className="font-semibold col-span-1">IFSC:</span>
                                     <span className="col-span-2">{sellerProfile.ifsc_code}</span>
-                                    
                                     {sellerProfile.branch_name && (
                                         <>
                                             <span className="font-semibold col-span-1">Branch:</span>
@@ -574,8 +584,15 @@ export default function CreateInvoice() {
                         )}
                     </div>
 
-                    <div className="text-right">
-                        {signaturePreview && <img src={signaturePreview} alt="Sign" className="h-12 ml-auto mb-1 object-contain" />}
+                    <div className="text-right w-4/12">
+                        {signaturePreview && (
+                            <img 
+                                src={signaturePreview} 
+                                alt="Sign" 
+                                crossOrigin="anonymous" // FIX for CORS images
+                                className="h-12 ml-auto mb-1 object-contain" 
+                            />
+                        )}
                         <p className="text-[10px] font-bold uppercase">Authorized Signatory</p>
                         <p className="text-[10px] text-gray-500">{sellerProfile?.business_name}</p>
                     </div>
@@ -588,8 +605,8 @@ export default function CreateInvoice() {
             </div>
 
             <div className="absolute bottom-10 w-full text-center">
-                 <p className="text-[10px] text-gray-400">
-                     Powered by <a href="https://pixalara.com/" target="_blank" rel="noreferrer" className="font-semibold text-gray-500 no-underline">pixalara.com</a>
+                 <p className="text-xs text-gray-700 font-medium">
+                     Powered by <a href="https://pixalara.com/" target="_blank" rel="noreferrer" className="text-gray-900 hover:underline font-bold">pixalara.com</a>
                  </p>
             </div>
 
