@@ -174,26 +174,6 @@ export default function CreateInvoice() {
     return ''; 
   }
 
-  // --- REUSABLE STYLE OBJECTS FOR TABLE ALIGNMENT ---
-  const thBase = {
-    backgroundColor: theme.hex,
-    color: theme.text,
-    height: '35px',
-    verticalAlign: 'middle',
-    paddingTop: '0px',
-    paddingBottom: '0px',
-    paddingLeft: '12px',
-    paddingRight: '12px',
-    border: 'none',
-    fontSize: '11px',
-    fontWeight: 'bold',
-    textTransform: 'uppercase'
-  }
-
-  const thLeft = { ...thBase, textAlign: 'left' }
-  const thCenter = { ...thBase, textAlign: 'center' }
-  const thRight = { ...thBase, textAlign: 'right' }
-
   // --- PDF GENERATION ---
   const generatePdfBlob = async () => {
       const originalElement = invoiceRef.current
@@ -201,14 +181,15 @@ export default function CreateInvoice() {
 
       const clone = originalElement.cloneNode(true)
       
-      // Force dimensions and clear conflicting classes
+      // Force A4 dimensions and reset layout context
       clone.style.width = '794px' 
       clone.style.minHeight = '1122px'
       clone.style.height = 'auto'
       clone.style.overflow = 'visible'
-      clone.style.transform = 'none'
       clone.style.margin = '0'
       clone.style.backgroundColor = 'white'
+      
+      // Remove any conflicting responsive classes
       clone.classList.remove('w-full', 'lg:w-7/12', 'flex', 'justify-center', 'shadow-2xl', 'p-8') 
       
       const container = document.createElement('div')
@@ -216,7 +197,7 @@ export default function CreateInvoice() {
       container.style.top = '0'
       container.style.left = '0'
       container.style.zIndex = '-1000'
-      container.style.width = '794px' 
+      container.style.width = '794px'
       container.appendChild(clone)
       document.body.appendChild(container)
 
@@ -226,10 +207,10 @@ export default function CreateInvoice() {
         image: { type: 'jpeg', quality: 0.98 },
         enableLinks: true, 
         html2canvas: { 
-            scale: 1.5, // REDUCED SCALE TO PREVENT ROUNDING ERRORS
+            scale: 1.25, // Reduced scale to prevent rounding errors
             useCORS: true, 
             scrollY: 0,
-            letterRendering: true, // IMPROVES TEXT RENDERING
+            letterRendering: true, // Crucial for text alignment stability
             width: 794,
             windowWidth: 794 
         },
@@ -516,35 +497,146 @@ export default function CreateInvoice() {
                     </div>
                 </div>
 
-                <table className="w-full mb-6 border-collapse" style={{ tableLayout: 'fixed' }}>
-                <thead>
-                    <tr>
-                        <th style={{ ...thLeft, width: '40%' }}>Item</th>
-                        <th style={{ ...thLeft, width: '15%' }}>HSN</th>
-                        <th style={{ ...thCenter, width: '10%' }}>Qty</th>
-                        <th style={{ ...thRight, width: '17.5%' }}>Price</th>
-                        <th style={{ ...thRight, width: '17.5%' }}>Total</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {formData.items?.map((item, i) => {
-                    const amount = ((item.quantity||0) * (item.price||0));
-                    return (
-                        <tr key={i} className="border-b border-gray-200">
-                        <td className="py-2 px-2 text-left" style={{ width: '40%' }}>
-                            <p className="font-semibold text-gray-800 text-sm">{item.description}</p>
-                        </td>
-                        <td className="py-2 px-2 text-xs text-gray-600 text-left" style={{ width: '15%' }}>{item.hsn}</td>
-                        <td className="text-center py-2 px-2 text-sm" style={{ width: '10%' }}>{item.quantity}</td>
-                        <td className="text-right py-2 px-2 text-sm" style={{ width: '17.5%' }}>₹{item.price}</td>
-                        <td className="text-right py-2 px-2 font-bold text-gray-800 text-sm" style={{ width: '17.5%' }}>
-                            ₹{(amount).toFixed(2)}
-                        </td>
-                        </tr>
-                    )
-                    })}
-                </tbody>
-                </table>
+                {/* Fixed Width Container to prevent Flex/Grid interference */}
+                <div style={{ width: '740px', display: 'block', margin: '0 auto 24px auto' }}>
+                    <table style={{ width: '740px', tableLayout: 'fixed', borderCollapse: 'collapse' }}>
+                        <thead>
+                            <tr style={{ backgroundColor: theme.hex, color: theme.text }}>
+                                <th style={{ 
+                                    width: '300px', 
+                                    height: '40px', 
+                                    lineHeight: '40px', 
+                                    verticalAlign: 'middle', 
+                                    textAlign: 'left', 
+                                    paddingLeft: '12px',
+                                    fontSize: '11px', 
+                                    fontWeight: 'bold',
+                                    textTransform: 'uppercase',
+                                    backgroundColor: theme.hex, 
+                                    color: theme.text 
+                                }}>Item</th>
+                                
+                                <th style={{ 
+                                    width: '110px', 
+                                    height: '40px', 
+                                    lineHeight: '40px', 
+                                    verticalAlign: 'middle', 
+                                    textAlign: 'left', 
+                                    paddingLeft: '12px',
+                                    fontSize: '11px', 
+                                    fontWeight: 'bold',
+                                    textTransform: 'uppercase',
+                                    backgroundColor: theme.hex,
+                                    color: theme.text 
+                                }}>HSN</th>
+                                
+                                <th style={{ 
+                                    width: '70px', 
+                                    height: '40px', 
+                                    lineHeight: '40px', 
+                                    verticalAlign: 'middle', 
+                                    textAlign: 'center', 
+                                    fontSize: '11px', 
+                                    fontWeight: 'bold',
+                                    textTransform: 'uppercase',
+                                    backgroundColor: theme.hex,
+                                    color: theme.text 
+                                }}>Qty</th>
+                                
+                                <th style={{ 
+                                    width: '120px', 
+                                    height: '40px', 
+                                    lineHeight: '40px', 
+                                    verticalAlign: 'middle', 
+                                    textAlign: 'right', 
+                                    paddingRight: '12px',
+                                    fontSize: '11px', 
+                                    fontWeight: 'bold',
+                                    textTransform: 'uppercase',
+                                    backgroundColor: theme.hex,
+                                    color: theme.text 
+                                }}>Price</th>
+                                
+                                <th style={{ 
+                                    width: '140px', 
+                                    height: '40px', 
+                                    lineHeight: '40px', 
+                                    verticalAlign: 'middle', 
+                                    textAlign: 'right', 
+                                    paddingRight: '12px',
+                                    fontSize: '11px', 
+                                    fontWeight: 'bold',
+                                    textTransform: 'uppercase',
+                                    backgroundColor: theme.hex,
+                                    color: theme.text 
+                                }}>Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {formData.items?.map((item, i) => {
+                                const amount = ((item.quantity||0) * (item.price||0));
+                                return (
+                                    <tr key={i} style={{ borderBottom: '1px solid #e5e7eb' }}>
+                                        <td style={{ 
+                                            width: '300px', 
+                                            padding: '8px 0 8px 12px', 
+                                            textAlign: 'left',
+                                            verticalAlign: 'top',
+                                            wordWrap: 'break-word'
+                                        }}>
+                                            <p style={{ fontWeight: 600, fontSize: '13px', margin: 0, color: '#1f2937' }}>{item.description}</p>
+                                        </td>
+                                        
+                                        <td style={{ 
+                                            width: '110px', 
+                                            padding: '8px 0 8px 12px', 
+                                            textAlign: 'left',
+                                            verticalAlign: 'top',
+                                            fontSize: '12px',
+                                            color: '#4b5563'
+                                        }}>
+                                            {item.hsn}
+                                        </td>
+                                        
+                                        <td style={{ 
+                                            width: '70px', 
+                                            padding: '8px 0', 
+                                            textAlign: 'center',
+                                            verticalAlign: 'top',
+                                            fontSize: '13px',
+                                            color: '#1f2937'
+                                        }}>
+                                            {item.quantity}
+                                        </td>
+                                        
+                                        <td style={{ 
+                                            width: '120px', 
+                                            padding: '8px 12px 8px 0', 
+                                            textAlign: 'right',
+                                            verticalAlign: 'top',
+                                            fontSize: '13px',
+                                            color: '#1f2937'
+                                        }}>
+                                            ₹{item.price}
+                                        </td>
+                                        
+                                        <td style={{ 
+                                            width: '140px', 
+                                            padding: '8px 12px 8px 0', 
+                                            textAlign: 'right',
+                                            verticalAlign: 'top',
+                                            fontWeight: 'bold',
+                                            fontSize: '13px',
+                                            color: '#1f2937'
+                                        }}>
+                                            ₹{(amount).toFixed(2)}
+                                        </td>
+                                    </tr>
+                                )
+                            })}
+                        </tbody>
+                    </table>
+                </div>
                 
                 <div className="flex justify-end">
                     <div className="w-5/12 space-y-1 border-b pb-3">
