@@ -246,10 +246,10 @@ export default function CreateInvoice() {
         image: { type: 'jpeg', quality: 0.98 },
         enableLinks: true, 
         html2canvas: { 
-            scale: 2, // INCREASED SCALE FOR HIGH QUALITY
+            scale: 2, 
             useCORS: true, 
             scrollY: 0,
-            letterRendering: true, // Improves font rendering
+            letterRendering: true,
             width: 794,
             windowWidth: 794 
         },
@@ -630,9 +630,10 @@ export default function CreateInvoice() {
                 
                 {/* Footer / Bank Info & Signature */}
                 <div className="flex justify-between items-end mt-10 pt-6 border-t border-gray-100">
-                    <div className="w-[55%]">
+                    {/* Bank Details - Compact Box using w-fit */}
+                    <div className="w-auto"> 
                         {sellerProfile?.bank_name && (
-                            <div className="bg-gray-50/50 border border-gray-200 rounded-lg p-3">
+                            <div className="bg-gray-50/50 border border-gray-200 rounded-lg p-3 w-fit min-w-[200px]"> 
                                 <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Bank Details</p>
                                 <div className="grid grid-cols-[60px_1fr] gap-y-1 text-xs">
                                     <span className="text-gray-500">Bank:</span>
