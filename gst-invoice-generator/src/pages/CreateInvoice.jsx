@@ -174,26 +174,6 @@ export default function CreateInvoice() {
     return ''; 
   }
 
-  // --- REUSABLE STYLE OBJECTS FOR TABLE ALIGNMENT ---
-  const thBase = {
-    backgroundColor: theme.hex,
-    color: theme.text,
-    height: '35px',
-    verticalAlign: 'middle',
-    paddingTop: '0px',
-    paddingBottom: '0px',
-    paddingLeft: '12px',
-    paddingRight: '12px',
-    border: 'none',
-    fontSize: '11px',
-    fontWeight: 'bold',
-    textTransform: 'uppercase'
-  }
-
-  const thLeft = { ...thBase, textAlign: 'left' }
-  const thCenter = { ...thBase, textAlign: 'center' }
-  const thRight = { ...thBase, textAlign: 'right' }
-
   // --- PDF GENERATION ---
   const generatePdfBlob = async () => {
       const originalElement = invoiceRef.current
@@ -201,12 +181,11 @@ export default function CreateInvoice() {
 
       const clone = originalElement.cloneNode(true)
       
-      // Force dimensions and clear conflicting classes
+      // Standard A4 settings
       clone.style.width = '794px' 
       clone.style.minHeight = '1122px'
       clone.style.height = 'auto'
       clone.style.overflow = 'visible'
-      clone.style.transform = 'none'
       clone.style.margin = '0'
       clone.style.backgroundColor = 'white'
       clone.classList.remove('w-full', 'lg:w-7/12', 'flex', 'justify-center', 'shadow-2xl', 'p-8') 
@@ -216,7 +195,7 @@ export default function CreateInvoice() {
       container.style.top = '0'
       container.style.left = '0'
       container.style.zIndex = '-1000'
-      container.style.width = '794px' 
+      container.style.width = '794px'
       container.appendChild(clone)
       document.body.appendChild(container)
 
@@ -226,10 +205,9 @@ export default function CreateInvoice() {
         image: { type: 'jpeg', quality: 0.98 },
         enableLinks: true, 
         html2canvas: { 
-            scale: 1.5, // REDUCED SCALE TO PREVENT ROUNDING ERRORS
+            scale: 2, 
             useCORS: true, 
             scrollY: 0,
-            letterRendering: true, // IMPROVES TEXT RENDERING
             width: 794,
             windowWidth: 794 
         },
@@ -516,14 +494,14 @@ export default function CreateInvoice() {
                     </div>
                 </div>
 
-                <table className="w-full mb-6 border-collapse" style={{ tableLayout: 'fixed' }}>
+                <table className="w-full mb-6 border-collapse">
                 <thead>
-                    <tr>
-                        <th style={{ ...thLeft, width: '40%' }}>Item</th>
-                        <th style={{ ...thLeft, width: '15%' }}>HSN</th>
-                        <th style={{ ...thCenter, width: '10%' }}>Qty</th>
-                        <th style={{ ...thRight, width: '17.5%' }}>Price</th>
-                        <th style={{ ...thRight, width: '17.5%' }}>Total</th>
+                    <tr style={{ color: theme.text }}>
+                        <th className="text-left px-3 text-xs font-bold uppercase w-5/12" style={{ backgroundColor: theme.hex, padding: '8px', verticalAlign: 'middle' }}>Item</th>
+                        <th className="text-left px-3 text-xs font-bold uppercase w-2/12" style={{ backgroundColor: theme.hex, padding: '8px', verticalAlign: 'middle' }}>HSN</th>
+                        <th className="text-center px-3 text-xs font-bold uppercase w-1/12" style={{ backgroundColor: theme.hex, padding: '8px', verticalAlign: 'middle' }}>Qty</th>
+                        <th className="text-right px-3 text-xs font-bold uppercase w-2/12" style={{ backgroundColor: theme.hex, padding: '8px', verticalAlign: 'middle' }}>Price</th>
+                        <th className="text-right px-3 text-xs font-bold uppercase w-2/12" style={{ backgroundColor: theme.hex, padding: '8px', verticalAlign: 'middle' }}>Total</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -531,13 +509,13 @@ export default function CreateInvoice() {
                     const amount = ((item.quantity||0) * (item.price||0));
                     return (
                         <tr key={i} className="border-b border-gray-200">
-                        <td className="py-2 px-2 text-left" style={{ width: '40%' }}>
+                        <td className="py-2 px-2">
                             <p className="font-semibold text-gray-800 text-sm">{item.description}</p>
                         </td>
-                        <td className="py-2 px-2 text-xs text-gray-600 text-left" style={{ width: '15%' }}>{item.hsn}</td>
-                        <td className="text-center py-2 px-2 text-sm" style={{ width: '10%' }}>{item.quantity}</td>
-                        <td className="text-right py-2 px-2 text-sm" style={{ width: '17.5%' }}>₹{item.price}</td>
-                        <td className="text-right py-2 px-2 font-bold text-gray-800 text-sm" style={{ width: '17.5%' }}>
+                        <td className="py-2 px-2 text-xs text-gray-600">{item.hsn}</td>
+                        <td className="text-center py-2 px-2 text-sm">{item.quantity}</td>
+                        <td className="text-right py-2 px-2 text-sm">₹{item.price}</td>
+                        <td className="text-right py-2 px-2 font-bold text-gray-800 text-sm">
                             ₹{(amount).toFixed(2)}
                         </td>
                         </tr>
