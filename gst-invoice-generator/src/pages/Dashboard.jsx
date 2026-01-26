@@ -41,16 +41,13 @@ const Popup = ({ isOpen, onClose, title, message, type, actionLabel, onAction, c
 export default function Dashboard() {
   const [session, setSession] = useState(null)
   const [loading, setLoading] = useState(true)
-  
-  // Upload States
   const [uploadingLogo, setUploadingLogo] = useState(false)
   const [uploadingSig, setUploadingSig] = useState(false)
-  const [uploadingStamp, setUploadingStamp] = useState(false) // NEW: Stamp
+  const [uploadingStamp, setUploadingStamp] = useState(false)
   
-  // Saved URLs
   const [savedLogo, setSavedLogo] = useState(null)
   const [savedSignature, setSavedSignature] = useState(null)
-  const [savedStamp, setSavedStamp] = useState(null) // NEW: Stamp
+  const [savedStamp, setSavedStamp] = useState(null)
   
   const [invoices, setInvoices] = useState([]) 
   const [stats, setStats] = useState({ total: 0, revenue: 0 })
@@ -85,18 +82,18 @@ export default function Dashboard() {
       setValue('business_email', data.business_email)
       setValue('business_phone', data.business_phone)
       setValue('website', data.website)
-      
       setValue('bank_name', data.bank_name)
       setValue('account_number', data.account_number)
       setValue('ifsc_code', data.ifsc_code)
       setValue('branch_name', data.branch_name)
       
-      // Load New Setting
+      // Load Settings
       setValue('print_duplicates', data.print_duplicates)
+      setValue('enable_manual_invoice_no', data.enable_manual_invoice_no) // NEW
 
       if (data.logo_url) setSavedLogo(data.logo_url)
       if (data.signature_url) setSavedSignature(data.signature_url)
-      if (data.stamp_url) setSavedStamp(data.stamp_url) // NEW
+      if (data.stamp_url) setSavedStamp(data.stamp_url)
     }
     setLoading(false)
   }
@@ -130,7 +127,7 @@ export default function Dashboard() {
       const updateData = {}
       if (type === 'logo') updateData.logo_url = publicUrl
       else if (type === 'signature') updateData.signature_url = publicUrl
-      else updateData.stamp_url = publicUrl // Save Stamp
+      else updateData.stamp_url = publicUrl
 
       await supabase.from('users').update(updateData).eq('id', session.user.id)
 
@@ -148,7 +145,6 @@ export default function Dashboard() {
   const updateProfile = async (formData) => {
     try {
       setLoading(true)
-      // Save all form data including 'print_duplicates'
       const { error } = await supabase.from('users').upsert({ id: session.user.id, ...formData })
       if (error) throw error
       showPopup('Saved', 'Business Profile Saved Successfully!', 'success')
@@ -212,7 +208,6 @@ export default function Dashboard() {
             <div className="lg:col-span-1 bg-white p-5 rounded-xl shadow-sm h-fit">
                 <h2 className="text-lg font-bold mb-4 text-gray-800 border-b pb-2">Business Profile</h2>
                 
-                {/* 3-Column Upload Grid */}
                 <div className="grid grid-cols-3 gap-3 mb-6">
                     {['logo', 'signature', 'stamp'].map(type => (
                         <div key={type} className="flex flex-col items-center">
@@ -248,13 +243,17 @@ export default function Dashboard() {
                         </div>
                     </div>
 
-                    {/* NEW: DUPLICATE CHECKBOX */}
-                    <div className="pt-4 border-t mt-4">
+                    <div className="pt-4 border-t mt-4 space-y-2">
+                        {/* Duplicate Toggle */}
                         <div className="flex items-center gap-2">
                             <input type="checkbox" {...register('print_duplicates')} id="print_dup" className="w-4 h-4 text-blue-600 rounded cursor-pointer" />
                             <label htmlFor="print_dup" className="text-xs font-bold text-gray-700 cursor-pointer">Generate Original & Duplicate?</label>
                         </div>
-                        <p className="text-[10px] text-gray-400 mt-1 pl-6">If checked, separate PDFs for "Original" and "Duplicate" will be generated.</p>
+                        {/* Manual Invoice Number Toggle */}
+                        <div className="flex items-center gap-2">
+                            <input type="checkbox" {...register('enable_manual_invoice_no')} id="manual_inv" className="w-4 h-4 text-blue-600 rounded cursor-pointer" />
+                            <label htmlFor="manual_inv" className="text-xs font-bold text-gray-700 cursor-pointer">Enable Manual Invoice Numbering?</label>
+                        </div>
                     </div>
 
                     <button type="submit" className="w-full bg-blue-600 text-white py-2 rounded-lg font-bold text-sm shadow hover:bg-blue-700 mt-4">Save Profile</button>

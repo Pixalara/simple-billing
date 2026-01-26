@@ -80,8 +80,8 @@ export default function CreateInvoice() {
   const [sellerProfile, setSellerProfile] = useState(null)
   const [theme, setTheme] = useState(THEMES[0])
   const [signaturePreview, setSignaturePreview] = useState(null)
-  const [stampPreview, setStampPreview] = useState(null) // NEW STAMP
-  const [existingInvoiceNo, setExistingInvoiceNo] = useState(null)
+  const [stampPreview, setStampPreview] = useState(null) 
+  const [manualInvoiceEnabled, setManualInvoiceEnabled] = useState(false) // State for manual toggle
 
   const [popup, setPopup] = useState({ isOpen: false, title: '', message: '', type: 'success', actionLabel: 'OK', onAction: null })
   const showPopup = (title, message, type = 'success', actionLabel = 'OK', onAction = null) => { setPopup({ isOpen: true, title, message, type, actionLabel, onAction }) }
@@ -89,6 +89,7 @@ export default function CreateInvoice() {
 
   const { register, control, handleSubmit, setValue, reset, watch } = useForm({
     defaultValues: {
+      invoice_no: '',
       invoiceDate: new Date().toISOString().split('T')[0],
       dueDate: '',
       items: [{ description: '', hsn: '', quantity: 1, price: 0, gstRate: 18 }],
@@ -108,42 +109,47 @@ export default function CreateInvoice() {
       if (profile) {
           setSellerProfile(profile)
           if (profile.signature_url) setSignaturePreview(profile.signature_url)
-          if (profile.stamp_url) setStampPreview(profile.stamp_url) // Load Stamp
+          if (profile.stamp_url) setStampPreview(profile.stamp_url)
+          setManualInvoiceEnabled(profile.enable_manual_invoice_no) // Load manual setting
       }
 
       if (id) {
         const { data: invoice } = await supabase.from('invoices').select('*').eq('id', id).single()
         if (invoice) {
           reset(invoice.invoice_data)
-          setExistingInvoiceNo(invoice.invoice_no)
+          // For edit, simply load the number into the form field
+          setValue('invoice_no', invoice.invoice_no) 
           if (invoice.invoice_data.theme) {
             const foundTheme = THEMES.find(t => t.hex === invoice.invoice_data.theme)
             if (foundTheme) setTheme(foundTheme)
           }
         }
       } else {
-        try {
-            const date = new Date();
-            const day = String(date.getDate()).padStart(2, '0');
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const year = String(date.getFullYear()).slice(-2);
-            const prefix = `${day}${month}${year}`; 
-            const { data: lastInvoice } = await supabase.from('invoices').select('invoice_no').eq('user_id', user.id).ilike('invoice_no', `${prefix}%`).order('invoice_no', { ascending: false }).limit(1).single();
-            let sequence = '01';
-            if (lastInvoice && lastInvoice.invoice_no) {
-                const lastSeqStr = lastInvoice.invoice_no.replace(prefix, '');
-                const lastSeqNum = parseInt(lastSeqStr, 10);
-                if (!isNaN(lastSeqNum)) sequence = String(lastSeqNum + 1).padStart(2, '0');
+        // Only auto-generate if manual is disabled
+        if (!profile?.enable_manual_invoice_no) {
+            try {
+                const date = new Date();
+                const day = String(date.getDate()).padStart(2, '0');
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const year = String(date.getFullYear()).slice(-2);
+                const prefix = `${day}${month}${year}`; 
+                const { data: lastInvoice } = await supabase.from('invoices').select('invoice_no').eq('user_id', user.id).ilike('invoice_no', `${prefix}%`).order('invoice_no', { ascending: false }).limit(1).single();
+                let sequence = '01';
+                if (lastInvoice && lastInvoice.invoice_no) {
+                    const lastSeqStr = lastInvoice.invoice_no.replace(prefix, '');
+                    const lastSeqNum = parseInt(lastSeqStr, 10);
+                    if (!isNaN(lastSeqNum)) sequence = String(lastSeqNum + 1).padStart(2, '0');
+                }
+                setValue('invoice_no', `${prefix}${sequence}`)
+            } catch (e) {
+                console.error("Error generating invoice number:", e);
+                setValue('invoice_no', `DRAFT-${Date.now().toString().slice(-4)}`)
             }
-            setExistingInvoiceNo(`${prefix}${sequence}`);
-        } catch (e) {
-            console.error("Error generating invoice number:", e);
-            setExistingInvoiceNo(`DRAFT-${Date.now().toString().slice(-4)}`);
         }
       }
     }
     loadData()
-  }, [id, navigate, reset])
+  }, [id, navigate, reset, setValue])
 
   useEffect(() => {
     const handleResize = () => { if (containerRef.current) { const s = (containerRef.current.offsetWidth - 32) / 794; setPreviewScale(s > 1 ? 1 : s) } }; handleResize(); window.addEventListener('resize', handleResize); return () => window.removeEventListener('resize', handleResize);
@@ -154,14 +160,12 @@ export default function CreateInvoice() {
   const totals = calculateTotals(); const amountInWords = totals.grandTotal ? numberToWords(totals.grandTotal) : '';
   const getTaxRateText = (type) => { const rates = new Set(formData.items?.map(i => parseFloat(i.gstRate)).filter(r => r > 0)); if (rates.size === 1) { const r = [...rates][0]; if (type === 'IGST') return `(${r}%)`; if (type === 'CGST' || type === 'SGST') return `(${r/2}%)`; } return ''; }
 
-  // --- PDF GENERATION LOGIC WITH ORIGINAL/DUPLICATE COPY ---
   const generatePdfBlob = async (copyType = '') => {
       const originalElement = invoiceRef.current
       if (!originalElement) return null;
 
       const clone = originalElement.cloneNode(true)
       
-      // Inject Copy Type Header if specified (ORIGINAL / DUPLICATE)
       if (copyType) {
           const titleElement = clone.querySelector('h1'); 
           if (titleElement) {
@@ -195,7 +199,7 @@ export default function CreateInvoice() {
       document.body.appendChild(container)
 
       const buyerName = formData.buyer_name || 'Customer'
-      const invoiceNum = existingInvoiceNo || 'DRAFT'
+      const invoiceNum = formData.invoice_no || 'DRAFT'
       const typeTag = copyType ? `_${copyType}` : '';
       const safeFileName = `${buyerName}_${invoiceNum}${typeTag}.pdf`
 
@@ -218,22 +222,16 @@ export default function CreateInvoice() {
       }
   }
 
-  // --- DUAL DOWNLOAD LOGIC ---
   const handleDownloadPDF = async () => {
     try {
-        // CHECK IF USER WANTS ORIG + DUP
         if (sellerProfile?.print_duplicates) {
-            // Generate Original
             const res1 = await generatePdfBlob('ORIGINAL')
             downloadBlob(res1.blob, res1.filename)
-            
-            // Short delay then Generate Duplicate
             setTimeout(async () => {
                 const res2 = await generatePdfBlob('DUPLICATE')
                 downloadBlob(res2.blob, res2.filename)
             }, 800)
         } else {
-            // Standard Single Download
             const result = await generatePdfBlob()
             if (result) downloadBlob(result.blob, result.filename)
         }
@@ -242,7 +240,6 @@ export default function CreateInvoice() {
     }
   }
 
-  // --- DUAL EMAIL DOWNLOAD LOGIC ---
   const handleSendEmail = async () => {
     try {
         if (sellerProfile?.print_duplicates) {
@@ -262,10 +259,10 @@ export default function CreateInvoice() {
     }
 
     setTimeout(() => {
-        const subject = `Invoice ${existingInvoiceNo || ''} from ${sellerProfile?.business_name || 'Us'}`
+        const subject = `Invoice ${formData.invoice_no || ''} from ${sellerProfile?.business_name || 'Us'}`
         const body = `Dear ${formData.buyer_name || 'Customer'},\n\nPlease find the invoice attached.\n\nBest Regards,\n${sellerProfile?.business_name || ''}`
         window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
-        showPopup('Email Draft Opened', 'The PDFs have been downloaded.\n\nPlease attach them to the email draft.', 'info', 'Got it');
+        showPopup('Email Draft Opened', 'The PDF(s) have been downloaded.\n\nPlease attach them to the email draft.', 'info', 'Got it');
     }, 1500)
   }
 
@@ -279,19 +276,16 @@ export default function CreateInvoice() {
 
   const handleShare = async () => { setSharing(true); try { const result = await generatePdfBlob(); if(!result) return; const file = new File([result.blob], result.filename, { type: 'application/pdf' }); if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: 'Invoice', text: `Invoice from ${sellerProfile?.business_name}` }) } else { downloadBlob(result.blob, result.filename); showPopup('Downloaded', 'Browser doesn\'t support sharing.', 'info'); } } catch(e){ showPopup('Error','Failed share','error') } finally { setSharing(false) } }
   
-  const onSubmit = async (data) => { setLoading(true); try { const { data: { user } } = await supabase.auth.getUser(); const payload = { user_id: user.id, invoice_no: existingInvoiceNo, invoice_data: { ...data, totals, theme: theme.hex }, total_amount: totals.grandTotal }; if (id) await supabase.from('invoices').update(payload).eq('id', id); else await supabase.from('invoices').insert(payload); showPopup('Success!', 'Invoice Saved.', 'success', 'Go to Dashboard', () => navigate('/dashboard')); } catch (error) { showPopup('Error', error.message, 'error'); } finally { setLoading(false) } }
+  const onSubmit = async (data) => { setLoading(true); try { const { data: { user } } = await supabase.auth.getUser(); const payload = { user_id: user.id, invoice_no: data.invoice_no, invoice_data: { ...data, totals, theme: theme.hex }, total_amount: totals.grandTotal }; if (id) await supabase.from('invoices').update(payload).eq('id', id); else await supabase.from('invoices').insert(payload); showPopup('Success!', 'Invoice Saved.', 'success', 'Go to Dashboard', () => navigate('/dashboard')); } catch (error) { showPopup('Error', error.message, 'error'); } finally { setLoading(false) } }
 
   return (
     <div className="min-h-screen bg-gray-100 p-0 md:p-4 lg:p-8 flex flex-col lg:flex-row gap-6">
       <Popup isOpen={popup.isOpen} onClose={closePopup} title={popup.title} message={popup.message} type={popup.type} actionLabel={popup.actionLabel} />
       
-      {/* Mobile Tabs */}
       <div className="lg:hidden sticky top-0 z-20 bg-white border-b flex text-sm font-bold shadow-sm">
         <button onClick={() => setMobileTab('edit')} className={`flex-1 py-3 ${mobileTab === 'edit' ? 'text-blue-600 border-b-2 border-blue-600' : ''}`}>✎ Editor</button>
         <button onClick={() => setMobileTab('preview')} className={`flex-1 py-3 ${mobileTab === 'preview' ? 'text-blue-600 border-b-2 border-blue-600' : ''}`}>👁 Preview</button>
       </div>
-
-      {/* Editor Section */}
       <div className={`w-full lg:w-5/12 bg-white p-4 md:p-6 rounded-lg shadow-lg h-fit overflow-y-auto max-h-screen custom-scrollbar ${mobileTab === 'preview' ? 'hidden lg:block' : 'block'}`}>
          <button onClick={() => navigate('/dashboard')} className="flex items-center text-sm text-gray-500 hover:text-gray-800 mb-4 transition-colors font-medium">← Back to Dashboard</button>
          <div className="flex justify-between items-center mb-4 border-t pt-4">
@@ -304,9 +298,19 @@ export default function CreateInvoice() {
         </div>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
+                {/* NEW: Manually Editable Invoice No */}
+                <div>
+                    <label className="text-xs text-gray-500">Invoice No</label>
+                    <input 
+                        {...register('invoice_no')} 
+                        className={`w-full p-2 border rounded text-sm ${!manualInvoiceEnabled ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : 'bg-white'}`}
+                        readOnly={!manualInvoiceEnabled}
+                    />
+                </div>
                 <div><label className="text-xs text-gray-500">Date</label><input type="date" {...register('invoiceDate')} className="w-full p-2 border rounded text-sm" /></div>
-                <div><label className="text-xs text-gray-500">Due Date</label><input type="date" {...register('dueDate')} className="w-full p-2 border rounded text-sm" /></div>
             </div>
+            <div><label className="text-xs text-gray-500">Due Date</label><input type="date" {...register('dueDate')} className="w-full p-2 border rounded text-sm" /></div>
+            
             <div className="bg-gray-50 p-3 rounded border">
                 <h3 className="text-sm font-semibold mb-2 text-gray-700">Bill To</h3>
                 <input {...register('buyer_name')} placeholder="Client Name" className="w-full p-2 border rounded mb-2 text-sm" onChange={(e) => setValue('buyer_name', e.target.value.toUpperCase())} />
@@ -344,14 +348,13 @@ export default function CreateInvoice() {
         </form>
       </div>
 
-      {/* --- PREVIEW SECTION --- */}
       <div ref={containerRef} className={`w-full lg:w-7/12 flex justify-center bg-gray-300 p-0 md:p-8 overflow-hidden ${mobileTab === 'edit' ? 'hidden lg:flex' : 'flex'}`}>
         <div id="invoice-preview" ref={invoiceRef} className="bg-white shadow-2xl relative shrink-0 transition-transform origin-top duration-200" style={{ transform: `scale(${previewScale})`, width: '210mm', minHeight: '297mm', padding: '0' }}>
             <div className="px-6 py-4 flex justify-between" style={{ backgroundColor: theme.hex, color: theme.text }}>
                 <div style={{ width: '50%' }}>
                     {sellerProfile?.logo_url && <img src={sellerProfile.logo_url} alt="Logo" crossOrigin="anonymous" className="h-12 w-auto mb-1 object-contain bg-white rounded p-0.5" />}
                     <h1 className="text-2xl font-bold uppercase tracking-wide">Invoice</h1>
-                    <p className="opacity-80 text-xs"># {existingInvoiceNo || 'DRAFT'}</p>
+                    <p className="opacity-80 text-xs"># {formData.invoice_no || 'DRAFT'}</p>
                 </div>
                 <div className="text-right" style={{ width: '50%' }}>
                     <h2 className="text-3xl font-bold leading-tight mb-1">{sellerProfile?.business_name || 'Your Business Name'}</h2>
@@ -361,7 +364,6 @@ export default function CreateInvoice() {
                     {sellerProfile?.gstin && <p className="font-semibold mt-1 text-base">GSTIN: {sellerProfile.gstin}</p>}
                 </div>
             </div>
-            {/* Body */}
             <div className="px-6 py-4 pb-12">
                 <div className="flex justify-between mb-6">
                     <div style={{ width: '60%' }}>
@@ -379,7 +381,6 @@ export default function CreateInvoice() {
                         </div>
                     </div>
                 </div>
-                {/* Table */}
                 <div style={{ width: '740px', display: 'block', margin: '0 auto 24px auto' }}>
                     <table style={{ width: '740px', tableLayout: 'fixed', borderCollapse: 'collapse' }}>
                         <thead>
@@ -404,7 +405,6 @@ export default function CreateInvoice() {
                         </tbody>
                     </table>
                 </div>
-                {/* Totals */}
                 <div className="flex justify-end">
                     <div className="w-5/12 space-y-1 border-b pb-3">
                         <div className="flex justify-between text-gray-600 text-sm"><span>Subtotal</span><span>₹{totals.subtotal}</span></div>
@@ -413,7 +413,6 @@ export default function CreateInvoice() {
                     </div>
                 </div>
                 <div className="mt-2 text-right"><p className="text-xs text-gray-500 font-semibold italic">Amount in Words:</p><p className="text-xs font-bold text-gray-800">{amountInWords}</p></div>
-                {/* Footer */}
                 <div className="flex justify-between items-end mt-10 pt-6 border-t border-gray-100">
                     <div className="w-[55%]">
                         {sellerProfile?.bank_name && (
@@ -428,10 +427,8 @@ export default function CreateInvoice() {
                             </div>
                         )}
                     </div>
-                    {/* Stamp & Sig */}
                     <div className="w-[40%] text-right flex flex-col items-end">
                         <div className="flex items-end gap-4 mb-2">
-                            {/* STAMP DISPLAY */}
                             {stampPreview && <img src={stampPreview} alt="Stamp" crossOrigin="anonymous" className="h-20 w-20 object-contain opacity-80 rotate-[-5deg]" />}
                             {signaturePreview && <img src={signaturePreview} alt="Sign" crossOrigin="anonymous" className="h-14 mb-2 object-contain" />}
                         </div>
