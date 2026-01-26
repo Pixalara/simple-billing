@@ -81,7 +81,7 @@ export default function CreateInvoice() {
   const [theme, setTheme] = useState(THEMES[0])
   const [signaturePreview, setSignaturePreview] = useState(null)
   const [stampPreview, setStampPreview] = useState(null) 
-  const [manualInvoiceEnabled, setManualInvoiceEnabled] = useState(false) // State for manual toggle
+  const [manualInvoiceEnabled, setManualInvoiceEnabled] = useState(false) 
 
   const [popup, setPopup] = useState({ isOpen: false, title: '', message: '', type: 'success', actionLabel: 'OK', onAction: null })
   const showPopup = (title, message, type = 'success', actionLabel = 'OK', onAction = null) => { setPopup({ isOpen: true, title, message, type, actionLabel, onAction }) }
@@ -110,14 +110,13 @@ export default function CreateInvoice() {
           setSellerProfile(profile)
           if (profile.signature_url) setSignaturePreview(profile.signature_url)
           if (profile.stamp_url) setStampPreview(profile.stamp_url)
-          setManualInvoiceEnabled(profile.enable_manual_invoice_no) // Load manual setting
+          setManualInvoiceEnabled(profile.enable_manual_invoice_no) 
       }
 
       if (id) {
         const { data: invoice } = await supabase.from('invoices').select('*').eq('id', id).single()
         if (invoice) {
           reset(invoice.invoice_data)
-          // For edit, simply load the number into the form field
           setValue('invoice_no', invoice.invoice_no) 
           if (invoice.invoice_data.theme) {
             const foundTheme = THEMES.find(t => t.hex === invoice.invoice_data.theme)
@@ -125,7 +124,6 @@ export default function CreateInvoice() {
           }
         }
       } else {
-        // Only auto-generate if manual is disabled
         if (!profile?.enable_manual_invoice_no) {
             try {
                 const date = new Date();
@@ -298,13 +296,14 @@ export default function CreateInvoice() {
         </div>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
-                {/* NEW: Manually Editable Invoice No */}
+                {/* INVOICE NUMBER - AUTO-CAPITALIZED & TOGGLED */}
                 <div>
                     <label className="text-xs text-gray-500">Invoice No</label>
                     <input 
                         {...register('invoice_no')} 
                         className={`w-full p-2 border rounded text-sm ${!manualInvoiceEnabled ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : 'bg-white'}`}
                         readOnly={!manualInvoiceEnabled}
+                        onChange={(e) => setValue('invoice_no', e.target.value.toUpperCase())}
                     />
                 </div>
                 <div><label className="text-xs text-gray-500">Date</label><input type="date" {...register('invoiceDate')} className="w-full p-2 border rounded text-sm" /></div>
