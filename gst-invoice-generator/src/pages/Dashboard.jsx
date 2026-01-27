@@ -87,9 +87,8 @@ export default function Dashboard() {
       setValue('ifsc_code', data.ifsc_code)
       setValue('branch_name', data.branch_name)
       
-      // Load Settings
       setValue('print_duplicates', data.print_duplicates)
-      setValue('enable_manual_invoice_no', data.enable_manual_invoice_no) // NEW
+      setValue('enable_manual_invoice_no', data.enable_manual_invoice_no)
 
       if (data.logo_url) setSavedLogo(data.logo_url)
       if (data.signature_url) setSavedSignature(data.signature_url)
@@ -243,16 +242,14 @@ export default function Dashboard() {
                         </div>
                     </div>
 
-                    <div className="pt-4 border-t mt-4 space-y-2">
-                        {/* Duplicate Toggle */}
-                        <div className="flex items-center gap-2">
-                            <input type="checkbox" {...register('print_duplicates')} id="print_dup" className="w-4 h-4 text-blue-600 rounded cursor-pointer" />
-                            <label htmlFor="print_dup" className="text-xs font-bold text-gray-700 cursor-pointer">Generate Original & Duplicate?</label>
+                    <div className="pt-4 border-t mt-4 space-y-3">
+                        <div className="flex items-center gap-3">
+                            <input type="checkbox" {...register('print_duplicates')} id="print_dup" className="w-5 h-5 text-blue-600 rounded cursor-pointer accent-blue-600" />
+                            <label htmlFor="print_dup" className="text-sm font-semibold text-gray-800 cursor-pointer select-none">Generate Original & Duplicate</label>
                         </div>
-                        {/* Manual Invoice Number Toggle */}
-                        <div className="flex items-center gap-2">
-                            <input type="checkbox" {...register('enable_manual_invoice_no')} id="manual_inv" className="w-4 h-4 text-blue-600 rounded cursor-pointer" />
-                            <label htmlFor="manual_inv" className="text-xs font-bold text-gray-700 cursor-pointer">Enable Manual Invoice Numbering?</label>
+                        <div className="flex items-center gap-3">
+                            <input type="checkbox" {...register('enable_manual_invoice_no')} id="manual_inv" className="w-5 h-5 text-blue-600 rounded cursor-pointer accent-blue-600" />
+                            <label htmlFor="manual_inv" className="text-sm font-semibold text-gray-800 cursor-pointer select-none">Enable Manual Invoice Numbering</label>
                         </div>
                     </div>
 
