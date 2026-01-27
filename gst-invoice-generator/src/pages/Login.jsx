@@ -162,29 +162,29 @@ export default function Login() {
       {/* Main Content Grid */}
       <div className="relative z-10 w-full max-w-7xl mx-auto p-4 lg:p-12 flex flex-col lg:flex-row items-center justify-between gap-12 lg:gap-24">
         
-        {/* LEFT SIDE: Marketing Info */}
+        {/* LEFT SIDE: Marketing Info (REDEFINED COPY) */}
         <div className="w-full lg:w-1/2 text-center lg:text-left space-y-8 mt-8 lg:mt-0">
             
             {/* Badge */}
             <div className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-blue-600/20 border border-blue-500/30 backdrop-blur-sm mx-auto lg:mx-0">
-                <span className="text-sm font-bold text-blue-300 tracking-wider">🚀 #1 GST BILLING PLATFORM</span>
+                <span className="text-sm font-bold text-blue-300 tracking-wider">Forever Free GST Billing</span>
             </div>
 
-            {/* Heading - Large on Mobile as requested */}
+            {/* Headline */}
             <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold text-white leading-tight tracking-tight">
-                Create <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400">Professional Invoices</span> in Seconds.
+                Professional GST Invoicing. <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500">Zero Cost.</span>
             </h1>
 
-            {/* Subtext */}
+            {/* Sub-headline */}
             <p className="text-slate-300 text-xl leading-relaxed max-w-2xl mx-auto lg:mx-0">
-                Join thousands of businesses who trust <span className="text-white font-semibold">Pixalara</span> for GST billing and automated WhatsApp sharing.
+                Create unlimited tax invoices with no trial period, no hidden fees, and no credit card required.
             </p>
 
-            {/* Checkmarks - Fixed Alignment Logic: Centered Block, Left Aligned Items */}
+            {/* Feature Bullets */}
             <div className="pt-4 flex flex-col gap-1 w-fit mx-auto lg:mx-0 items-start">
-                <CheckItem text="100% GST Compliant" />
-                <CheckItem text="Secure Cloud Storage" />
-                <CheckItem text="Mobile & Desktop Ready" />
+                <CheckItem text="100% GST compliant formats" />
+                <CheckItem text="Instant WhatsApp PDF sharing" />
+                <CheckItem text="Secure, encrypted data storage" />
             </div>
         </div>
 
@@ -239,8 +239,9 @@ export default function Login() {
                         <InputField label="Create Password" type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
                         <InputField label="Confirm Password" type="password" placeholder="••••••••" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required minLength={6} />
 
+                        {/* UPDATED CTA TEXT */}
                         <button type="submit" disabled={loading} className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-lg py-4 rounded-xl shadow-lg shadow-blue-500/20 transform transition active:scale-[0.98] mt-4">
-                            {loading ? 'Processing...' : 'Create Account'}
+                            {loading ? 'Processing...' : 'Create Free Account'}
                         </button>
 
                         <div className="mt-8 pt-6 border-t border-white/10 text-center">
