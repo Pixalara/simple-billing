@@ -169,11 +169,14 @@ export default function CreateInvoice() {
           if (titleElement) {
               const copyLabel = document.createElement('p');
               copyLabel.innerText = copyType === 'ORIGINAL' ? 'ORIGINAL FOR RECIPIENT' : 'DUPLICATE FOR SUPPLIER';
-              copyLabel.style.fontSize = '10px';
-              copyLabel.style.fontWeight = 'bold';
-              copyLabel.style.marginTop = '2px';
+              // --- UPDATED STYLES FOR COPY LABEL ---
+              copyLabel.style.fontSize = '12px';  // Increased font size
+              copyLabel.style.fontWeight = 'bold'; // Bold
+              copyLabel.style.color = '#ffffff';   // Pure White
+              copyLabel.style.marginTop = '4px';
               copyLabel.style.letterSpacing = '1px';
-              copyLabel.style.opacity = '0.7';
+              copyLabel.style.opacity = '1';       // No transparency
+              
               titleElement.parentNode.appendChild(copyLabel);
           }
       }
