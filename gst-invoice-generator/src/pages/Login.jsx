@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { useNavigate } from 'react-router-dom'
 
-// --- COMPONENTS MOVED OUTSIDE ---
+// --- COMPONENTS MOVED OUTSIDE TO FIX TYPING BUG ---
 
 const CheckItem = ({ text }) => (
   <div className="flex items-center gap-3 mb-2">
@@ -116,8 +116,8 @@ export default function Login() {
       <div className="relative z-10 w-full max-w-7xl mx-auto p-4 lg:p-12 flex flex-col lg:flex-row items-center justify-between gap-12 lg:gap-24">
         
         {/* LEFT SIDE: Marketing Info */}
-        {/* Removed 'mt-16' to allow perfect vertical centering with flex container */}
-        <div className="w-full lg:w-1/2 text-center lg:text-left space-y-6">
+        {/* UPDATED: Added 'lg:-mt-12' to move the section up on desktop screens */}
+        <div className="w-full lg:w-1/2 text-center lg:text-left space-y-6 mt-16 lg:-mt-12">
             
             {/* Badge */}
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-600/10 border border-blue-500/30 backdrop-blur-md mx-auto lg:mx-0">
@@ -140,6 +140,13 @@ export default function Login() {
                 <CheckItem text="100% GST compliant formats" />
                 <CheckItem text="Instant WhatsApp PDF sharing" />
                 <CheckItem text="Secure, encrypted data storage" />
+            </div>
+
+            {/* Built by Pixalara Message */}
+            <div className="pt-8 border-t border-white/5 w-full">
+                <p className="text-slate-400 font-medium text-sm leading-relaxed tracking-wide">
+                    Built by <span className="text-white font-bold">Pixalara</span> to support small traders and freelancers - <span className="text-cyan-400 font-semibold">at zero cost</span>
+                </p>
             </div>
         </div>
 
@@ -216,31 +223,14 @@ export default function Login() {
                 </div>
             </div>
             
-            {/* Footer - Main Brand Link */}
-            <div className="lg:hidden mt-12 text-center relative z-10">
+            {/* Footer */}
+            <div className="mt-12 text-center relative z-10">
                 <p className="text-sm font-semibold text-slate-400 tracking-wide">
                     Powered by <a href="https://pixalara.com" target="_blank" rel="noreferrer" className="text-lg font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500 hover:from-white hover:via-white hover:to-white transition-all duration-300 ml-1">pixalara.com</a>
                 </p>
             </div>
         </div>
       </div>
-
-      {/* --- DESKTOP FOOTER (Pinned Bottom Left for Alignment) --- */}
-      <div className="hidden lg:block absolute bottom-12 left-0 w-full z-20">
-          <div className="max-w-7xl mx-auto px-12">
-              <p className="text-slate-400 font-medium text-sm leading-relaxed tracking-wide">
-                  Built by <span className="text-white font-bold">Pixalara</span> to support small traders and freelancers - <span className="text-cyan-400 font-semibold">at zero cost</span>
-              </p>
-          </div>
-      </div>
-
-      {/* --- MOBILE FOOTER (In Flow) --- */}
-      <div className="lg:hidden w-full text-center pb-8 z-20 px-4">
-          <p className="text-slate-400 font-medium text-xs leading-relaxed tracking-wide">
-              Built by <span className="text-white font-bold">Pixalara</span> to support small traders and freelancers - <span className="text-cyan-400 font-semibold">at zero cost</span>
-          </p>
-      </div>
-
     </div>
   )
 }
