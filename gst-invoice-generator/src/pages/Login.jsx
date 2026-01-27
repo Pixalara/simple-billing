@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { useNavigate } from 'react-router-dom'
 
-// --- COMPONENTS MOVED OUTSIDE TO FIX TYPING BUG ---
+// --- COMPONENTS MOVED OUTSIDE ---
 
 const CheckItem = ({ text }) => (
   <div className="flex items-center gap-3 mb-2">
@@ -52,11 +52,9 @@ export default function Login() {
   }
 
   const handleSignupStart = async (e) => {
-    e.preventDefault(); 
-    if (password !== confirmPassword) return showToast("Passwords do not match!", 'error'); 
-    setLoading(true);
+    e.preventDefault(); if (password !== confirmPassword) return showToast("Passwords do not match!", 'error'); setLoading(true);
     try {
-      // Check if user already exists
+      // Check existing user
       const { data: existingUser } = await supabase.from('users').select('id').eq('business_email', email).maybeSingle()
       if (existingUser) throw new Error("User already exists. Please Log In.")
 
@@ -107,13 +105,6 @@ export default function Login() {
         <div className="absolute inset-0 bg-gradient-to-br from-[#0f172a] via-[#1e1b4b]/90 to-[#0f172a]"></div>
       </div>
 
-      {/* --- BOTTOM LEFT: MISSION STATEMENT --- */}
-      <div className="absolute bottom-8 left-8 lg:bottom-12 lg:left-16 z-20 max-w-sm">
-          <p className="text-slate-400 font-medium text-sm leading-relaxed tracking-wide">
-              Built by <span className="text-white font-bold">Pixalara</span> to support small traders and freelancers - <span className="text-cyan-400 font-semibold">at zero cost</span>
-          </p>
-      </div>
-
       {/* Toast */}
       {toast && (
         <div className={`fixed top-6 right-6 z-50 flex items-center gap-4 px-6 py-4 rounded-xl shadow-2xl backdrop-blur-xl border animate-bounce-in ${toast.type === 'success' ? 'bg-emerald-900/80 border-emerald-500/30 text-emerald-100' : 'bg-red-900/80 border-red-500/30 text-red-100'}`}>
@@ -125,7 +116,8 @@ export default function Login() {
       <div className="relative z-10 w-full max-w-7xl mx-auto p-4 lg:p-12 flex flex-col lg:flex-row items-center justify-between gap-12 lg:gap-24">
         
         {/* LEFT SIDE: Marketing Info */}
-        <div className="w-full lg:w-1/2 text-center lg:text-left space-y-6 mt-16 lg:mt-0">
+        {/* Removed 'mt-16' to allow perfect vertical centering with flex container */}
+        <div className="w-full lg:w-1/2 text-center lg:text-left space-y-6">
             
             {/* Badge */}
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-600/10 border border-blue-500/30 backdrop-blur-md mx-auto lg:mx-0">
@@ -224,14 +216,31 @@ export default function Login() {
                 </div>
             </div>
             
-            {/* Footer */}
-            <div className="mt-12 text-center relative z-10">
+            {/* Footer - Main Brand Link */}
+            <div className="lg:hidden mt-12 text-center relative z-10">
                 <p className="text-sm font-semibold text-slate-400 tracking-wide">
                     Powered by <a href="https://pixalara.com" target="_blank" rel="noreferrer" className="text-lg font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500 hover:from-white hover:via-white hover:to-white transition-all duration-300 ml-1">pixalara.com</a>
                 </p>
             </div>
         </div>
       </div>
+
+      {/* --- DESKTOP FOOTER (Pinned Bottom Left for Alignment) --- */}
+      <div className="hidden lg:block absolute bottom-12 left-0 w-full z-20">
+          <div className="max-w-7xl mx-auto px-12">
+              <p className="text-slate-400 font-medium text-sm leading-relaxed tracking-wide">
+                  Built by <span className="text-white font-bold">Pixalara</span> to support small traders and freelancers - <span className="text-cyan-400 font-semibold">at zero cost</span>
+              </p>
+          </div>
+      </div>
+
+      {/* --- MOBILE FOOTER (In Flow) --- */}
+      <div className="lg:hidden w-full text-center pb-8 z-20 px-4">
+          <p className="text-slate-400 font-medium text-xs leading-relaxed tracking-wide">
+              Built by <span className="text-white font-bold">Pixalara</span> to support small traders and freelancers - <span className="text-cyan-400 font-semibold">at zero cost</span>
+          </p>
+      </div>
+
     </div>
   )
 }
