@@ -6,25 +6,48 @@ import { INDIAN_STATES, HSN_CODES } from '../constants'
 import SearchableSelect from '../components/SearchableSelect'
 import html2pdf from 'html2pdf.js'
 
-// --- PREMIUM POPUP COMPONENT ---
-const Popup = ({ isOpen, onClose, title, message, type, actionLabel }) => {
+// --- PREMIUM POPUP COMPONENT (Updated for Dual Buttons) ---
+const Popup = ({ isOpen, onClose, title, message, type, actionLabel, onAction, cancelLabel }) => {
     if (!isOpen) return null;
+    
     const colors = {
         success: { iconBg: 'bg-green-100', iconColor: 'text-green-600', btn: 'bg-green-600 hover:bg-green-700' },
         error: { iconBg: 'bg-red-100', iconColor: 'text-red-600', btn: 'bg-red-600 hover:bg-red-700' },
         info: { iconBg: 'bg-blue-100', iconColor: 'text-blue-600', btn: 'bg-blue-600 hover:bg-blue-700' }
     }
     const style = colors[type] || colors.info;
+
     return (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm transition-all duration-300">
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden transform transition-all scale-100 animate-in fade-in zoom-in duration-200">
                 <div className="p-6 text-center">
                     <div className={`mx-auto flex items-center justify-center h-16 w-16 rounded-full mb-5 ${style.iconBg}`}>
-                        <svg className={`h-8 w-8 ${style.iconColor}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        {type === 'success' && <svg className={`h-8 w-8 ${style.iconColor}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
+                        {type === 'error' && <svg className={`h-8 w-8 ${style.iconColor}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>}
+                        {type === 'info' && <svg className={`h-8 w-8 ${style.iconColor}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
                     </div>
                     <h3 className="text-2xl font-bold text-gray-900 mb-2 tracking-tight">{title}</h3>
                     <p className="text-gray-500 mb-8 leading-relaxed">{message}</p>
-                    <button onClick={onClose} className={`w-full py-3.5 px-4 rounded-xl text-white font-bold shadow-lg shadow-gray-200 transition-transform active:scale-95 ${style.btn}`}>{actionLabel || 'Continue'}</button>
+                    
+                    <div className="flex gap-3">
+                        {cancelLabel && (
+                            <button 
+                                onClick={onClose}
+                                className="flex-1 py-3.5 px-4 rounded-xl text-gray-700 font-bold bg-gray-100 hover:bg-gray-200 transition-colors shadow-sm"
+                            >
+                                {cancelLabel}
+                            </button>
+                        )}
+                        <button 
+                            onClick={() => {
+                                if (onAction) onAction();
+                                else onClose();
+                            }}
+                            className={`flex-1 py-3.5 px-4 rounded-xl text-white font-bold shadow-lg shadow-gray-200 transition-transform active:scale-95 ${style.btn}`}
+                        >
+                            {actionLabel || 'Continue'}
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -82,10 +105,18 @@ export default function CreateInvoice() {
   const [signaturePreview, setSignaturePreview] = useState(null)
   const [stampPreview, setStampPreview] = useState(null) 
   const [manualInvoiceEnabled, setManualInvoiceEnabled] = useState(false) 
+  const [existingInvoiceNo, setExistingInvoiceNo] = useState(null)
 
-  const [popup, setPopup] = useState({ isOpen: false, title: '', message: '', type: 'success', actionLabel: 'OK', onAction: null })
-  const showPopup = (title, message, type = 'success', actionLabel = 'OK', onAction = null) => { setPopup({ isOpen: true, title, message, type, actionLabel, onAction }) }
-  const closePopup = () => { if (popup.onAction) popup.onAction(); setPopup({ ...popup, isOpen: false, onAction: null }) }
+  // Updated Popup State
+  const [popup, setPopup] = useState({ isOpen: false, title: '', message: '', type: 'success', actionLabel: 'OK', onAction: null, cancelLabel: null })
+  
+  const showPopup = (title, message, type = 'success', actionLabel = 'OK', onAction = null, cancelLabel = null) => { 
+      setPopup({ isOpen: true, title, message, type, actionLabel, onAction, cancelLabel }) 
+  }
+  
+  const closePopup = () => { 
+      setPopup({ ...popup, isOpen: false }) 
+  }
 
   const { register, control, handleSubmit, setValue, reset, watch } = useForm({
     defaultValues: {
@@ -169,13 +200,13 @@ export default function CreateInvoice() {
           if (titleElement) {
               const copyLabel = document.createElement('p');
               copyLabel.innerText = copyType === 'ORIGINAL' ? 'ORIGINAL FOR RECIPIENT' : 'DUPLICATE FOR SUPPLIER';
-              // --- UPDATED STYLES FOR COPY LABEL ---
-              copyLabel.style.fontSize = '12px';  // Increased font size
-              copyLabel.style.fontWeight = 'bold'; // Bold
-              copyLabel.style.color = '#ffffff';   // Pure White
+              // --- STYLED HEADER ---
+              copyLabel.style.fontSize = '12px';  
+              copyLabel.style.fontWeight = 'bold'; 
+              copyLabel.style.color = '#ffffff';   
               copyLabel.style.marginTop = '4px';
               copyLabel.style.letterSpacing = '1px';
-              copyLabel.style.opacity = '1';       // No transparency
+              copyLabel.style.opacity = '1';       
               
               titleElement.parentNode.appendChild(copyLabel);
           }
@@ -277,11 +308,49 @@ export default function CreateInvoice() {
 
   const handleShare = async () => { setSharing(true); try { const result = await generatePdfBlob(); if(!result) return; const file = new File([result.blob], result.filename, { type: 'application/pdf' }); if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: 'Invoice', text: `Invoice from ${sellerProfile?.business_name}` }) } else { downloadBlob(result.blob, result.filename); showPopup('Downloaded', 'Browser doesn\'t support sharing.', 'info'); } } catch(e){ showPopup('Error','Failed share','error') } finally { setSharing(false) } }
   
-  const onSubmit = async (data) => { setLoading(true); try { const { data: { user } } = await supabase.auth.getUser(); const payload = { user_id: user.id, invoice_no: data.invoice_no, invoice_data: { ...data, totals, theme: theme.hex }, total_amount: totals.grandTotal }; if (id) await supabase.from('invoices').update(payload).eq('id', id); else await supabase.from('invoices').insert(payload); showPopup('Success!', 'Invoice Saved.', 'success', 'Go to Dashboard', () => navigate('/dashboard')); } catch (error) { showPopup('Error', error.message, 'error'); } finally { setLoading(false) } }
+  const onSubmit = async (data) => { 
+      setLoading(true); 
+      try { 
+          const { data: { user } } = await supabase.auth.getUser(); 
+          const payload = { 
+              user_id: user.id, 
+              invoice_no: data.invoice_no, 
+              invoice_data: { ...data, totals, theme: theme.hex }, 
+              total_amount: totals.grandTotal 
+          }; 
+          
+          if (id) await supabase.from('invoices').update(payload).eq('id', id); 
+          else await supabase.from('invoices').insert(payload); 
+          
+          // --- UPDATED SUCCESS POPUP ---
+          showPopup(
+              'Success!', 
+              'Invoice has been saved successfully.', 
+              'success', 
+              'Go to Dashboard', 
+              () => navigate('/dashboard'), // Action: Go Home
+              'Stay Here'                   // Cancel: Stay
+          ); 
+      } catch (error) { 
+          showPopup('Error', error.message, 'error'); 
+      } finally { 
+          setLoading(false) 
+      } 
+  }
 
   return (
     <div className="min-h-screen bg-gray-100 p-0 md:p-4 lg:p-8 flex flex-col lg:flex-row gap-6">
-      <Popup isOpen={popup.isOpen} onClose={closePopup} title={popup.title} message={popup.message} type={popup.type} actionLabel={popup.actionLabel} />
+      
+      <Popup 
+        isOpen={popup.isOpen} 
+        onClose={closePopup} 
+        title={popup.title} 
+        message={popup.message} 
+        type={popup.type} 
+        actionLabel={popup.actionLabel} 
+        cancelLabel={popup.cancelLabel}
+        onAction={popup.onAction}
+      />
       
       <div className="lg:hidden sticky top-0 z-20 bg-white border-b flex text-sm font-bold shadow-sm">
         <button onClick={() => setMobileTab('edit')} className={`flex-1 py-3 ${mobileTab === 'edit' ? 'text-blue-600 border-b-2 border-blue-600' : ''}`}>✎ Editor</button>
@@ -299,7 +368,7 @@ export default function CreateInvoice() {
         </div>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
-                {/* INVOICE NUMBER - AUTO-CAPITALIZED & TOGGLED */}
+                {/* INVOICE NUMBER - AUTO-CAPITALIZED */}
                 <div>
                     <label className="text-xs text-gray-500">Invoice No</label>
                     <input 
