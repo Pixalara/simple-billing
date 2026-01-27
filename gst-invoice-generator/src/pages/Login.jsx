@@ -312,10 +312,17 @@ export default function Login() {
 
             </div>
             
-            {/* Footer */}
-            <div className="mt-8 text-center">
-                <p className="text-xs text-slate-500">
-                    Powered by <a href="https://pixalara.com" target="_blank" rel="noreferrer" className="hover:text-blue-400 transition-colors">pixalara.com</a>
+            {/* UPDATED PREMIUM FOOTER */}
+            <div className="mt-12 text-center relative z-10">
+                <p className="text-sm font-semibold text-slate-400 tracking-wide">
+                    Powered by <a 
+                        href="https://pixalara.com" 
+                        target="_blank" 
+                        rel="noreferrer" 
+                        className="text-lg font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400 hover:from-white hover:to-white transition-all duration-300 ml-1"
+                    >
+                        pixalara.com
+                    </a>
                 </p>
             </div>
         </div>
