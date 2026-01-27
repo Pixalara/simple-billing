@@ -312,14 +312,14 @@ export default function Login() {
 
             </div>
             
-            {/* UPDATED PREMIUM FOOTER */}
+            {/* UPDATED PREMIUM FOOTER WITH SIGNATURE GRADIENT */}
             <div className="mt-12 text-center relative z-10">
                 <p className="text-sm font-semibold text-slate-400 tracking-wide">
                     Powered by <a 
                         href="https://pixalara.com" 
                         target="_blank" 
                         rel="noreferrer" 
-                        className="text-lg font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400 hover:from-white hover:to-white transition-all duration-300 ml-1"
+                        className="text-lg font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500 hover:from-white hover:via-white hover:to-white transition-all duration-300 ml-1"
                     >
                         pixalara.com
                     </a>
