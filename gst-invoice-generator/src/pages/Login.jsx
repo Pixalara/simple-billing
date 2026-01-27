@@ -52,9 +52,11 @@ export default function Login() {
   }
 
   const handleSignupStart = async (e) => {
-    e.preventDefault(); if (password !== confirmPassword) return showToast("Passwords do not match!", 'error'); setLoading(true);
+    e.preventDefault(); 
+    if (password !== confirmPassword) return showToast("Passwords do not match!", 'error'); 
+    setLoading(true);
     try {
-      // Check existing user
+      // Check if user already exists
       const { data: existingUser } = await supabase.from('users').select('id').eq('business_email', email).maybeSingle()
       if (existingUser) throw new Error("User already exists. Please Log In.")
 
@@ -105,6 +107,13 @@ export default function Login() {
         <div className="absolute inset-0 bg-gradient-to-br from-[#0f172a] via-[#1e1b4b]/90 to-[#0f172a]"></div>
       </div>
 
+      {/* --- BOTTOM LEFT: MISSION STATEMENT --- */}
+      <div className="absolute bottom-8 left-8 lg:bottom-12 lg:left-16 z-20 max-w-sm">
+          <p className="text-slate-400 font-medium text-sm leading-relaxed tracking-wide">
+              Built by <span className="text-white font-bold">Pixalara</span> to support small traders and freelancers - <span className="text-cyan-400 font-semibold">at zero cost</span>
+          </p>
+      </div>
+
       {/* Toast */}
       {toast && (
         <div className={`fixed top-6 right-6 z-50 flex items-center gap-4 px-6 py-4 rounded-xl shadow-2xl backdrop-blur-xl border animate-bounce-in ${toast.type === 'success' ? 'bg-emerald-900/80 border-emerald-500/30 text-emerald-100' : 'bg-red-900/80 border-red-500/30 text-red-100'}`}>
@@ -139,13 +148,6 @@ export default function Login() {
                 <CheckItem text="100% GST compliant formats" />
                 <CheckItem text="Instant WhatsApp PDF sharing" />
                 <CheckItem text="Secure, encrypted data storage" />
-            </div>
-
-            {/* --- MOVED HERE FOR BETTER ALIGNMENT --- */}
-            <div className="pt-8 border-t border-white/5 w-full">
-                <p className="text-slate-400 font-medium text-sm leading-relaxed tracking-wide">
-                    Built by <span className="text-white font-bold">Pixalara</span> to support small traders and freelancers - <span className="text-cyan-400 font-semibold">at zero cost</span>
-                </p>
             </div>
         </div>
 
