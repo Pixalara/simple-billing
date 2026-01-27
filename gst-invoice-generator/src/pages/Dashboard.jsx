@@ -41,10 +41,13 @@ const Popup = ({ isOpen, onClose, title, message, type, actionLabel, onAction, c
 export default function Dashboard() {
   const [session, setSession] = useState(null)
   const [loading, setLoading] = useState(true)
+  
+  // Upload States
   const [uploadingLogo, setUploadingLogo] = useState(false)
   const [uploadingSig, setUploadingSig] = useState(false)
   const [uploadingStamp, setUploadingStamp] = useState(false)
   
+  // Saved URLs
   const [savedLogo, setSavedLogo] = useState(null)
   const [savedSignature, setSavedSignature] = useState(null)
   const [savedStamp, setSavedStamp] = useState(null)
@@ -81,7 +84,8 @@ export default function Dashboard() {
       setValue('gstin', data.gstin)
       setValue('business_email', data.business_email)
       setValue('business_phone', data.business_phone)
-      setValue('website', data.website)
+      setValue('website', data.website) // Load Website
+      
       setValue('bank_name', data.bank_name)
       setValue('account_number', data.account_number)
       setValue('ifsc_code', data.ifsc_code)
@@ -228,7 +232,7 @@ export default function Dashboard() {
                     <input {...register('business_name')} placeholder="BUSINESS NAME" onChange={(e) => enforceLettersOnly(e, 'business_name')} className="w-full p-2 border rounded text-sm bg-gray-50" />
                     <input {...register('business_email')} placeholder="BUSINESS EMAIL" className="w-full p-2 border rounded text-sm bg-gray-50" />
                     <input {...register('business_phone')} placeholder="BUSINESS PHONE" onChange={(e) => enforceNumbersOnly(e, 'business_phone')} maxLength={10} className="w-full p-2 border rounded text-sm bg-gray-50" />
-                    <input {...register('website')} placeholder="WEBSITE" className="w-full p-2 border rounded text-sm bg-gray-50" />
+                    <input {...register('website')} placeholder="WEBSITE (Optional)" className="w-full p-2 border rounded text-sm bg-gray-50" />
                     <input {...register('gstin')} placeholder="GSTIN" onChange={(e) => enforceUpperCase(e, 'gstin')} className="w-full p-2 border rounded text-sm bg-gray-50" />
                     <select {...register('state')} className="w-full p-2 border rounded text-sm bg-gray-50"><option value="">Select State</option>{INDIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}</select>
 
