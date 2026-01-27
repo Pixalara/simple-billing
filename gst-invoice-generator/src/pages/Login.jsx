@@ -56,17 +56,9 @@ export default function Login() {
     if (password !== confirmPassword) return showToast("Passwords do not match!", 'error'); 
     setLoading(true);
     try {
-      // --- FIX: Check if user already exists ---
-      const { data: existingUser } = await supabase
-        .from('users')
-        .select('id')
-        .eq('business_email', email)
-        .maybeSingle()
-
-      if (existingUser) {
-        throw new Error("User already exists. Please Log In.")
-      }
-      // ----------------------------------------
+      // Check if user already exists
+      const { data: existingUser } = await supabase.from('users').select('id').eq('business_email', email).maybeSingle()
+      if (existingUser) throw new Error("User already exists. Please Log In.")
 
       const { error } = await supabase.auth.signInWithOtp({ email }); if (error) throw error;
       setOtpContext('SIGNUP'); setView('OTP_VERIFY'); showToast('OTP sent to email!', 'success')
