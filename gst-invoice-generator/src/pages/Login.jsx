@@ -101,8 +101,8 @@ export default function Login() {
         <div className="absolute inset-0 bg-gradient-to-br from-[#0f172a] via-[#1e1b4b]/90 to-[#0f172a]"></div>
       </div>
 
-      {/* --- TOP LEFT: MISSION STATEMENT (Replaces Logo) --- */}
-      <div className="absolute top-8 left-8 lg:top-12 lg:left-16 z-20 max-w-sm">
+      {/* --- BOTTOM LEFT: MISSION STATEMENT --- */}
+      <div className="absolute bottom-8 left-8 lg:bottom-12 lg:left-16 z-20 max-w-sm">
           <p className="text-slate-400 font-medium text-sm leading-relaxed tracking-wide">
               Built by <span className="text-white font-bold">Pixalara</span> to support small traders and freelancers - <span className="text-cyan-400 font-semibold">at zero cost</span>
           </p>
