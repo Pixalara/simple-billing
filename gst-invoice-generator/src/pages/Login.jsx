@@ -101,6 +101,13 @@ export default function Login() {
         <div className="absolute inset-0 bg-gradient-to-br from-[#0f172a] via-[#1e1b4b]/90 to-[#0f172a]"></div>
       </div>
 
+      {/* --- BOTTOM LEFT: MISSION STATEMENT --- */}
+      <div className="absolute bottom-8 left-8 lg:bottom-12 lg:left-16 z-20 max-w-sm">
+          <p className="text-slate-400 font-medium text-sm leading-relaxed tracking-wide">
+              Built by <span className="text-white font-bold">Pixalara</span> to support small traders and freelancers - <span className="text-cyan-400 font-semibold">at zero cost</span>
+          </p>
+      </div>
+
       {/* Toast */}
       {toast && (
         <div className={`fixed top-6 right-6 z-50 flex items-center gap-4 px-6 py-4 rounded-xl shadow-2xl backdrop-blur-xl border animate-bounce-in ${toast.type === 'success' ? 'bg-emerald-900/80 border-emerald-500/30 text-emerald-100' : 'bg-red-900/80 border-red-500/30 text-red-100'}`}>
@@ -112,11 +119,11 @@ export default function Login() {
       <div className="relative z-10 w-full max-w-7xl mx-auto p-4 lg:p-12 flex flex-col lg:flex-row items-center justify-between gap-12 lg:gap-24">
         
         {/* LEFT SIDE: Marketing Info */}
-        <div className="w-full lg:w-1/2 text-center lg:text-left space-y-6"> {/* Alignment Fix: Removed mt-16 to center vertically with right card */}
+        <div className="w-full lg:w-1/2 text-center lg:text-left space-y-6 mt-16 lg:mt-0">
             
-            {/* Badge */}
+            {/* Badge - UPDATED TEXT */}
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-600/10 border border-blue-500/30 backdrop-blur-md mx-auto lg:mx-0">
-                <span className="text-xs font-bold text-cyan-300 tracking-widest uppercase">Forever Free GST Billing</span>
+                <span className="text-xs font-bold text-cyan-300 tracking-widest uppercase">Free GST Invoice Generator for Indian Businesses</span>
             </div>
 
             {/* Headline */}
@@ -135,14 +142,6 @@ export default function Login() {
                 <CheckItem text="100% GST compliant formats" />
                 <CheckItem text="Instant WhatsApp PDF sharing" />
                 <CheckItem text="Secure, encrypted data storage" />
-            </div>
-
-            {/* --- NEW POSITION: MISSION STATEMENT --- */}
-            {/* Placed here to sit naturally below the bullets */}
-            <div className="pt-8 border-t border-white/10 mt-8 w-fit mx-auto lg:mx-0">
-                <p className="text-slate-400 font-medium text-sm leading-relaxed tracking-wide">
-                    Built by <span className="text-white font-bold">Pixalara</span> to support small traders and freelancers - <span className="text-cyan-400 font-semibold">at zero cost</span>
-                </p>
             </div>
         </div>
 
