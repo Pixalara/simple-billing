@@ -167,16 +167,15 @@ export default function CreateInvoice() {
   const totals = calculateTotals(); const amountInWords = totals.grandTotal ? numberToWords(totals.grandTotal) : '';
   const getTaxRateText = (type) => { const rates = new Set(formData.items?.map(i => parseFloat(i.gstRate)).filter(r => r > 0)); if (rates.size === 1) { const r = [...rates][0]; if (type === 'IGST') return `(${r}%)`; if (type === 'CGST' || type === 'SGST') return `(${r/2}%)`; } return ''; }
 
-  // --- UPDATED SINGLE-FILE PDF GENERATOR (Fix for Empty PDF) ---
+  // --- ROBUST PDF GENERATOR (Fixes Empty PDF + Multi-Page) ---
   const generatePdfBlob = async () => {
       const originalElement = invoiceRef.current
       if (!originalElement) return null;
 
-      // Helper function to clone and style the invoice page
+      // Helper function to create a clone
       const createCopy = (label) => {
           const clone = originalElement.cloneNode(true)
           
-          // Force layout dimensions for A4 PDF
           clone.style.width = '794px' 
           clone.style.minHeight = '1122px'
           clone.style.height = 'auto'
@@ -185,10 +184,8 @@ export default function CreateInvoice() {
           clone.style.margin = '0'
           clone.style.padding = '0'
           clone.style.backgroundColor = 'white'
-          // Ensure it's visible and block level
+          // Ensure block display and remove potentially problematic classes
           clone.style.display = 'block'
-          clone.style.position = 'relative'
-          // Remove app-specific UI classes that mess up PDF
           clone.classList.remove('w-full', 'lg:w-7/12', 'flex', 'justify-center', 'shadow-2xl', 'p-8', 'hidden', 'lg:flex') 
           
           if (label) {
@@ -196,7 +193,6 @@ export default function CreateInvoice() {
               if (titleElement) {
                   const copyLabel = document.createElement('p');
                   copyLabel.innerText = label;
-                  // --- STYLED HEADER ---
                   copyLabel.style.fontSize = '12px';  
                   copyLabel.style.fontWeight = 'bold'; 
                   copyLabel.style.color = '#ffffff';   
@@ -209,39 +205,50 @@ export default function CreateInvoice() {
           return clone;
       }
 
-      // Container for single or multiple pages
+      // 1. Create a container for the PDF
       const container = document.createElement('div')
       
-      // FIX: Position fixed at negative coordinates to be "visible" to the browser renderer
-      // but hidden from the user. Using z-index alone can sometimes fail with html2canvas.
-      container.style.position = 'fixed'
-      container.style.left = '-10000px'
+      // FIX: Position at top-left (visible zone) but BEHIND everything (z-index)
+      // This is safer than off-screen coordinates which html2canvas might clip.
+      container.style.position = 'absolute'
+      container.style.left = '0'
       container.style.top = '0'
       container.style.width = '794px'
-      container.style.zIndex = '9999'
+      container.style.zIndex = '-9999' 
+      container.style.backgroundColor = '#ffffff'
       
-      // COMBINE LOGIC: If "Duplicate" setting is ON, append both copies to one container
+      // 2. Logic for Multi-Page (Original + Duplicate)
       if (sellerProfile?.print_duplicates) {
-          // 1. Original Page
+          // Page 1
           container.appendChild(createCopy('ORIGINAL FOR RECIPIENT'));
           
-          // 2. Page Break
+          // Page Break
           const pageBreak = document.createElement('div');
           pageBreak.style.pageBreakBefore = 'always';
-          pageBreak.className = 'html2pdf__page-break'; 
+          pageBreak.className = 'html2pdf__page-break'; // Critical for html2pdf
           container.appendChild(pageBreak);
 
-          // 3. Duplicate Page
+          // Page 2
           container.appendChild(createCopy('DUPLICATE FOR SUPPLIER'));
       } else {
-          // Single Copy (Default)
+          // Single Page
           container.appendChild(createCopy(''));
       }
 
       document.body.appendChild(container)
 
-      // --- CRITICAL FIX: WAIT FOR RENDERING ---
-      // Give browser time to paint the cloned DOM (images, fonts) before capturing
+      // 3. WAIT FOR IMAGES TO LOAD (Fixes blank PDF)
+      const images = Array.from(container.querySelectorAll('img'));
+      await Promise.all(images.map(img => {
+          if (img.complete) return Promise.resolve();
+          return new Promise(resolve => { 
+              img.onload = resolve; 
+              img.onerror = resolve; // Resolve even on error to prevent hanging
+          });
+      }));
+
+      // 4. EXTRA DELAY FOR RENDERING
+      // Gives the browser a moment to paint the new DOM nodes before capture
       await new Promise(resolve => setTimeout(resolve, 500));
 
       const buyerName = formData.buyer_name || 'Customer'
@@ -259,29 +266,25 @@ export default function CreateInvoice() {
             scrollY: 0, 
             letterRendering: true,
             width: 794,
-            windowWidth: 794 // Ensures consistent rendering width
+            windowWidth: 794 // Ensures consistent capture width
         },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
       }
       
       try {
         const pdfBlob = await html2pdf().set(opt).from(container).output('blob')
-        // Clean up DOM
-        if (document.body.contains(container)) {
-            document.body.removeChild(container)
-        }
+        // Cleanup
+        if(document.body.contains(container)) document.body.removeChild(container)
         return { blob: pdfBlob, filename: opt.filename }
       } catch (err) {
-        if (document.body.contains(container)) {
-            document.body.removeChild(container)
-        }
+        if(document.body.contains(container)) document.body.removeChild(container)
         throw err
       }
   }
 
   const handleDownloadPDF = async () => {
     try {
-        const result = await generatePdfBlob() // Generates SINGLE file (possibly multi-page)
+        const result = await generatePdfBlob() // Generates single file
         if (result) downloadBlob(result.blob, result.filename)
     } catch (e) {
         showPopup('Error', 'Failed to generate PDF.', 'error');
@@ -290,7 +293,7 @@ export default function CreateInvoice() {
 
   const handleSendEmail = async () => {
     try {
-        const result = await generatePdfBlob() // Generates SINGLE file
+        const result = await generatePdfBlob() // Generates single file
         if (result) downloadBlob(result.blob, result.filename)
     } catch (e) {
         showPopup('Error', 'Failed to generate PDF for email.', 'error');
