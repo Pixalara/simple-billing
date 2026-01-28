@@ -191,23 +191,12 @@ export default function CreateInvoice() {
 
       const clone = originalElement.cloneNode(true)
       
-      // Styling for PDF Generation
-      clone.style.width = '794px' 
-      clone.style.minHeight = '1122px'
-      clone.style.height = 'auto'
-      clone.style.overflow = 'visible'
-      clone.style.transform = 'none'
-      clone.style.margin = '0'
-      clone.style.padding = '0'
-      clone.style.backgroundColor = 'white'
-      clone.style.display = 'block'
-      clone.classList.remove('w-full', 'lg:w-7/12', 'flex', 'justify-center', 'shadow-2xl', 'p-8', 'hidden', 'lg:flex') 
-      
       if (copyType) {
           const titleElement = clone.querySelector('h1'); 
           if (titleElement) {
               const copyLabel = document.createElement('p');
               copyLabel.innerText = copyType === 'ORIGINAL' ? 'ORIGINAL FOR RECIPIENT' : 'DUPLICATE FOR SUPPLIER';
+              // --- STYLED HEADER ---
               copyLabel.style.fontSize = '12px';  
               copyLabel.style.fontWeight = 'bold'; 
               copyLabel.style.color = '#ffffff';   
@@ -219,30 +208,23 @@ export default function CreateInvoice() {
           }
       }
 
-      // Container positioned safely to be visible to html2canvas but hidden from user
+      clone.style.width = '794px' 
+      clone.style.minHeight = '1122px'
+      clone.style.height = 'auto'
+      clone.style.overflow = 'visible'
+      clone.style.transform = 'none'
+      clone.style.margin = '0'
+      clone.style.backgroundColor = 'white'
+      clone.classList.remove('w-full', 'lg:w-7/12', 'flex', 'justify-center', 'shadow-2xl', 'p-8') 
+      
       const container = document.createElement('div')
-      container.style.position = 'fixed' // fixed ensures it stays in view
+      container.style.position = 'absolute'
       container.style.top = '0'
       container.style.left = '0'
-      container.style.zIndex = '-9999' // behind everything
+      container.style.zIndex = '-1000'
       container.style.width = '794px'
-      container.style.backgroundColor = '#ffffff'
-      
       container.appendChild(clone)
       document.body.appendChild(container)
-
-      // --- CRITICAL FIX: Wait for images to load to prevent empty PDF ---
-      const images = Array.from(container.querySelectorAll('img'));
-      await Promise.all(images.map(img => {
-          if (img.complete) return Promise.resolve();
-          return new Promise(resolve => { 
-              img.onload = resolve; 
-              img.onerror = resolve; 
-          });
-      }));
-
-      // --- CRITICAL FIX: Rendering Delay ---
-      await new Promise(resolve => setTimeout(resolve, 500));
 
       const buyerName = formData.buyer_name || 'Customer'
       const invoiceNum = formData.invoice_no || 'DRAFT'
@@ -254,23 +236,16 @@ export default function CreateInvoice() {
         filename: safeFileName,
         image: { type: 'jpeg', quality: 0.98 },
         enableLinks: true, 
-        html2canvas: { 
-            scale: 2, 
-            useCORS: true, 
-            scrollY: 0, 
-            letterRendering: true, 
-            width: 794, 
-            windowWidth: 794 
-        },
+        html2canvas: { scale: 2, useCORS: true, scrollY: 0, letterRendering: true, width: 794, windowWidth: 794 },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
       }
       
       try {
-        const pdfBlob = await html2pdf().set(opt).from(container).output('blob') // Generate from Container
+        const pdfBlob = await html2pdf().set(opt).from(clone).output('blob')
         document.body.removeChild(container)
         return { blob: pdfBlob, filename: opt.filename }
       } catch (err) {
-        if(document.body.contains(container)) document.body.removeChild(container)
+        document.body.removeChild(container)
         throw err
       }
   }
@@ -283,7 +258,7 @@ export default function CreateInvoice() {
             setTimeout(async () => {
                 const res2 = await generatePdfBlob('DUPLICATE')
                 downloadBlob(res2.blob, res2.filename)
-            }, 1000) // Increased delay between downloads to prevent browser blocking
+            }, 800)
         } else {
             const result = await generatePdfBlob()
             if (result) downloadBlob(result.blob, result.filename)
@@ -301,7 +276,7 @@ export default function CreateInvoice() {
              setTimeout(async () => {
                 const res2 = await generatePdfBlob('DUPLICATE')
                 downloadBlob(res2.blob, res2.filename)
-             }, 1000)
+             }, 800)
         } else {
              const result = await generatePdfBlob()
              if (result) downloadBlob(result.blob, result.filename)
@@ -316,8 +291,9 @@ export default function CreateInvoice() {
         const body = `Dear ${formData.buyer_name || 'Customer'},\n\nPlease find the invoice attached.\n\nBest Regards,\n${sellerProfile?.business_name || ''}`
         window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
         
+        // Show Premium Info Popup
         showPopup('Email Draft Opened', 'The PDF has been downloaded to your device.\n\nPlease attach it manually to the email draft that just opened.', 'info', 'Got it');
-    }, 1500)
+    }, 1000)
   }
 
   const downloadBlob = (blob, filename) => {
@@ -344,13 +320,14 @@ export default function CreateInvoice() {
           if (id) await supabase.from('invoices').update(payload).eq('id', id); 
           else await supabase.from('invoices').insert(payload); 
           
+          // --- UPDATED SUCCESS POPUP ---
           showPopup(
               'Success!', 
               'Invoice has been saved successfully.', 
               'success', 
               'Go to Dashboard', 
-              () => navigate('/dashboard'), 
-              'Stay Here'
+              () => navigate('/dashboard'), // Action: Go Home
+              'Stay Here'                   // Cancel: Stay
           ); 
       } catch (error) { 
           showPopup('Error', error.message, 'error'); 
