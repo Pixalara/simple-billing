@@ -89,7 +89,7 @@ export default function Dashboard() {
       
       // Load Settings
       setValue('print_duplicates', data.print_duplicates)
-      setValue('print_triplicates', data.print_triplicates) // New Triplicate Setting
+      setValue('print_triplicates', data.print_triplicates) // New Setting
       setValue('enable_manual_invoice_no', data.enable_manual_invoice_no)
 
       if (data.logo_url) setSavedLogo(data.logo_url)
@@ -248,7 +248,7 @@ export default function Dashboard() {
                         {/* Duplicate Toggle */}
                         <div className="flex items-center gap-2">
                             <input type="checkbox" {...register('print_duplicates')} id="print_dup" className="w-4 h-4 text-blue-600 rounded cursor-pointer" />
-                            <label htmlFor="print_dup" className="text-xs font-bold text-gray-700 cursor-pointer">Generate Duplicate Copy?</label>
+                            <label htmlFor="print_dup" className="text-xs font-bold text-gray-700 cursor-pointer">Generate Original & Duplicate Copy?</label>
                         </div>
                         {/* Triplicate Toggle */}
                         <div className="flex items-center gap-2">

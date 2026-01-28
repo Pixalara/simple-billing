@@ -168,115 +168,134 @@ export default function CreateInvoice() {
   const totals = calculateTotals(); const amountInWords = totals.grandTotal ? numberToWords(totals.grandTotal) : '';
   const getTaxRateText = (type) => { const rates = new Set(formData.items?.map(i => parseFloat(i.gstRate)).filter(r => r > 0)); if (rates.size === 1) { const r = [...rates][0]; if (type === 'IGST') return `(${r}%)`; if (type === 'CGST' || type === 'SGST') return `(${r/2}%)`; } return ''; }
 
-  const generatePdfBlob = async (copyType = '') => {
+  // --- UPDATED PDF GENERATOR FOR SINGLE FILE WITH UP TO 3 COPIES ---
+  const generatePdfBlob = async () => {
       const originalElement = invoiceRef.current
       if (!originalElement) return null;
 
-      const clone = originalElement.cloneNode(true)
-      
-      // -- HEADER LABELS --
-      if (copyType) {
-          const titleElement = clone.querySelector('h1'); 
-          if (titleElement) {
-              const copyLabel = document.createElement('p');
-              
-              if (copyType === 'ORIGINAL') copyLabel.innerText = 'ORIGINAL FOR RECIPIENT';
-              else if (copyType === 'DUPLICATE') copyLabel.innerText = 'DUPLICATE FOR TRANSPORTER';
-              else if (copyType === 'TRIPLICATE') copyLabel.innerText = 'TRIPLICATE FOR SUPPLIER';
-              
-              copyLabel.style.fontSize = '12px';  
-              copyLabel.style.fontWeight = 'bold'; 
-              copyLabel.style.color = '#ffffff';   
-              copyLabel.style.marginTop = '4px';
-              copyLabel.style.letterSpacing = '1px';
-              copyLabel.style.opacity = '1';       
-              
-              titleElement.parentNode.appendChild(copyLabel);
+      // Helper function to create clones
+      const createCopy = (label) => {
+          const clone = originalElement.cloneNode(true)
+          
+          // Force layout dimensions for A4 PDF
+          clone.style.width = '794px' 
+          clone.style.minHeight = '1122px'
+          clone.style.height = 'auto'
+          clone.style.overflow = 'visible'
+          clone.style.transform = 'none'
+          clone.style.margin = '0'
+          clone.style.padding = '0'
+          clone.style.backgroundColor = 'white'
+          // Ensure it's visible and block level
+          clone.style.display = 'block'
+          // Remove app-specific UI classes that mess up PDF
+          clone.classList.remove('w-full', 'lg:w-7/12', 'flex', 'justify-center', 'shadow-2xl', 'p-8', 'hidden', 'lg:flex') 
+          
+          if (label) {
+              const titleElement = clone.querySelector('h1'); 
+              if (titleElement) {
+                  const copyLabel = document.createElement('p');
+                  copyLabel.innerText = label;
+                  // --- STYLED HEADER ---
+                  copyLabel.style.fontSize = '12px';  
+                  copyLabel.style.fontWeight = 'bold'; 
+                  copyLabel.style.color = '#ffffff';   
+                  copyLabel.style.marginTop = '4px';
+                  copyLabel.style.letterSpacing = '1px';
+                  copyLabel.style.opacity = '1';       
+                  titleElement.parentNode.appendChild(copyLabel);
+              }
           }
+          return clone;
       }
 
-      clone.style.width = '794px' 
-      clone.style.minHeight = '1122px'
-      clone.style.height = 'auto'
-      clone.style.overflow = 'visible'
-      clone.style.transform = 'none'
-      clone.style.margin = '0'
-      clone.style.backgroundColor = 'white'
-      clone.classList.remove('w-full', 'lg:w-7/12', 'flex', 'justify-center', 'shadow-2xl', 'p-8') 
-      
+      // Container for single or multiple pages
       const container = document.createElement('div')
-      // --- FIX FOR EMPTY PDF (Render Visible but Behind) ---
-      container.style.position = 'fixed' 
-      container.style.top = '0'
-      container.style.left = '0'
-      container.style.zIndex = '-9999' 
-      container.style.width = '794px'
-      container.style.opacity = '0.01' // Invisible to user, visible to renderer
       
-      container.appendChild(clone)
+      // FIX: Position fixed at top-left to be visible to renderer but hidden behind everything
+      // Standard fix for html2pdf/html2canvas empty page issues
+      container.style.position = 'fixed'
+      container.style.left = '0'
+      container.style.top = '0'
+      container.style.width = '794px'
+      container.style.zIndex = '-9999' 
+      container.style.backgroundColor = 'white'
+      
+      // PAGE 1: ALWAYS ORIGINAL
+      container.appendChild(createCopy('ORIGINAL FOR RECIPIENT'));
+
+      // PAGE 2: DUPLICATE (If enabled)
+      if (sellerProfile?.print_duplicates) {
+          const pageBreak = document.createElement('div');
+          pageBreak.style.pageBreakBefore = 'always';
+          pageBreak.className = 'html2pdf__page-break'; 
+          container.appendChild(pageBreak);
+          container.appendChild(createCopy('DUPLICATE FOR TRANSPORTER'));
+      }
+
+      // PAGE 3: TRIPLICATE (If enabled)
+      if (sellerProfile?.print_triplicates) {
+          const pageBreak = document.createElement('div');
+          pageBreak.style.pageBreakBefore = 'always';
+          pageBreak.className = 'html2pdf__page-break'; 
+          container.appendChild(pageBreak);
+          container.appendChild(createCopy('TRIPLICATE FOR SUPPLIER'));
+      }
+
       document.body.appendChild(container)
 
-      // --- CRITICAL FIX: WAIT FOR IMAGES ---
+      // --- CRITICAL FIX: WAIT FOR IMAGES TO LOAD ---
       const images = Array.from(container.querySelectorAll('img'));
       await Promise.all(images.map(img => {
           if (img.complete) return Promise.resolve();
-          return new Promise(resolve => { img.onload = resolve; img.onerror = resolve; });
+          return new Promise(resolve => { 
+              img.onload = resolve; 
+              img.onerror = resolve; // Resolve even on error to prevent hanging
+          });
       }));
 
-      // --- DELAY FOR RENDERING ---
+      // --- EXTRA DELAY FOR RENDERING ---
       await new Promise(resolve => setTimeout(resolve, 500));
 
       const buyerName = formData.buyer_name || 'Customer'
       const invoiceNum = formData.invoice_no || 'DRAFT'
-      const typeTag = copyType ? `_${copyType}` : '';
-      const safeFileName = `${buyerName}_${invoiceNum}${typeTag}.pdf`
+      const safeFileName = `${buyerName}_${invoiceNum}.pdf`
 
       const opt = {
         margin: 0,
         filename: safeFileName,
         image: { type: 'jpeg', quality: 0.98 },
         enableLinks: true, 
-        html2canvas: { scale: 2, useCORS: true, scrollY: 0, letterRendering: true, width: 794, windowWidth: 794 },
+        html2canvas: { 
+            scale: 2, 
+            useCORS: true, 
+            scrollY: 0, 
+            letterRendering: true,
+            width: 794,
+            windowWidth: 794 // Ensures consistent capture width
+        },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
       }
       
       try {
-        const pdfBlob = await html2pdf().set(opt).from(clone).output('blob')
-        if (document.body.contains(container)) document.body.removeChild(container)
+        const pdfBlob = await html2pdf().set(opt).from(container).output('blob')
+        // Cleanup DOM
+        if (document.body.contains(container)) {
+            document.body.removeChild(container)
+        }
         return { blob: pdfBlob, filename: opt.filename }
       } catch (err) {
-        if (document.body.contains(container)) document.body.removeChild(container)
+        if (document.body.contains(container)) {
+            document.body.removeChild(container)
+        }
         throw err
       }
   }
 
   const handleDownloadPDF = async () => {
     try {
-        // 1. ORIGINAL
-        const res1 = await generatePdfBlob('ORIGINAL')
-        downloadBlob(res1.blob, res1.filename)
-
-        // 2. DUPLICATE (Sequential Download)
-        if (sellerProfile?.print_duplicates) {
-            setTimeout(async () => {
-                const res2 = await generatePdfBlob('DUPLICATE')
-                downloadBlob(res2.blob, res2.filename)
-            }, 800)
-        }
-
-        // 3. TRIPLICATE (Sequential Download)
-        if (sellerProfile?.print_triplicates) {
-            setTimeout(async () => {
-                const res3 = await generatePdfBlob('TRIPLICATE')
-                downloadBlob(res3.blob, res3.filename)
-            }, 1600)
-        }
-
-        if (!sellerProfile?.print_duplicates && !sellerProfile?.print_triplicates) {
-             const result = await generatePdfBlob() // Default Single
-             downloadBlob(result.blob, result.filename)
-        }
-
+        const result = await generatePdfBlob() // Generates SINGLE file with all pages
+        if (result) downloadBlob(result.blob, result.filename)
     } catch (e) {
         showPopup('Error', 'Failed to generate PDF.', 'error');
     }
@@ -284,28 +303,8 @@ export default function CreateInvoice() {
 
   const handleSendEmail = async () => {
     try {
-        const res1 = await generatePdfBlob('ORIGINAL')
-        downloadBlob(res1.blob, res1.filename)
-
-        if (sellerProfile?.print_duplicates) {
-             setTimeout(async () => {
-                const res2 = await generatePdfBlob('DUPLICATE')
-                downloadBlob(res2.blob, res2.filename)
-             }, 800)
-        }
-
-        if (sellerProfile?.print_triplicates) {
-             setTimeout(async () => {
-                const res3 = await generatePdfBlob('TRIPLICATE')
-                downloadBlob(res3.blob, res3.filename)
-             }, 1600)
-        }
-
-        if (!sellerProfile?.print_duplicates && !sellerProfile?.print_triplicates) {
-             const result = await generatePdfBlob()
-             downloadBlob(result.blob, result.filename)
-        }
-
+        const result = await generatePdfBlob() // Generates SINGLE file
+        if (result) downloadBlob(result.blob, result.filename)
     } catch (e) {
         showPopup('Error', 'Failed to generate PDF for email.', 'error');
         return
@@ -315,8 +314,8 @@ export default function CreateInvoice() {
         const subject = `Invoice ${formData.invoice_no || ''} from ${sellerProfile?.business_name || 'Us'}`
         const body = `Dear ${formData.buyer_name || 'Customer'},\n\nPlease find the invoice attached.\n\nBest Regards,\n${sellerProfile?.business_name || ''}`
         window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
-        showPopup('Email Draft Opened', 'The invoice copies have been downloaded.\n\nPlease attach them manually to the email.', 'info', 'Got it');
-    }, 2000)
+        showPopup('Email Draft Opened', 'The PDF has been downloaded.\n\nPlease attach it manually to the email draft that just opened.', 'info', 'Got it');
+    }, 1000)
   }
 
   const downloadBlob = (blob, filename) => {
@@ -361,73 +360,15 @@ export default function CreateInvoice() {
   return (
     <div className="min-h-screen bg-gray-100 p-0 md:p-4 lg:p-8 flex flex-col lg:flex-row gap-6">
       
-      {/* --- RENDER POPUP --- */}
-      <Popup 
-        isOpen={popup.isOpen}
-        onClose={closePopup}
-        title={popup.title}
-        message={popup.message}
-        type={popup.type}
-        actionLabel={popup.actionLabel}
-        cancelLabel={popup.cancelLabel}
-        onAction={popup.onAction}
-      />
-
-      <style>{`
-        @media print {
-          .no-print, .no-print * {
-            display: none !important;
-            height: 0 !important;
-            width: 0 !important;
-            overflow: hidden !important;
-          }
-          body {
-            background-color: white !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            overflow: visible !important;
-          }
-          #print-scaler {
-            display: block !important;
-            position: relative !important;
-            width: 100% !important;
-            height: auto !important;
-            transform: none !important; 
-            margin: 0 !important;
-            padding: 0 !important;
-            left: 0 !important;
-            top: 0 !important;
-            overflow: visible !important;
-          }
-          #invoice-preview {
-            display: block !important;
-            visibility: visible !important;
-            width: 100% !important;
-            max-width: 210mm !important;
-            margin: 0 auto !important;
-            box-shadow: none !important;
-            border: none !important;
-          }
-        }
-      `}</style>
+      <Popup isOpen={popup.isOpen} onClose={closePopup} title={popup.title} message={popup.message} type={popup.type} actionLabel={popup.actionLabel} cancelLabel={popup.cancelLabel} onAction={popup.onAction} />
       
-      {/* --- MOBILE TABS --- */}
       <div className="lg:hidden sticky top-0 z-20 bg-white border-b flex text-sm font-bold shadow-sm">
-        <button onClick={() => setMobileTab('edit')} className={`flex-1 py-3 text-center ${mobileTab === 'edit' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500'}`}>✎ Editor</button>
-        <button onClick={() => setMobileTab('preview')} className={`flex-1 py-3 text-center ${mobileTab === 'preview' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500'}`}>👁 Preview</button>
+        <button onClick={() => setMobileTab('edit')} className={`flex-1 py-3 ${mobileTab === 'edit' ? 'text-blue-600 border-b-2 border-blue-600' : ''}`}>✎ Editor</button>
+        <button onClick={() => setMobileTab('preview')} className={`flex-1 py-3 ${mobileTab === 'preview' ? 'text-blue-600 border-b-2 border-blue-600' : ''}`}>👁 Preview</button>
       </div>
-
-      {/* --- LEFT SIDE: EDITOR --- */}
       <div className={`w-full lg:w-5/12 bg-white p-4 md:p-6 rounded-lg shadow-lg h-fit overflow-y-auto max-h-screen custom-scrollbar ${mobileTab === 'preview' ? 'hidden lg:block' : 'block'}`}>
-        
-        <button 
-          onClick={() => navigate('/dashboard')}
-          className="flex items-center text-sm text-gray-500 hover:text-gray-800 mb-4 transition-colors font-medium"
-        >
-          ← Back to Dashboard
-        </button>
-
-        <div className="flex justify-between items-center mb-4 border-t pt-4">
+         <button onClick={() => navigate('/dashboard')} className="flex items-center text-sm text-gray-500 hover:text-gray-800 mb-4 transition-colors font-medium">← Back to Dashboard</button>
+         <div className="flex justify-between items-center mb-4 border-t pt-4">
           <h2 className="text-xl font-bold text-gray-800">{id ? 'Edit Invoice' : 'New Invoice'}</h2>
           <div className="flex gap-2">
             {THEMES.map((t) => (
@@ -435,160 +376,63 @@ export default function CreateInvoice() {
             ))}
           </div>
         </div>
-
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-xs text-gray-500">Invoice No</label>
-              <input 
-                  {...register('invoice_no')} 
-                  className={`w-full p-2 border rounded text-sm ${!manualInvoiceEnabled ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : 'bg-white'}`}
-                  readOnly={!manualInvoiceEnabled}
-                  onChange={(e) => setValue('invoice_no', e.target.value.toUpperCase())}
-              />
-            </div>
-            <div>
-              <label className="text-xs text-gray-500">Date</label>
-              <input type="date" {...register('invoiceDate')} className="w-full p-2 border rounded text-sm" />
-            </div>
-          </div>
-          <div>
-              <label className="text-xs text-gray-500">Due Date</label>
-              <input type="date" {...register('dueDate')} className="w-full p-2 border rounded text-sm" />
-          </div>
-
-          <div className="bg-gray-50 p-3 rounded border">
-            <h3 className="text-sm font-semibold mb-2 text-gray-700">Bill To</h3>
-            
-            <input 
-                {...register('buyer_name')} 
-                placeholder="Client Name" 
-                className="w-full p-2 border rounded mb-2 text-sm" 
-                onChange={(e) => setValue('buyer_name', e.target.value.toUpperCase())}
-            />
-            
-            <select {...register('buyer_state')} className="w-full p-2 border rounded mb-2 text-sm">
-                <option value="">Select State</option>
-                {INDIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
-            
-            <input 
-                {...register('buyer_gstin')} 
-                placeholder="GSTIN (Optional)" 
-                className="w-full p-2 border rounded text-sm" 
-                onChange={(e) => setValue('buyer_gstin', e.target.value.toUpperCase())}
-            />
-            
-            <input {...register('buyer_address')} placeholder="Address" className="w-full p-2 border rounded mt-2 text-sm" />
-          </div>
-
-          <div>
-            <h3 className="text-sm font-semibold mb-2 text-gray-700">Items</h3>
-            {fields.map((item, index) => (
-              <div key={item.id} className="flex flex-col gap-2 mb-4 p-3 bg-gray-50 rounded border">
-                <div className="w-full">
-                    <label className="text-xs text-gray-500 font-bold">Search Item</label>
-                    <SearchableSelect 
-                        options={HSN_CODES} 
-                        value={formData.items[index]?.description}
-                        placeholder="Start typing..."
-                        onChange={(selected) => handleItemSelect(index, selected)}
+            <div className="grid grid-cols-2 gap-3">
+                <div>
+                    <label className="text-xs text-gray-500">Invoice No</label>
+                    <input 
+                        {...register('invoice_no')} 
+                        className={`w-full p-2 border rounded text-sm ${!manualInvoiceEnabled ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : 'bg-white'}`}
+                        readOnly={!manualInvoiceEnabled}
+                        onChange={(e) => setValue('invoice_no', e.target.value.toUpperCase())}
                     />
                 </div>
-                <div className="flex gap-2">
-                    <div className="w-2/5">
-                        <label className="text-xs text-gray-500">Price</label>
-                        <input {...register(`items.${index}.price`)} type="number" className="w-full p-2 border rounded text-sm" />
-                    </div>
-                    <div className="w-1/5">
-                        <label className="text-xs text-gray-500">Qty</label>
-                        <input {...register(`items.${index}.quantity`)} type="number" className="w-full p-2 border rounded text-sm" />
-                    </div>
-                    <div className="w-2/5">
-                        <label className="text-xs text-gray-500">GST %</label>
-                        <select {...register(`items.${index}.gstRate`)} className="w-full p-2 border rounded text-sm">
-                            <option value="0">0%</option>
-                            <option value="5">5%</option>
-                            <option value="12">12%</option>
-                            <option value="18">18%</option>
-                            <option value="28">28%</option>
-                        </select>
-                    </div>
-                </div>
-                <button type="button" onClick={() => remove(index)} className="text-red-500 text-xs text-right hover:underline mt-1">Remove Item</button>
-              </div>
-            ))}
-            <button type="button" onClick={() => append({ description: '', hsn: '', quantity: 1, price: 0, gstRate: 18 })} className="text-blue-600 text-sm font-bold p-1">
-              + Add Item
-            </button>
-          </div>
-
-          <div className="space-y-3">
-             <div className="bg-gray-50 p-3 rounded border">
-                <div className="flex justify-between items-center mb-2">
-                    <label className="text-xs font-bold text-gray-500">Signature</label>
-                    {signaturePreview && <span className="text-xs text-green-600 font-semibold">✓ Loaded from Profile</span>}
-                </div>
-                <input type="file" accept="image/*" onChange={handleImageUpload} className="block w-full text-sm text-gray-500 mt-1" />
+                <div><label className="text-xs text-gray-500">Date</label><input type="date" {...register('invoiceDate')} className="w-full p-2 border rounded text-sm" /></div>
+            </div>
+            <div><label className="text-xs text-gray-500">Due Date</label><input type="date" {...register('dueDate')} className="w-full p-2 border rounded text-sm" /></div>
+            
+            <div className="bg-gray-50 p-3 rounded border">
+                <h3 className="text-sm font-semibold mb-2 text-gray-700">Bill To</h3>
+                <input {...register('buyer_name')} placeholder="Client Name" className="w-full p-2 border rounded mb-2 text-sm" onChange={(e) => setValue('buyer_name', e.target.value.toUpperCase())} />
+                <select {...register('buyer_state')} className="w-full p-2 border rounded mb-2 text-sm"><option value="">Select State</option>{INDIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}</select>
+                <input {...register('buyer_gstin')} placeholder="GSTIN (Optional)" className="w-full p-2 border rounded text-sm" onChange={(e) => setValue('buyer_gstin', e.target.value.toUpperCase())} />
+                <input {...register('buyer_address')} placeholder="Address" className="w-full p-2 border rounded mt-2 text-sm" />
             </div>
             <div>
-              <label className="text-xs text-gray-500">Terms</label>
-              <textarea {...register('terms')} rows="3" className="w-full p-2 border rounded text-sm"></textarea>
+                <h3 className="text-sm font-semibold mb-2 text-gray-700">Items</h3>
+                {fields.map((item, index) => (
+                <div key={item.id} className="flex flex-col gap-2 mb-4 p-3 bg-gray-50 rounded border">
+                    <div className="w-full"><label className="text-xs text-gray-500 font-bold">Search Item</label><SearchableSelect options={HSN_CODES} value={formData.items[index]?.description} placeholder="Start typing..." onChange={(selected) => handleItemSelect(index, selected)} /></div>
+                    <div className="flex gap-2">
+                        <div className="w-2/5"><label className="text-xs text-gray-500">Price</label><input {...register(`items.${index}.price`)} type="number" className="w-full p-2 border rounded text-sm" /></div>
+                        <div className="w-1/5"><label className="text-xs text-gray-500">Qty</label><input {...register(`items.${index}.quantity`)} type="number" className="w-full p-2 border rounded text-sm" /></div>
+                        <div className="w-2/5"><label className="text-xs text-gray-500">GST %</label><select {...register(`items.${index}.gstRate`)} className="w-full p-2 border rounded text-sm"><option value="0">0%</option><option value="5">5%</option><option value="12">12%</option><option value="18">18%</option><option value="28">28%</option></select></div>
+                    </div>
+                    <button type="button" onClick={() => remove(index)} className="text-red-500 text-xs text-right hover:underline mt-1">Remove Item</button>
+                </div>
+                ))}
+                <button type="button" onClick={() => append({ description: '', hsn: '', quantity: 1, price: 0, gstRate: 18 })} className="text-blue-600 text-sm font-bold p-1">+ Add Item</button>
             </div>
-          </div>
-
-          <div className="flex flex-col gap-3 pt-4 border-t sticky bottom-0 bg-white z-10 pb-4 md:pb-0">
-            <button type="button" onClick={handleShare} disabled={sharing} className="w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 font-bold shadow flex items-center justify-center gap-2">
-               {sharing ? '...' : 'Share Invoice'} 
-               <span className="text-xs font-normal opacity-75">(WhatsApp)</span>
-            </button>
-
-            <div className="flex gap-2">
-                <button type="button" onClick={handleSendEmail} className="flex-1 bg-gray-200 text-gray-800 py-3 rounded hover:bg-gray-300 font-bold">Send Email</button>
-                <button type="button" onClick={handleDownloadPDF} className="flex-1 bg-gray-900 text-white py-3 rounded hover:bg-black font-bold">PDF</button>
-                <button type="submit" disabled={loading} className="flex-1 bg-blue-600 text-white py-3 rounded hover:bg-blue-700 font-bold">
-                    {loading ? '...' : (id ? 'Update' : 'Save')}
-                </button>
+            <div className="space-y-3">
+                <div className="bg-gray-50 p-3 rounded border"><div className="flex justify-between items-center mb-2"><label className="text-xs font-bold text-gray-500">Signature</label>{signaturePreview && <span className="text-xs text-green-600 font-semibold">✓ Loaded from Profile</span>}</div><input type="file" accept="image/*" onChange={handleImageUpload} className="block w-full text-sm text-gray-500 mt-1" /></div>
+                <div><label className="text-xs text-gray-500">Terms</label><textarea {...register('terms')} rows="3" className="w-full p-2 border rounded text-sm"></textarea></div>
             </div>
-          </div>
+            <div className="flex flex-col gap-3 pt-4 border-t sticky bottom-0 bg-white z-10 pb-4 md:pb-0">
+                <button type="button" onClick={handleShare} disabled={sharing} className="w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 font-bold shadow flex items-center justify-center gap-2">{sharing ? '...' : 'Share Invoice'} <span className="text-xs font-normal opacity-75">(WhatsApp)</span></button>
+                <div className="flex gap-2">
+                    <button type="button" onClick={handleSendEmail} className="flex-1 bg-gray-200 text-gray-800 py-3 rounded hover:bg-gray-300 font-bold">Send Email</button>
+                    <button type="button" onClick={handleDownloadPDF} className="flex-1 bg-gray-900 text-white py-3 rounded hover:bg-black font-bold">PDF</button>
+                    <button type="submit" disabled={loading} className="flex-1 bg-blue-600 text-white py-3 rounded hover:bg-blue-700 font-bold">{loading ? '...' : (id ? 'Update' : 'Save')}</button>
+                </div>
+            </div>
         </form>
-
-        <div className="mt-8 text-center text-xs text-gray-400">
-           <p>Powered by <a href="https://pixalara.com" target="_blank" rel="noreferrer" className="text-blue-500 hover:underline">pixalara.com</a></p>
-        </div>
       </div>
 
-      {/* --- RIGHT SIDE: PREVIEW --- */}
-      <div 
-        ref={containerRef}
-        className={`w-full lg:w-7/12 flex justify-center bg-gray-300 p-0 md:p-8 overflow-hidden ${mobileTab === 'edit' ? 'hidden lg:flex' : 'flex'}`}
-      >
-        <div 
-            id="print-scaler" 
-            className="flex justify-center origin-top p-4 md:p-0 transition-transform duration-200 ease-out"
-            style={{ 
-                transform: `scale(${previewScale})`, 
-                transformOrigin: 'top center',
-                height: previewScale < 1 ? `${(297 * 3.78 * previewScale) + 30}px` : 'auto' 
-            }}
-        >
-            <div 
-                id="invoice-preview" 
-                ref={invoiceRef} 
-                className="bg-white shadow-2xl relative shrink-0" 
-                style={{ width: '210mm', minHeight: '297mm', padding: '0' }}
-            >
-            
+      <div ref={containerRef} className={`w-full lg:w-7/12 flex justify-center bg-gray-300 p-0 md:p-8 overflow-hidden ${mobileTab === 'edit' ? 'hidden lg:flex' : 'flex'}`}>
+        <div id="invoice-preview" ref={invoiceRef} className="bg-white shadow-2xl relative shrink-0 transition-transform origin-top duration-200" style={{ transform: `scale(${previewScale})`, width: '210mm', minHeight: '297mm', padding: '0' }}>
             <div className="px-6 py-4 flex justify-between" style={{ backgroundColor: theme.hex, color: theme.text }}>
                 <div style={{ width: '50%' }}>
-                    {sellerProfile?.logo_url && (
-                        <img 
-                            src={sellerProfile.logo_url} 
-                            alt="Logo" 
-                            crossOrigin="anonymous" 
-                            className="h-12 w-auto mb-1 object-contain bg-white rounded p-0.5" 
-                        />
-                    )}
+                    {sellerProfile?.logo_url && <img src={sellerProfile.logo_url} alt="Logo" crossOrigin="anonymous" className="h-12 w-auto mb-1 object-contain bg-white rounded p-0.5" />}
                     <h1 className="text-2xl font-bold uppercase tracking-wide">Invoice</h1>
                     <p className="opacity-80 text-xs"># {formData.invoice_no || 'DRAFT'}</p>
                 </div>
@@ -597,14 +441,10 @@ export default function CreateInvoice() {
                     <p className="opacity-90 text-sm leading-tight">{sellerProfile?.state}</p>
                     {sellerProfile?.business_email && <p className="opacity-90 text-sm leading-tight">{sellerProfile.business_email}</p>}
                     {sellerProfile?.business_phone && <p className="opacity-90 text-sm leading-tight">{sellerProfile.business_phone}</p>}
-                    
-                    {/* WEBSITE URL (Updated) */}
                     {sellerProfile?.website && <p className="opacity-90 text-sm leading-tight">{sellerProfile.website}</p>}
-                    
                     {sellerProfile?.gstin && <p className="font-semibold mt-1 text-base">GSTIN: {sellerProfile.gstin}</p>}
                 </div>
             </div>
-
             <div className="px-6 py-4 pb-12">
                 <div className="flex justify-between mb-6">
                     <div style={{ width: '60%' }}>
@@ -618,150 +458,70 @@ export default function CreateInvoice() {
                         <div className="grid grid-cols-[auto_auto] gap-x-3 justify-end items-baseline">
                             <span className="text-gray-500 text-xs text-right">Date:</span>
                             <span className="font-semibold text-sm text-right">{formatDate(formData.invoiceDate)}</span>
-                            
-                            {formData.dueDate && (
-                                <>
-                                    <span className="text-gray-500 text-xs text-right">Due Date:</span>
-                                    <span className="font-semibold text-sm text-right">{formatDate(formData.dueDate)}</span>
-                                </>
-                            )}
+                            {formData.dueDate && <><span className="text-gray-500 text-xs text-right">Due Date:</span><span className="font-semibold text-sm text-right">{formatDate(formData.dueDate)}</span></>}
                         </div>
                     </div>
                 </div>
-
                 <div style={{ width: '740px', display: 'block', margin: '0 auto 24px auto' }}>
                     <table style={{ width: '740px', tableLayout: 'fixed', borderCollapse: 'collapse' }}>
                         <thead>
                             <tr style={{ backgroundColor: theme.hex, color: theme.text }}>
-                                <th style={{ 
-                                    width: '300px', 
-                                    height: '35px', 
-                                    maxHeight: '35px',
-                                    overflow: 'hidden',
-                                    verticalAlign: 'middle', 
-                                    backgroundColor: theme.hex, 
-                                    color: theme.text 
-                                }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', height: '100%', paddingLeft: '12px', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }}>ITEM</div>
-                                </th>
-                                <th style={{ width: '110px', height: '35px', maxHeight: '35px', overflow: 'hidden', verticalAlign: 'middle', backgroundColor: theme.hex, color: theme.text }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', height: '100%', paddingLeft: '8px', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }}>HSN</div>
-                                </th>
-                                <th style={{ width: '70px', height: '35px', maxHeight: '35px', overflow: 'hidden', verticalAlign: 'middle', backgroundColor: theme.hex, color: theme.text }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }}>QTY</div>
-                                </th>
-                                <th style={{ width: '120px', height: '35px', maxHeight: '35px', overflow: 'hidden', verticalAlign: 'middle', backgroundColor: theme.hex, color: theme.text }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', height: '100%', paddingRight: '12px', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }}>PRICE</div>
-                                </th>
-                                <th style={{ width: '140px', height: '35px', maxHeight: '35px', overflow: 'hidden', verticalAlign: 'middle', backgroundColor: theme.hex, color: theme.text }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', height: '100%', paddingRight: '12px', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }}>TOTAL</div>
-                                </th>
+                                <th style={{ width: '300px', height: '35px', maxHeight: '35px', overflow: 'hidden', verticalAlign: 'middle' }}><div style={{ display: 'flex', alignItems: 'center', height: '100%', paddingLeft: '12px', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }}>ITEM</div></th>
+                                <th style={{ width: '110px', height: '35px', maxHeight: '35px', overflow: 'hidden', verticalAlign: 'middle' }}><div style={{ display: 'flex', alignItems: 'center', height: '100%', paddingLeft: '8px', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }}>HSN</div></th>
+                                <th style={{ width: '70px', height: '35px', maxHeight: '35px', overflow: 'hidden', verticalAlign: 'middle' }}><div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }}>QTY</div></th>
+                                <th style={{ width: '120px', height: '35px', maxHeight: '35px', overflow: 'hidden', verticalAlign: 'middle' }}><div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', height: '100%', paddingRight: '12px', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }}>PRICE</div></th>
+                                <th style={{ width: '140px', height: '35px', maxHeight: '35px', overflow: 'hidden', verticalAlign: 'middle' }}><div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', height: '100%', paddingRight: '12px', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }}>TOTAL</div></th>
                             </tr>
                         </thead>
                         <tbody>
-                            {formData.items?.map((item, i) => {
-                                const amount = ((item.quantity||0) * (item.price||0));
-                                return (
-                                    <tr key={i} style={{ borderBottom: '1px solid #e5e7eb' }}>
-                                        <td style={{ width: '300px', padding: '8px 0 8px 12px', verticalAlign: 'top' }}>
-                                            <p style={{ fontWeight: 600, fontSize: '13px', margin: 0, color: '#1f2937' }}>{item.description}</p>
-                                        </td>
-                                        <td style={{ width: '110px', padding: '8px 0 8px 12px', verticalAlign: 'top', fontSize: '12px', color: '#4b5563' }}>{item.hsn}</td>
-                                        <td style={{ width: '70px', padding: '8px 0', textAlign: 'center', verticalAlign: 'top', fontSize: '13px', color: '#1f2937' }}>{item.quantity}</td>
-                                        <td style={{ width: '120px', padding: '8px 12px 8px 0', textAlign: 'right', verticalAlign: 'top', fontSize: '13px', color: '#1f2937' }}>₹{item.price}</td>
-                                        <td style={{ width: '140px', padding: '8px 12px 8px 0', textAlign: 'right', verticalAlign: 'top', fontWeight: 'bold', fontSize: '13px', color: '#1f2937' }}>₹{(amount).toFixed(2)}</td>
-                                    </tr>
-                                )
-                            })}
+                            {formData.items?.map((item, i) => (
+                                <tr key={i} style={{ borderBottom: '1px solid #e5e7eb' }}>
+                                    <td style={{ width: '300px', padding: '8px 0 8px 12px', verticalAlign: 'top' }}><p style={{ fontWeight: 600, fontSize: '13px', margin: 0, color: '#1f2937' }}>{item.description}</p></td>
+                                    <td style={{ width: '110px', padding: '8px 0 8px 12px', verticalAlign: 'top', fontSize: '12px', color: '#4b5563' }}>{item.hsn}</td>
+                                    <td style={{ width: '70px', padding: '8px 0', textAlign: 'center', verticalAlign: 'top', fontSize: '13px', color: '#1f2937' }}>{item.quantity}</td>
+                                    <td style={{ width: '120px', padding: '8px 12px 8px 0', textAlign: 'right', verticalAlign: 'top', fontSize: '13px', color: '#1f2937' }}>₹{item.price}</td>
+                                    <td style={{ width: '140px', padding: '8px 12px 8px 0', textAlign: 'right', verticalAlign: 'top', fontWeight: 'bold', fontSize: '13px', color: '#1f2937' }}>₹{((item.quantity||0)*(item.price||0)).toFixed(2)}</td>
+                                </tr>
+                            ))}
                         </tbody>
                     </table>
                 </div>
-                
                 <div className="flex justify-end">
                     <div className="w-5/12 space-y-1 border-b pb-3">
                         <div className="flex justify-between text-gray-600 text-sm"><span>Subtotal</span><span>₹{totals.subtotal}</span></div>
-                        {parseFloat(totals.igst) > 0 ? (
-                        <div className="flex justify-between text-gray-600 text-xs">
-                            <span>IGST {getTaxRateText('IGST')}</span>
-                            <span>₹{totals.igst}</span>
-                        </div>
-                        ) : (
-                        <>
-                            <div className="flex justify-between text-gray-600 text-xs">
-                                <span>CGST {getTaxRateText('CGST')}</span>
-                                <span>₹{totals.cgst}</span>
-                            </div>
-                            <div className="flex justify-between text-gray-600 text-xs">
-                                <span>SGST {getTaxRateText('SGST')}</span>
-                                <span>₹{totals.sgst}</span>
-                            </div>
-                        </>
-                        )}
-                        <div className="flex justify-between py-2 text-xl font-bold" style={{ color: theme.hex }}>
-                            <span>Total</span><span>₹{totals.grandTotal}</span>
-                        </div>
+                        {parseFloat(totals.igst) > 0 ? <div className="flex justify-between text-gray-600 text-xs"><span>IGST {getTaxRateText('IGST')}</span><span>₹{totals.igst}</span></div> : <><div className="flex justify-between text-gray-600 text-xs"><span>CGST {getTaxRateText('CGST')}</span><span>₹{totals.cgst}</span></div><div className="flex justify-between text-gray-600 text-xs"><span>SGST {getTaxRateText('SGST')}</span><span>₹{totals.sgst}</span></div></>}
+                        <div className="flex justify-between py-2 text-xl font-bold" style={{ color: theme.hex }}><span>Total</span><span>₹{totals.grandTotal}</span></div>
                     </div>
                 </div>
-
-                <div className="mt-2 text-right">
-                    <p className="text-xs text-gray-500 font-semibold italic">Amount in Words:</p>
-                    <p className="text-xs font-bold text-gray-800">{amountInWords}</p>
-                </div>
-                
-                {/* Footer / Bank Info & Signature */}
+                <div className="mt-2 text-right"><p className="text-xs text-gray-500 font-semibold italic">Amount in Words:</p><p className="text-xs font-bold text-gray-800">{amountInWords}</p></div>
                 <div className="flex justify-between items-end mt-10 pt-6 border-t border-gray-100">
-                    
-                    {/* Clean Bank Details - Content Only */}
                     <div className="w-[55%]">
                         {sellerProfile?.bank_name && (
                             <div className="pt-2">
                                 <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2 border-b border-gray-200 pb-1 w-fit pr-8">Bank Details</p>
                                 <div className="grid grid-cols-[80px_1fr] gap-y-1 text-xs w-fit min-w-[200px]">
-                                    <span className="text-gray-500 font-medium">Bank:</span>
-                                    <span className="font-bold text-gray-800">{sellerProfile.bank_name}</span>
-                                    
-                                    <span className="text-gray-500 font-medium">A/c No:</span>
-                                    <span className="font-bold text-gray-800">{sellerProfile.account_number}</span>
-                                    
-                                    <span className="text-gray-500 font-medium">IFSC:</span>
-                                    <span className="font-bold text-gray-800">{sellerProfile.ifsc_code}</span>
-                                    
-                                    {sellerProfile.branch_name && (
-                                        <>
-                                            <span className="text-gray-500 font-medium">Branch:</span>
-                                            <span className="font-bold text-gray-800">{sellerProfile.branch_name}</span>
-                                        </>
-                                    )}
+                                    <span className="text-gray-500 font-medium">Bank:</span><span className="font-bold text-gray-800">{sellerProfile.bank_name}</span>
+                                    <span className="text-gray-500 font-medium">A/c No:</span><span className="font-bold text-gray-800">{sellerProfile.account_number}</span>
+                                    <span className="text-gray-500 font-medium">IFSC:</span><span className="font-bold text-gray-800">{sellerProfile.ifsc_code}</span>
+                                    {sellerProfile.branch_name && <><span className="text-gray-500 font-medium">Branch:</span><span className="font-bold text-gray-800">{sellerProfile.branch_name}</span></>}
                                 </div>
                             </div>
                         )}
                     </div>
-
                     <div className="w-[40%] text-right flex flex-col items-end">
                         <div className="flex items-end gap-4 mb-2">
                             {stampPreview && <img src={stampPreview} alt="Stamp" crossOrigin="anonymous" className="h-20 w-20 object-contain opacity-80 rotate-[-5deg]" />}
                             {signaturePreview && <img src={signaturePreview} alt="Sign" crossOrigin="anonymous" className="h-14 mb-2 object-contain" />}
                         </div>
-                        <div className="border-t border-gray-300 w-32 mt-auto"></div> 
+                        <div className="border-t border-gray-300 w-32 mt-auto"></div>
                         <p className="text-[10px] font-bold uppercase mt-1 text-gray-600">Authorized Signatory</p>
                         <p className="text-[10px] text-gray-400">{sellerProfile?.business_name}</p>
                     </div>
                 </div>
-                
-                <div className="mt-6 pt-3 border-t text-xs text-gray-600">
-                    <h4 className="font-bold text-gray-800 mb-1">Terms & Conditions</h4>
-                    <p className="whitespace-pre-wrap text-[10px]">{formData.terms}</p>
-                </div>
+                <div className="mt-6 pt-3 border-t text-xs text-gray-600"><h4 className="font-bold text-gray-800 mb-1">Terms & Conditions</h4><p className="whitespace-pre-wrap text-[10px]">{formData.terms}</p></div>
             </div>
-
-            <div className="absolute bottom-10 w-full text-center">
-                 <p className="text-xs text-gray-700 font-medium">
-                     Powered by <a href="https://pixalara.com/" target="_blank" rel="noreferrer" className="text-gray-900 hover:underline font-bold">pixalara.com</a>
-                 </p>
-            </div>
-
+            <div className="absolute bottom-10 w-full text-center"><p className="text-xs text-gray-700 font-medium">Powered by <a href="https://pixalara.com/" target="_blank" rel="noreferrer" className="text-gray-900 hover:underline font-bold">pixalara.com</a></p></div>
             <div className="h-6 w-full absolute bottom-0" style={{ backgroundColor: theme.hex }}></div>
-            </div>
         </div>
       </div>
     </div>
