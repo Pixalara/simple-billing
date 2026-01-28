@@ -168,14 +168,14 @@ export default function CreateInvoice() {
   const totals = calculateTotals(); const amountInWords = totals.grandTotal ? numberToWords(totals.grandTotal) : '';
   const getTaxRateText = (type) => { const rates = new Set(formData.items?.map(i => parseFloat(i.gstRate)).filter(r => r > 0)); if (rates.size === 1) { const r = [...rates][0]; if (type === 'IGST') return `(${r}%)`; if (type === 'CGST' || type === 'SGST') return `(${r/2}%)`; } return ''; }
 
-  // --- SEPARATE FILE GENERATOR (Fixes Empty PDF) ---
+  // --- PDF GENERATOR (FIXED FOR EMPTY PDFS) ---
   const generatePdfBlob = async (copyType = '') => {
       const originalElement = invoiceRef.current
       if (!originalElement) return null;
 
       const clone = originalElement.cloneNode(true)
       
-      // -- SET HEADER LABEL --
+      // -- HEADER LABELS --
       if (copyType) {
           const titleElement = clone.querySelector('h1'); 
           if (titleElement) {
@@ -198,6 +198,7 @@ export default function CreateInvoice() {
           }
       }
 
+      // Force Dimensions & Cleanup Styles
       clone.style.width = '794px' 
       clone.style.minHeight = '1122px'
       clone.style.height = 'auto'
@@ -205,30 +206,37 @@ export default function CreateInvoice() {
       clone.style.transform = 'none'
       clone.style.margin = '0'
       clone.style.backgroundColor = 'white'
-      clone.classList.remove('w-full', 'lg:w-7/12', 'flex', 'justify-center', 'shadow-2xl', 'p-8') 
-      clone.style.display = 'block'
+      clone.style.display = 'block' // Ensure visibility
+      clone.classList.remove('w-full', 'lg:w-7/12', 'flex', 'justify-center', 'shadow-2xl', 'p-8', 'hidden', 'lg:flex') 
       
       const container = document.createElement('div')
       
-      // FIX: Position fixed at 0,0 but BEHIND everything (z-index) to prevent blank pages
+      // --- FIX FOR EMPTY PDF ---
+      // Position fixed at 0,0 ensures it's in the viewport rendering area.
+      // Z-index -9999 hides it behind the main app content.
       container.style.position = 'fixed'
       container.style.top = '0'
       container.style.left = '0'
       container.style.zIndex = '-9999' 
-      container.style.width = '794px'
+      container.style.width = '794px' // A4 width at 96DPI
       container.style.backgroundColor = 'white'
       
       container.appendChild(clone)
       document.body.appendChild(container)
 
       // --- CRITICAL FIX: WAIT FOR IMAGES TO LOAD ---
+      // This ensures logos and signatures are painted before capture
       const images = Array.from(container.querySelectorAll('img'));
       await Promise.all(images.map(img => {
           if (img.complete) return Promise.resolve();
-          return new Promise(resolve => { img.onload = resolve; img.onerror = resolve; });
+          return new Promise(resolve => { 
+              img.onload = resolve; 
+              img.onerror = resolve; // Continue even if image fails
+          });
       }));
 
       // --- DELAY FOR RENDERING ---
+      // Allow browser layout engine to catch up
       await new Promise(resolve => setTimeout(resolve, 500));
 
       const buyerName = formData.buyer_name || 'Customer'
@@ -241,7 +249,14 @@ export default function CreateInvoice() {
         filename: safeFileName,
         image: { type: 'jpeg', quality: 0.98 },
         enableLinks: true, 
-        html2canvas: { scale: 2, useCORS: true, scrollY: 0, letterRendering: true, width: 794, windowWidth: 794 },
+        html2canvas: { 
+            scale: 2, 
+            useCORS: true, 
+            scrollY: 0, 
+            letterRendering: true,
+            width: 794, 
+            windowWidth: 794 // Forces desktop rendering on mobile
+        },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
       }
       
@@ -261,12 +276,12 @@ export default function CreateInvoice() {
         const res1 = await generatePdfBlob('ORIGINAL')
         downloadBlob(res1.blob, res1.filename)
 
-        // 2. DUPLICATE (Sequential Download)
+        // 2. DUPLICATE (Sequential Download with delay to prevent browser blocking)
         if (sellerProfile?.print_duplicates) {
             setTimeout(async () => {
                 const res2 = await generatePdfBlob('DUPLICATE')
                 downloadBlob(res2.blob, res2.filename)
-            }, 800)
+            }, 1000)
         }
 
         // 3. TRIPLICATE (Sequential Download)
@@ -274,12 +289,12 @@ export default function CreateInvoice() {
             setTimeout(async () => {
                 const res3 = await generatePdfBlob('TRIPLICATE')
                 downloadBlob(res3.blob, res3.filename)
-            }, 1600)
+            }, 2000)
         }
 
+        // 4. DEFAULT (If no options selected)
         if (!sellerProfile?.print_duplicates && !sellerProfile?.print_triplicates) {
-             const result = await generatePdfBlob() // Default Single
-             downloadBlob(result.blob, result.filename)
+             // Already downloaded ORIGINAL (Step 1), no extra action needed.
         }
 
     } catch (e) {
@@ -296,19 +311,14 @@ export default function CreateInvoice() {
              setTimeout(async () => {
                 const res2 = await generatePdfBlob('DUPLICATE')
                 downloadBlob(res2.blob, res2.filename)
-             }, 800)
+             }, 1000)
         }
 
         if (sellerProfile?.print_triplicates) {
              setTimeout(async () => {
                 const res3 = await generatePdfBlob('TRIPLICATE')
                 downloadBlob(res3.blob, res3.filename)
-             }, 1600)
-        }
-
-        if (!sellerProfile?.print_duplicates && !sellerProfile?.print_triplicates) {
-             const result = await generatePdfBlob()
-             downloadBlob(result.blob, result.filename)
+             }, 2000)
         }
 
     } catch (e) {
@@ -322,7 +332,7 @@ export default function CreateInvoice() {
         window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
         
         showPopup('Email Draft Opened', 'The invoice copies have been downloaded.\n\nPlease attach them manually to the email.', 'info', 'Got it');
-    }, 2000)
+    }, 2500)
   }
 
   const downloadBlob = (blob, filename) => {
