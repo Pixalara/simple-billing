@@ -168,21 +168,25 @@ export default function CreateInvoice() {
   const totals = calculateTotals(); const amountInWords = totals.grandTotal ? numberToWords(totals.grandTotal) : '';
   const getTaxRateText = (type) => { const rates = new Set(formData.items?.map(i => parseFloat(i.gstRate)).filter(r => r > 0)); if (rates.size === 1) { const r = [...rates][0]; if (type === 'IGST') return `(${r}%)`; if (type === 'CGST' || type === 'SGST') return `(${r/2}%)`; } return ''; }
 
-  // --- UPDATED PDF GENERATOR (Fix for Empty PDF) ---
+  // --- UPDATED PDF GENERATOR FOR SINGLE FILE (WITH DELAY FIX) ---
   const generatePdfBlob = async () => {
       const originalElement = invoiceRef.current
       if (!originalElement) return null;
 
+      // Helper to create copy
       const createCopy = (label) => {
           const clone = originalElement.cloneNode(true)
           
+          // Force layout styles to prevent collapse
           clone.style.width = '794px' 
           clone.style.minHeight = '1122px'
           clone.style.height = 'auto'
           clone.style.overflow = 'visible'
           clone.style.transform = 'none'
           clone.style.margin = '0'
+          clone.style.padding = '0' // Ensure no padding shift
           clone.style.backgroundColor = 'white'
+          clone.style.position = 'relative'
           clone.classList.remove('w-full', 'lg:w-7/12', 'flex', 'justify-center', 'shadow-2xl', 'p-8', 'hidden', 'lg:flex') 
           clone.style.display = 'block'
           
@@ -206,10 +210,10 @@ export default function CreateInvoice() {
 
       const container = document.createElement('div')
       
-      // FIX: Move off-screen to the RIGHT (100vw) so it's not "behind" things
-      // This prevents the "white overlay" issue
+      // FIX: Position fixed at negative left coordinates to ensure rendering
+      // using z-index sometimes fails with certain rendering engines.
       container.style.position = 'fixed'
-      container.style.left = '100vw' 
+      container.style.left = '-10000px'
       container.style.top = '0'
       container.style.width = '794px'
       container.style.zIndex = '9999'
@@ -229,6 +233,9 @@ export default function CreateInvoice() {
 
       document.body.appendChild(container)
 
+      // --- CRITICAL FIX: Add delay to allow DOM/Images to paint ---
+      await new Promise(resolve => setTimeout(resolve, 500));
+
       const buyerName = formData.buyer_name || 'Customer'
       const invoiceNum = formData.invoice_no || 'DRAFT'
       const safeFileName = `${buyerName}_${invoiceNum}.pdf`
@@ -243,15 +250,14 @@ export default function CreateInvoice() {
             useCORS: true, 
             scrollY: 0, 
             letterRendering: true,
-            width: 794,
-            windowWidth: 794
+            // Removing windowWidth to let it detect the element's natural width
         },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
       }
       
       try {
         const pdfBlob = await html2pdf().set(opt).from(container).output('blob')
-        if(document.body.contains(container)) document.body.removeChild(container)
+        document.body.removeChild(container)
         return { blob: pdfBlob, filename: opt.filename }
       } catch (err) {
         if(document.body.contains(container)) document.body.removeChild(container)
