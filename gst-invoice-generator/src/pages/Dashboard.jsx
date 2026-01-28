@@ -11,6 +11,18 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recha
 import ExcelJS from 'exceljs'
 import { saveAs } from 'file-saver'
 
+// --- BRANDING FOOTER COMPONENT ---
+const BrandingFooter = () => (
+  <div className="mt-12 mb-6 flex flex-col items-center justify-center gap-1 text-center no-print pointer-events-none select-none">
+    <p className="text-[12px] text-gray-400 font-medium tracking-wide font-sans">
+      Made for small traders & growing businesses in India
+    </p>
+    <p className="text-[12px] text-gray-400 font-medium tracking-wide font-sans">
+      Crafted by <span className="text-gray-500 font-semibold">Pixalara</span> to keep billing simple
+    </p>
+  </div>
+)
+
 // --- PREMIUM POPUP COMPONENT ---
 const Popup = ({ isOpen, onClose, title, message, type, actionLabel, onAction, cancelLabel }) => {
     if (!isOpen) return null;
@@ -47,24 +59,18 @@ const Popup = ({ isOpen, onClose, title, message, type, actionLabel, onAction, c
 
 // --- ANALYTICS DATA PROCESSORS ---
 const processStatusData = (invoices) => {
-    // 1. Initialize data structure
     const data = [
         { name: 'Paid', value: 0, color: '#10b981' }, // Emerald
         { name: 'Pending', value: 0, color: '#f59e0b' }, // Amber
         { name: 'Overdue', value: 0, color: '#ef4444' }  // Red
     ];
-
-    // 2. Sum amounts based on status
     invoices.forEach(inv => {
         const status = inv.status || 'PENDING';
         const amount = inv.total_amount || 0;
-        
         if (status === 'PAID') data[0].value += amount;
         else if (status === 'OVERDUE') data[2].value += amount;
         else data[1].value += amount; // Default to Pending
     });
-
-    // 3. Filter out zero values to avoid ugly empty slices
     return data.filter(item => item.value > 0);
 };
 
@@ -75,7 +81,6 @@ const processTopClients = (invoices) => {
         if (!clients[name]) clients[name] = 0;
         clients[name] += (inv.total_amount || 0);
     });
-    
     return Object.entries(clients)
         .map(([name, value]) => ({ name, value }))
         .sort((a, b) => b.value - a.value)
@@ -170,7 +175,6 @@ export default function Dashboard() {
   }
 
   const fetchInvoices = async (userId) => {
-    // Fetches status automatically since we select *
     const { data } = await supabase.from('invoices').select('*').eq('user_id', userId).order('created_at', { ascending: false })
     if (data) {
         setInvoices(data)
@@ -229,20 +233,16 @@ export default function Dashboard() {
 
   // --- STATUS UPDATE LOGIC ---
   const cycleStatus = async (e, invoice) => {
-      e.stopPropagation(); // Prevent opening edit mode
-      
+      e.stopPropagation(); 
       const statusOrder = ['PENDING', 'PAID', 'OVERDUE'];
       const currentStatus = invoice.status || 'PENDING';
       const nextStatus = statusOrder[(statusOrder.indexOf(currentStatus) + 1) % statusOrder.length];
 
       try {
-          // Optimistic Update
           setInvoices(prev => prev.map(inv => inv.id === invoice.id ? { ...inv, status: nextStatus } : inv));
-          
           const { error } = await supabase.from('invoices').update({ status: nextStatus }).eq('id', invoice.id);
           if (error) throw error;
       } catch (err) {
-          // Revert on error
           setInvoices(prev => prev.map(inv => inv.id === invoice.id ? { ...inv, status: currentStatus } : inv));
           showPopup('Error', 'Failed to update status', 'error');
       }
@@ -252,7 +252,7 @@ export default function Dashboard() {
       switch(status) {
           case 'PAID': return 'bg-green-100 text-green-700 border-green-200 hover:bg-green-200';
           case 'OVERDUE': return 'bg-red-100 text-red-700 border-red-200 hover:bg-red-200';
-          default: return 'bg-amber-100 text-amber-700 border-amber-200 hover:bg-amber-200'; // Pending
+          default: return 'bg-amber-100 text-amber-700 border-amber-200 hover:bg-amber-200'; 
       }
   }
 
@@ -288,14 +288,12 @@ export default function Dashboard() {
   // --- FILTERING LOGIC ---
   const getFilteredInvoices = () => {
     return invoices.filter(inv => {
-        // 1. Search Text
         const searchLower = searchTerm.toLowerCase().trim()
         const matchesSearch = 
             !searchLower ||
             inv.invoice_no.toLowerCase().includes(searchLower) ||
             (inv.invoice_data?.buyer_name || '').toLowerCase().includes(searchLower)
 
-        // 2. Date Range
         const invDate = new Date(inv.created_at)
         let matchesDate = true
         if (filters.startDate) {
@@ -307,7 +305,6 @@ export default function Dashboard() {
             if (invDate > end) matchesDate = false
         }
 
-        // 3. Amount Range
         let matchesAmount = true
         const amount = inv.total_amount || 0
         if (filters.minAmount && amount < parseFloat(filters.minAmount)) matchesAmount = false
@@ -372,30 +369,28 @@ export default function Dashboard() {
             cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
             cell.alignment = { vertical: 'middle', horizontal: colNumber > 4 ? 'right' : 'left' }; // Numbers aligned right
             
-            // Currency Formatting for columns 5 to 9
             if (colNumber >= 5 && colNumber <= 9) {
                 cell.numFmt = '₹ #,##0.00';
             }
         });
 
-        // 5. Conditional Status Coloring (Last Column)
+        // 5. Conditional Status Coloring
         const statusCell = row.getCell(10);
         statusCell.font = { bold: true };
         statusCell.alignment = { horizontal: 'center' };
         
         if (statusCell.value === 'PAID') {
             statusCell.font.color = { argb: 'FF166534' }; // Green
-            statusCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDCFCE7' } }; // Light Green Bg
+            statusCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDCFCE7' } }; 
         } else if (statusCell.value === 'OVERDUE') {
             statusCell.font.color = { argb: 'FF991B1B' }; // Red
-            statusCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEE2E2' } }; // Light Red Bg
+            statusCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEE2E2' } }; 
         } else {
             statusCell.font.color = { argb: 'FF92400E' }; // Amber
-            statusCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEF3C7' } }; // Light Amber Bg
+            statusCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEF3C7' } }; 
         }
     });
 
-    // 6. Generate File
     const buffer = await workbook.xlsx.writeBuffer();
     const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
     saveAs(blob, `GSTR1_Export_${new Date().toISOString().split('T')[0]}.xlsx`);
@@ -409,52 +404,15 @@ export default function Dashboard() {
       {/* CUSTOM CSS */}
       <style>{`
         .react-datepicker-wrapper { width: 100%; }
-        /* Fix for clipping: ensure calendar is on top */
         .react-datepicker-popper { z-index: 9999 !important; }
-        
-        .react-datepicker {
-            border: none !important;
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
-            border-radius: 16px !important;
-            font-family: inherit !important;
-            border: 1px solid #f3f4f6 !important;
-        }
-        .react-datepicker__header {
-            background-color: white !important;
-            border-bottom: 1px solid #f3f4f6 !important;
-            padding-top: 15px !important;
-            border-top-left-radius: 16px !important;
-            border-top-right-radius: 16px !important;
-        }
-        .react-datepicker__current-month {
-            color: #1f2937 !important;
-            font-weight: 700 !important;
-            margin-bottom: 10px !important;
-        }
-        .react-datepicker__day-name {
-            color: #9ca3af !important;
-            font-weight: 600 !important;
-            width: 2.2rem !important;
-        }
-        .react-datepicker__day {
-            color: #4b5563 !important;
-            width: 2.2rem !important;
-            line-height: 2.2rem !important;
-            margin: 0.1rem !important;
-            border-radius: 9999px !important;
-        }
-        .react-datepicker__day:hover {
-            background-color: #eff6ff !important;
-            color: #2563eb !important;
-        }
-        .react-datepicker__day--selected, .react-datepicker__day--keyboard-selected {
-            background-color: #2563eb !important;
-            color: white !important;
-            font-weight: bold !important;
-        }
-        .react-datepicker__navigation {
-            top: 15px !important;
-        }
+        .react-datepicker { border: none !important; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important; border-radius: 16px !important; font-family: inherit !important; border: 1px solid #f3f4f6 !important; }
+        .react-datepicker__header { background-color: white !important; border-bottom: 1px solid #f3f4f6 !important; padding-top: 15px !important; border-top-left-radius: 16px !important; border-top-right-radius: 16px !important; }
+        .react-datepicker__current-month { color: #1f2937 !important; font-weight: 700 !important; margin-bottom: 10px !important; }
+        .react-datepicker__day-name { color: #9ca3af !important; font-weight: 600 !important; width: 2.2rem !important; }
+        .react-datepicker__day { color: #4b5563 !important; width: 2.2rem !important; line-height: 2.2rem !important; margin: 0.1rem !important; border-radius: 9999px !important; }
+        .react-datepicker__day:hover { background-color: #eff6ff !important; color: #2563eb !important; }
+        .react-datepicker__day--selected, .react-datepicker__day--keyboard-selected { background-color: #2563eb !important; color: white !important; font-weight: bold !important; }
+        .react-datepicker__navigation { top: 15px !important; }
         .react-datepicker__triangle { display: none !important; }
       `}</style>
 
@@ -481,7 +439,7 @@ export default function Dashboard() {
         {/* --- INSIGHTS ROW --- */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             
-            {/* PIE CHART (PAYMENT STATUS) */}
+            {/* PIE CHART */}
             <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center justify-center relative min-h-[300px]">
                 <h3 className="absolute top-5 left-5 text-xs font-bold text-gray-400 uppercase tracking-wider">Payment Status</h3>
                 
@@ -489,28 +447,11 @@ export default function Dashboard() {
                     <div className="w-full h-56 mt-4">
                         <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
-                                <Pie
-                                    data={statusData}
-                                    cx="50%"
-                                    cy="50%"
-                                    innerRadius={60}
-                                    outerRadius={80}
-                                    paddingAngle={5}
-                                    dataKey="value"
-                                    cornerRadius={5}
-                                >
-                                    {statusData.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
-                                    ))}
+                                <Pie data={statusData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value" cornerRadius={5}>
+                                    {statusData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />)}
                                 </Pie>
                                 <Tooltip content={<CustomTooltip />} cursor={{ fill: 'transparent' }} />
-                                <Legend 
-                                    verticalAlign="bottom" 
-                                    height={36} 
-                                    iconType="circle"
-                                    iconSize={8}
-                                    formatter={(value, entry) => <span className="text-xs font-medium text-gray-600 ml-1">{value}</span>}
-                                />
+                                <Legend verticalAlign="bottom" height={36} iconType="circle" iconSize={8} formatter={(value, entry) => <span className="text-xs font-medium text-gray-600 ml-1">{value}</span>} />
                             </PieChart>
                         </ResponsiveContainer>
                     </div>
@@ -522,35 +463,24 @@ export default function Dashboard() {
                 )}
             </div>
 
-            {/* TOP CLIENTS LIST */}
+            {/* TOP CLIENTS */}
             <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col min-h-[300px]">
                 <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Top Clients by Revenue</p>
                 <div className="flex-1 flex flex-col justify-center space-y-3">
-                    {topClients.length === 0 ? (
-                        <div className="text-center opacity-40">
-                            <p className="text-xs font-medium">No clients yet.</p>
-                        </div>
-                    ) : (
+                    {topClients.length === 0 ? <div className="text-center opacity-40"><p className="text-xs font-medium">No clients yet.</p></div> : 
                         topClients.map((client, idx) => (
                             <div key={idx} className="flex justify-between items-center group">
                                 <div className="flex items-center gap-3 w-3/5">
-                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${idx === 0 ? 'bg-yellow-100 text-yellow-600' : idx === 1 ? 'bg-gray-100 text-gray-600' : 'bg-orange-50 text-orange-600'}`}>
-                                        {idx + 1}
-                                    </div>
+                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${idx === 0 ? 'bg-yellow-100 text-yellow-600' : idx === 1 ? 'bg-gray-100 text-gray-600' : 'bg-orange-50 text-orange-600'}`}>{idx + 1}</div>
                                     <span className="font-semibold text-sm text-gray-700 truncate">{client.name}</span>
                                 </div>
                                 <div className="text-right">
                                     <span className="block font-bold text-sm text-gray-900">₹{client.value.toLocaleString('en-IN')}</span>
-                                    <div className="w-24 h-1 bg-gray-100 rounded-full mt-1 overflow-hidden ml-auto">
-                                        <div 
-                                            className="h-full bg-blue-500 rounded-full" 
-                                            style={{ width: `${(client.value / topClients[0].value) * 100}%` }}
-                                        ></div>
-                                    </div>
+                                    <div className="w-24 h-1 bg-gray-100 rounded-full mt-1 overflow-hidden ml-auto"><div className="h-full bg-blue-500 rounded-full" style={{ width: `${(client.value / topClients[0].value) * 100}%` }}></div></div>
                                 </div>
                             </div>
                         ))
-                    )}
+                    }
                 </div>
             </div>
         </div>
@@ -639,7 +569,7 @@ export default function Dashboard() {
                                         onChange={(e) => setSearchTerm(e.target.value)}
                                     />
                                 </div>
-                                {/* NEW EXPORT BUTTON */}
+                                {/* EXPORT BUTTON */}
                                 <button 
                                     onClick={handleExport}
                                     className="px-3 py-2 rounded-lg border border-gray-200 text-sm font-medium flex items-center gap-2 text-gray-600 hover:bg-gray-50 transition-colors"
@@ -707,7 +637,7 @@ export default function Dashboard() {
                         </div>
                     ) : (
                         <>
-                            {/* Desktop Table View - Rounded Bottom */}
+                            {/* Desktop Table View */}
                             <table className="hidden md:table w-full text-left text-sm rounded-b-xl overflow-hidden">
                                 <thead className="bg-gray-50 text-gray-500 uppercase font-semibold text-xs border-b">
                                     <tr>
@@ -740,7 +670,7 @@ export default function Dashboard() {
                                 </tbody>
                             </table>
 
-                            {/* Mobile List View - Rounded Bottom */}
+                            {/* Mobile List View */}
                             <div className="md:hidden divide-y divide-gray-100 rounded-b-xl overflow-hidden">
                                 {filteredInvoices.map((inv) => (
                                     <div key={inv.id} onClick={() => navigate(`/edit-invoice/${inv.id}`)} className="p-4 active:bg-blue-50 transition-colors cursor-pointer">
@@ -774,30 +704,9 @@ export default function Dashboard() {
             </div>
         </div>
       </div>
-
-// ... inside Dashboard() component return statement ...
-
-return (
-  <div className="min-h-screen bg-gray-50 p-4 md:p-6 pb-20">
-    
-    {/* ... existing styles and Popup ... */}
-
-    <div className="max-w-7xl mx-auto">
-        {/* ... existing header, stats, and grid layout ... */}
-        
-        {/* ... end of grid layout ... */}
-    </div>
-
-    {/* INSERT FOOTER HERE */}
-    <BrandingFooter />
-
-  </div>
-)
-
-
-
-
-
+      
+      {/* BRANDING FOOTER */}
+      <BrandingFooter />
     </div>
   )
 }

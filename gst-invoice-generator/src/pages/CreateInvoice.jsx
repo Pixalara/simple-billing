@@ -6,6 +6,18 @@ import { INDIAN_STATES, HSN_CODES } from '../constants'
 import SearchableSelect from '../components/SearchableSelect'
 import html2pdf from 'html2pdf.js'
 
+// --- BRANDING FOOTER COMPONENT ---
+const BrandingFooter = () => (
+  <div className="mt-12 mb-6 flex flex-col items-center justify-center gap-1 text-center no-print pointer-events-none select-none">
+    <p className="text-[12px] text-gray-400 font-medium tracking-wide font-sans">
+      Made for small traders & growing businesses in India
+    </p>
+    <p className="text-[12px] text-gray-400 font-medium tracking-wide font-sans">
+      Crafted by <span className="text-gray-500 font-semibold">Pixalara</span> to keep billing simple
+    </p>
+  </div>
+)
+
 // --- PREMIUM POPUP COMPONENT ---
 const Popup = ({ isOpen, onClose, title, message, type, actionLabel, onAction, cancelLabel }) => {
     if (!isOpen) return null;
@@ -179,12 +191,11 @@ export default function CreateInvoice() {
           if (titleElement) {
               const copyLabel = document.createElement('p');
               
-              // --- GST STANDARD LABELS ---
               if (copyType === 'ORIGINAL') copyLabel.innerText = 'ORIGINAL FOR RECIPIENT';
               else if (copyType === 'DUPLICATE') copyLabel.innerText = 'DUPLICATE FOR TRANSPORTER';
               else if (copyType === 'TRIPLICATE') copyLabel.innerText = 'TRIPLICATE FOR SUPPLIER';
-              
-              // --- STYLED HEADER ---
+              else copyLabel.innerText = copyType;
+
               copyLabel.style.fontSize = '12px';  
               copyLabel.style.fontWeight = 'bold'; 
               copyLabel.style.color = '#ffffff';   
@@ -203,16 +214,29 @@ export default function CreateInvoice() {
       clone.style.transform = 'none'
       clone.style.margin = '0'
       clone.style.backgroundColor = 'white'
-      clone.classList.remove('w-full', 'lg:w-7/12', 'flex', 'justify-center', 'shadow-2xl', 'p-8') 
+      clone.style.display = 'block'
+      clone.classList.remove('w-full', 'lg:w-7/12', 'flex', 'justify-center', 'shadow-2xl', 'p-8', 'hidden', 'lg:flex') 
       
       const container = document.createElement('div')
       container.style.position = 'absolute'
+      container.style.left = '-10000px'
       container.style.top = '0'
-      container.style.left = '0'
-      container.style.zIndex = '-1000'
-      container.style.width = '794px'
+      container.style.width = '794px' 
+      container.style.backgroundColor = 'white'
+      
       container.appendChild(clone)
       document.body.appendChild(container)
+
+      const images = Array.from(container.querySelectorAll('img'));
+      await Promise.all(images.map(img => {
+          if (img.complete) return Promise.resolve();
+          return new Promise(resolve => { 
+              img.onload = resolve; 
+              img.onerror = resolve; 
+          });
+      }));
+
+      await new Promise(resolve => setTimeout(resolve, 800));
 
       const buyerName = formData.buyer_name || 'Customer'
       const invoiceNum = formData.invoice_no || 'DRAFT'
@@ -229,40 +253,36 @@ export default function CreateInvoice() {
       }
       
       try {
-        const pdfBlob = await html2pdf().set(opt).from(clone).output('blob')
+        const pdfBlob = await html2pdf().set(opt).from(container).output('blob')
         document.body.removeChild(container)
         return { blob: pdfBlob, filename: opt.filename }
       } catch (err) {
-        document.body.removeChild(container)
+        if(document.body.contains(container)) document.body.removeChild(container)
         throw err
       }
   }
 
   const handleDownloadPDF = async () => {
     try {
-        // 1. ORIGINAL
         const res1 = await generatePdfBlob('ORIGINAL')
         downloadBlob(res1.blob, res1.filename)
 
-        // 2. DUPLICATE (if enabled)
         if (sellerProfile?.print_duplicates) {
             setTimeout(async () => {
                 const res2 = await generatePdfBlob('DUPLICATE')
                 downloadBlob(res2.blob, res2.filename)
-            }, 800)
+            }, 1000)
         }
 
-        // 3. TRIPLICATE (if enabled)
         if (sellerProfile?.print_triplicates) {
             setTimeout(async () => {
                 const res3 = await generatePdfBlob('TRIPLICATE')
                 downloadBlob(res3.blob, res3.filename)
-            }, 1600)
+            }, 2000)
         }
 
-        // Default case (if settings loaded late or generic)
         if (!sellerProfile?.print_duplicates && !sellerProfile?.print_triplicates) {
-             // Already downloaded original, do nothing else.
+             // Already downloaded ORIGINAL
         }
 
     } catch (e) {
@@ -272,7 +292,6 @@ export default function CreateInvoice() {
 
   const handleSendEmail = async () => {
     try {
-        // Similar sequence logic for email generation
         const res1 = await generatePdfBlob('ORIGINAL')
         downloadBlob(res1.blob, res1.filename)
 
@@ -280,14 +299,14 @@ export default function CreateInvoice() {
              setTimeout(async () => {
                 const res2 = await generatePdfBlob('DUPLICATE')
                 downloadBlob(res2.blob, res2.filename)
-             }, 800)
+             }, 1000)
         }
 
         if (sellerProfile?.print_triplicates) {
              setTimeout(async () => {
                 const res3 = await generatePdfBlob('TRIPLICATE')
                 downloadBlob(res3.blob, res3.filename)
-             }, 1600)
+             }, 2000)
         }
 
     } catch (e) {
@@ -299,9 +318,8 @@ export default function CreateInvoice() {
         const subject = `Invoice ${formData.invoice_no || ''} from ${sellerProfile?.business_name || 'Us'}`
         const body = `Dear ${formData.buyer_name || 'Customer'},\n\nPlease find the invoice attached.\n\nBest Regards,\n${sellerProfile?.business_name || ''}`
         window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
-        
         showPopup('Email Draft Opened', 'The invoice copies have been downloaded.\n\nPlease attach them manually to the email.', 'info', 'Got it');
-    }, 2000)
+    }, 2500)
   }
 
   const downloadBlob = (blob, filename) => {
@@ -538,8 +556,9 @@ export default function CreateInvoice() {
           </div>
         </form>
 
-        <div className="mt-8 text-center text-xs text-gray-400">
-           <p>Powered by <a href="https://pixalara.com" target="_blank" rel="noreferrer" className="text-blue-500 hover:underline">pixalara.com</a></p>
+        {/* --- BRANDING FOOTER ADDED HERE --- */}
+        <div className="border-t border-gray-100 mt-8 pt-2">
+            <BrandingFooter />
         </div>
       </div>
 
@@ -702,8 +721,7 @@ export default function CreateInvoice() {
                             <div className="pt-2">
                                 <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2 border-b border-gray-200 pb-1 w-fit pr-8">Bank Details</p>
                                 <div className="grid grid-cols-[80px_1fr] gap-y-1 text-xs w-fit min-w-[200px]">
-                                    <span className="text-gray-500 font-medium">Bank:</span>
-                                    <span className="font-bold text-gray-800">{sellerProfile.bank_name}</span>
+                                    <span className="text-gray-500 font-medium">Bank:</span><span className="font-bold text-gray-800">{sellerProfile.bank_name}</span>
                                     
                                     <span className="text-gray-500 font-medium">A/c No:</span>
                                     <span className="font-bold text-gray-800">{sellerProfile.account_number}</span>
@@ -737,12 +755,6 @@ export default function CreateInvoice() {
                     <h4 className="font-bold text-gray-800 mb-1">Terms & Conditions</h4>
                     <p className="whitespace-pre-wrap text-[10px]">{formData.terms}</p>
                 </div>
-            </div>
-
-            <div className="absolute bottom-10 w-full text-center">
-                 <p className="text-xs text-gray-700 font-medium">
-                     Powered by <a href="https://pixalara.com/" target="_blank" rel="noreferrer" className="text-gray-900 hover:underline font-bold">pixalara.com</a>
-                 </p>
             </div>
 
             <div className="h-6 w-full absolute bottom-0" style={{ backgroundColor: theme.hex }}></div>
