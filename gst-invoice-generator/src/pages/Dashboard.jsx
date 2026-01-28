@@ -89,7 +89,7 @@ export default function Dashboard() {
       
       // Load Settings
       setValue('print_duplicates', data.print_duplicates)
-      setValue('print_triplicates', data.print_triplicates) // New Setting
+      setValue('print_triplicates', data.print_triplicates) // New Triplicate Setting
       setValue('enable_manual_invoice_no', data.enable_manual_invoice_no)
 
       if (data.logo_url) setSavedLogo(data.logo_url)

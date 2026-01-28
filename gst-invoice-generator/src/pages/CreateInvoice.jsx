@@ -174,17 +174,16 @@ export default function CreateInvoice() {
 
       const clone = originalElement.cloneNode(true)
       
+      // -- HEADER LABELS --
       if (copyType) {
           const titleElement = clone.querySelector('h1'); 
           if (titleElement) {
               const copyLabel = document.createElement('p');
               
-              // --- GST STANDARD LABELS ---
               if (copyType === 'ORIGINAL') copyLabel.innerText = 'ORIGINAL FOR RECIPIENT';
               else if (copyType === 'DUPLICATE') copyLabel.innerText = 'DUPLICATE FOR TRANSPORTER';
               else if (copyType === 'TRIPLICATE') copyLabel.innerText = 'TRIPLICATE FOR SUPPLIER';
               
-              // --- STYLED HEADER ---
               copyLabel.style.fontSize = '12px';  
               copyLabel.style.fontWeight = 'bold'; 
               copyLabel.style.color = '#ffffff';   
@@ -206,13 +205,26 @@ export default function CreateInvoice() {
       clone.classList.remove('w-full', 'lg:w-7/12', 'flex', 'justify-center', 'shadow-2xl', 'p-8') 
       
       const container = document.createElement('div')
-      container.style.position = 'absolute'
+      // --- FIX FOR EMPTY PDF (Render Visible but Behind) ---
+      container.style.position = 'fixed' 
       container.style.top = '0'
       container.style.left = '0'
-      container.style.zIndex = '-1000'
+      container.style.zIndex = '-9999' 
       container.style.width = '794px'
+      container.style.opacity = '0.01' // Invisible to user, visible to renderer
+      
       container.appendChild(clone)
       document.body.appendChild(container)
+
+      // --- CRITICAL FIX: WAIT FOR IMAGES ---
+      const images = Array.from(container.querySelectorAll('img'));
+      await Promise.all(images.map(img => {
+          if (img.complete) return Promise.resolve();
+          return new Promise(resolve => { img.onload = resolve; img.onerror = resolve; });
+      }));
+
+      // --- DELAY FOR RENDERING ---
+      await new Promise(resolve => setTimeout(resolve, 500));
 
       const buyerName = formData.buyer_name || 'Customer'
       const invoiceNum = formData.invoice_no || 'DRAFT'
@@ -230,10 +242,10 @@ export default function CreateInvoice() {
       
       try {
         const pdfBlob = await html2pdf().set(opt).from(clone).output('blob')
-        document.body.removeChild(container)
+        if (document.body.contains(container)) document.body.removeChild(container)
         return { blob: pdfBlob, filename: opt.filename }
       } catch (err) {
-        document.body.removeChild(container)
+        if (document.body.contains(container)) document.body.removeChild(container)
         throw err
       }
   }
@@ -244,7 +256,7 @@ export default function CreateInvoice() {
         const res1 = await generatePdfBlob('ORIGINAL')
         downloadBlob(res1.blob, res1.filename)
 
-        // 2. DUPLICATE (if enabled)
+        // 2. DUPLICATE (Sequential Download)
         if (sellerProfile?.print_duplicates) {
             setTimeout(async () => {
                 const res2 = await generatePdfBlob('DUPLICATE')
@@ -252,7 +264,7 @@ export default function CreateInvoice() {
             }, 800)
         }
 
-        // 3. TRIPLICATE (if enabled)
+        // 3. TRIPLICATE (Sequential Download)
         if (sellerProfile?.print_triplicates) {
             setTimeout(async () => {
                 const res3 = await generatePdfBlob('TRIPLICATE')
@@ -260,9 +272,9 @@ export default function CreateInvoice() {
             }, 1600)
         }
 
-        // Default case (if settings loaded late or generic)
         if (!sellerProfile?.print_duplicates && !sellerProfile?.print_triplicates) {
-             // Already downloaded original, do nothing else.
+             const result = await generatePdfBlob() // Default Single
+             downloadBlob(result.blob, result.filename)
         }
 
     } catch (e) {
@@ -272,7 +284,6 @@ export default function CreateInvoice() {
 
   const handleSendEmail = async () => {
     try {
-        // Similar sequence logic for email generation
         const res1 = await generatePdfBlob('ORIGINAL')
         downloadBlob(res1.blob, res1.filename)
 
@@ -290,6 +301,11 @@ export default function CreateInvoice() {
              }, 1600)
         }
 
+        if (!sellerProfile?.print_duplicates && !sellerProfile?.print_triplicates) {
+             const result = await generatePdfBlob()
+             downloadBlob(result.blob, result.filename)
+        }
+
     } catch (e) {
         showPopup('Error', 'Failed to generate PDF for email.', 'error');
         return
@@ -299,7 +315,6 @@ export default function CreateInvoice() {
         const subject = `Invoice ${formData.invoice_no || ''} from ${sellerProfile?.business_name || 'Us'}`
         const body = `Dear ${formData.buyer_name || 'Customer'},\n\nPlease find the invoice attached.\n\nBest Regards,\n${sellerProfile?.business_name || ''}`
         window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
-        
         showPopup('Email Draft Opened', 'The invoice copies have been downloaded.\n\nPlease attach them manually to the email.', 'info', 'Got it');
     }, 2000)
   }
