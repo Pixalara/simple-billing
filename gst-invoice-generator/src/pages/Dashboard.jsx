@@ -5,7 +5,8 @@ import { useForm } from 'react-hook-form'
 import { INDIAN_STATES } from '../constants'
 import DatePicker from "react-datepicker"
 import "react-datepicker/dist/react-datepicker.css"
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts'
+// Updated Recharts Imports for Pie Chart
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts'
 
 // --- PREMIUM POPUP COMPONENT ---
 const Popup = ({ isOpen, onClose, title, message, type, actionLabel, onAction, cancelLabel }) => {
@@ -41,27 +42,27 @@ const Popup = ({ isOpen, onClose, title, message, type, actionLabel, onAction, c
     )
 }
 
-// --- ANALYTICS UTILS ---
-const processChartData = (invoices) => {
-    const months = {};
-    const today = new Date();
-    
-    // Initialize last 6 months
-    for (let i = 5; i >= 0; i--) {
-        const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
-        const key = d.toLocaleString('default', { month: 'short', year: '2-digit' });
-        months[key] = 0;
-    }
+// --- ANALYTICS DATA PROCESSORS ---
+const processStatusData = (invoices) => {
+    // 1. Initialize data structure
+    const data = [
+        { name: 'Paid', value: 0, color: '#10b981' }, // Emerald
+        { name: 'Pending', value: 0, color: '#f59e0b' }, // Amber
+        { name: 'Overdue', value: 0, color: '#ef4444' }  // Red
+    ];
 
+    // 2. Sum amounts based on status
     invoices.forEach(inv => {
-        const d = new Date(inv.created_at);
-        const key = d.toLocaleString('default', { month: 'short', year: '2-digit' });
-        if (months[key] !== undefined) {
-            months[key] += (inv.total_amount || 0);
-        }
+        const status = inv.status || 'PENDING';
+        const amount = inv.total_amount || 0;
+        
+        if (status === 'PAID') data[0].value += amount;
+        else if (status === 'OVERDUE') data[2].value += amount;
+        else data[1].value += amount; // Default to Pending
     });
 
-    return Object.entries(months).map(([name, value]) => ({ name, value }));
+    // 3. Filter out zero values to avoid ugly empty slices
+    return data.filter(item => item.value > 0);
 };
 
 const processTopClients = (invoices) => {
@@ -78,6 +79,24 @@ const processTopClients = (invoices) => {
         .slice(0, 5); // Top 5
 };
 
+// --- CUSTOM TOOLTIP FOR PIE CHART ---
+const CustomTooltip = ({ active, payload }) => {
+    if (active && payload && payload.length) {
+        return (
+            <div className="bg-white p-3 border border-gray-100 shadow-xl rounded-xl">
+                <div className="flex items-center gap-2 mb-1">
+                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: payload[0].payload.color }}></div>
+                    <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">{payload[0].name}</p>
+                </div>
+                <p className="text-lg font-bold text-gray-800">
+                    ₹{payload[0].value.toLocaleString('en-IN')}
+                </p>
+            </div>
+        );
+    }
+    return null;
+};
+
 export default function Dashboard() {
   const [session, setSession] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -92,8 +111,8 @@ export default function Dashboard() {
   const [invoices, setInvoices] = useState([]) 
   const [stats, setStats] = useState({ total: 0, revenue: 0 })
   
-  // --- ANALYTICS DATA ---
-  const chartData = useMemo(() => processChartData(invoices), [invoices]);
+  // --- CALCULATE ANALYTICS DATA ---
+  const statusData = useMemo(() => processStatusData(invoices), [invoices]);
   const topClients = useMemo(() => processTopClients(invoices), [invoices]);
 
   // --- FILTER STATES ---
@@ -148,6 +167,7 @@ export default function Dashboard() {
   }
 
   const fetchInvoices = async (userId) => {
+    // Fetches status automatically since we select *
     const { data } = await supabase.from('invoices').select('*').eq('user_id', userId).order('created_at', { ascending: false })
     if (data) {
         setInvoices(data)
@@ -204,17 +224,22 @@ export default function Dashboard() {
     }
   }
 
+  // --- STATUS UPDATE LOGIC ---
   const cycleStatus = async (e, invoice) => {
-      e.stopPropagation(); 
+      e.stopPropagation(); // Prevent opening edit mode
+      
       const statusOrder = ['PENDING', 'PAID', 'OVERDUE'];
       const currentStatus = invoice.status || 'PENDING';
       const nextStatus = statusOrder[(statusOrder.indexOf(currentStatus) + 1) % statusOrder.length];
 
       try {
+          // Optimistic Update
           setInvoices(prev => prev.map(inv => inv.id === invoice.id ? { ...inv, status: nextStatus } : inv));
+          
           const { error } = await supabase.from('invoices').update({ status: nextStatus }).eq('id', invoice.id);
           if (error) throw error;
       } catch (err) {
+          // Revert on error
           setInvoices(prev => prev.map(inv => inv.id === invoice.id ? { ...inv, status: currentStatus } : inv));
           showPopup('Error', 'Failed to update status', 'error');
       }
@@ -224,7 +249,7 @@ export default function Dashboard() {
       switch(status) {
           case 'PAID': return 'bg-green-100 text-green-700 border-green-200 hover:bg-green-200';
           case 'OVERDUE': return 'bg-red-100 text-red-700 border-red-200 hover:bg-red-200';
-          default: return 'bg-amber-100 text-amber-700 border-amber-200 hover:bg-amber-200'; 
+          default: return 'bg-amber-100 text-amber-700 border-amber-200 hover:bg-amber-200'; // Pending
       }
   }
 
@@ -257,18 +282,34 @@ export default function Dashboard() {
   const enforceUpperCase = (e, f) => setValue(f, e.target.value.toUpperCase())
   const enforceCapitalLetters = (e, f) => setValue(f, e.target.value.replace(/[^A-Za-z\s]/g, '').toUpperCase())
 
+  // --- FILTERING LOGIC ---
   const getFilteredInvoices = () => {
     return invoices.filter(inv => {
+        // 1. Search Text
         const searchLower = searchTerm.toLowerCase().trim()
-        const matchesSearch = !searchLower || inv.invoice_no.toLowerCase().includes(searchLower) || (inv.invoice_data?.buyer_name || '').toLowerCase().includes(searchLower)
+        const matchesSearch = 
+            !searchLower ||
+            inv.invoice_no.toLowerCase().includes(searchLower) ||
+            (inv.invoice_data?.buyer_name || '').toLowerCase().includes(searchLower)
+
+        // 2. Date Range
         const invDate = new Date(inv.created_at)
         let matchesDate = true
-        if (filters.startDate) { const start = new Date(filters.startDate); start.setHours(0,0,0,0); if (invDate < start) matchesDate = false }
-        if (filters.endDate && matchesDate) { const end = new Date(filters.endDate); end.setHours(23,59,59,999); if (invDate > end) matchesDate = false }
+        if (filters.startDate) {
+            const start = new Date(filters.startDate); start.setHours(0,0,0,0)
+            if (invDate < start) matchesDate = false
+        }
+        if (filters.endDate && matchesDate) {
+            const end = new Date(filters.endDate); end.setHours(23,59,59,999)
+            if (invDate > end) matchesDate = false
+        }
+
+        // 3. Amount Range
         let matchesAmount = true
         const amount = inv.total_amount || 0
         if (filters.minAmount && amount < parseFloat(filters.minAmount)) matchesAmount = false
         if (filters.maxAmount && matchesAmount && amount > parseFloat(filters.maxAmount)) matchesAmount = false
+
         return matchesSearch && matchesDate && matchesAmount
     })
   }
@@ -280,17 +321,56 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-6 pb-20">
+      
+      {/* CUSTOM CSS */}
       <style>{`
         .react-datepicker-wrapper { width: 100%; }
+        /* Fix for clipping: ensure calendar is on top */
         .react-datepicker-popper { z-index: 9999 !important; }
-        .react-datepicker { border: none !important; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important; border-radius: 16px !important; font-family: inherit !important; border: 1px solid #f3f4f6 !important; }
-        .react-datepicker__header { background-color: white !important; border-bottom: 1px solid #f3f4f6 !important; padding-top: 15px !important; border-top-left-radius: 16px !important; border-top-right-radius: 16px !important; }
-        .react-datepicker__current-month { color: #1f2937 !important; font-weight: 700 !important; margin-bottom: 10px !important; }
-        .react-datepicker__day-name { color: #9ca3af !important; font-weight: 600 !important; width: 2.2rem !important; }
-        .react-datepicker__day { color: #4b5563 !important; width: 2.2rem !important; line-height: 2.2rem !important; margin: 0.1rem !important; border-radius: 9999px !important; }
-        .react-datepicker__day:hover { background-color: #eff6ff !important; color: #2563eb !important; }
-        .react-datepicker__day--selected, .react-datepicker__day--keyboard-selected { background-color: #2563eb !important; color: white !important; font-weight: bold !important; }
-        .react-datepicker__navigation { top: 15px !important; }
+        
+        .react-datepicker {
+            border: none !important;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
+            border-radius: 16px !important;
+            font-family: inherit !important;
+            border: 1px solid #f3f4f6 !important;
+        }
+        .react-datepicker__header {
+            background-color: white !important;
+            border-bottom: 1px solid #f3f4f6 !important;
+            padding-top: 15px !important;
+            border-top-left-radius: 16px !important;
+            border-top-right-radius: 16px !important;
+        }
+        .react-datepicker__current-month {
+            color: #1f2937 !important;
+            font-weight: 700 !important;
+            margin-bottom: 10px !important;
+        }
+        .react-datepicker__day-name {
+            color: #9ca3af !important;
+            font-weight: 600 !important;
+            width: 2.2rem !important;
+        }
+        .react-datepicker__day {
+            color: #4b5563 !important;
+            width: 2.2rem !important;
+            line-height: 2.2rem !important;
+            margin: 0.1rem !important;
+            border-radius: 9999px !important;
+        }
+        .react-datepicker__day:hover {
+            background-color: #eff6ff !important;
+            color: #2563eb !important;
+        }
+        .react-datepicker__day--selected, .react-datepicker__day--keyboard-selected {
+            background-color: #2563eb !important;
+            color: white !important;
+            font-weight: bold !important;
+        }
+        .react-datepicker__navigation {
+            top: 15px !important;
+        }
         .react-datepicker__triangle { display: none !important; }
       `}</style>
 
@@ -302,8 +382,8 @@ export default function Dashboard() {
           <button onClick={handleLogout} className="text-red-600 font-medium text-sm hover:underline">Sign Out</button>
         </div>
 
-        {/* Stats & Analytics Row */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+        {/* Stats Row */}
+        <div className="grid grid-cols-2 gap-4 mb-6">
             <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
                 <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Total Invoices</p>
                 <p className="text-2xl font-bold text-gray-900 mt-1">{stats.total}</p>
@@ -312,52 +392,88 @@ export default function Dashboard() {
                 <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Total Revenue</p>
                 <p className="text-2xl font-bold text-blue-600 mt-1">₹{stats.revenue.toLocaleString('en-IN')}</p>
             </div>
-            
-            {/* Top Clients Card */}
-            <div className="lg:col-span-2 bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col">
-                <p className="text-gray-500 text-xs font-bold uppercase tracking-wider mb-3">Top Clients</p>
-                <div className="flex-1 flex flex-col justify-center space-y-2">
-                    {topClients.length === 0 ? <p className="text-sm text-gray-400 italic">No data yet.</p> : 
-                        topClients.slice(0,3).map((client, idx) => (
-                            <div key={idx} className="flex justify-between items-center text-sm border-b border-dashed border-gray-100 pb-1 last:border-0">
-                                <span className="font-medium text-gray-700 truncate w-3/5">{client.name}</span>
-                                <span className="font-bold text-green-600">₹{client.value.toLocaleString('en-IN')}</span>
-                            </div>
-                        ))
-                    }
-                </div>
-            </div>
         </div>
 
-        {/* Revenue Chart */}
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 mb-6">
-            <h3 className="text-sm font-bold text-gray-700 uppercase mb-4">Revenue Overview (Last 6 Months)</h3>
-            <div className="h-64 w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={chartData} margin={{ top: 5, right: 0, left: -20, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
-                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#9ca3af', fontSize: 12}} dy={10} />
-                        <YAxis axisLine={false} tickLine={false} tick={{fill: '#9ca3af', fontSize: 12}} />
-                        <Tooltip cursor={{fill: '#f9fafb'}} contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'}} />
-                        <Bar dataKey="value" radius={[4, 4, 0, 0]} barSize={40}>
-                            {chartData.map((entry, index) => (
-                                <Cell key={`cell-${index}`} fill="url(#colorGradient)" />
-                            ))}
-                        </Bar>
-                        <defs>
-                            <linearGradient id="colorGradient" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="0%" stopColor="#2563eb" stopOpacity={0.8}/>
-                                <stop offset="100%" stopColor="#60a5fa" stopOpacity={0.8}/>
-                            </linearGradient>
-                        </defs>
-                    </BarChart>
-                </ResponsiveContainer>
+        {/* --- NEW INSIGHTS ROW: PIE CHART + TOP CLIENTS --- */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            
+            {/* PIE CHART (PAYMENT STATUS) */}
+            <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center justify-center relative min-h-[300px]">
+                <h3 className="absolute top-5 left-5 text-xs font-bold text-gray-400 uppercase tracking-wider">Payment Status</h3>
+                
+                {statusData.length > 0 ? (
+                    <div className="w-full h-56 mt-4">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                                <Pie
+                                    data={statusData}
+                                    cx="50%"
+                                    cy="50%"
+                                    innerRadius={60}
+                                    outerRadius={80}
+                                    paddingAngle={5}
+                                    dataKey="value"
+                                    cornerRadius={5}
+                                >
+                                    {statusData.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
+                                    ))}
+                                </Pie>
+                                <Tooltip content={<CustomTooltip />} cursor={{ fill: 'transparent' }} />
+                                <Legend 
+                                    verticalAlign="bottom" 
+                                    height={36} 
+                                    iconType="circle"
+                                    iconSize={8}
+                                    formatter={(value, entry) => <span className="text-xs font-medium text-gray-600 ml-1">{value}</span>}
+                                />
+                            </PieChart>
+                        </ResponsiveContainer>
+                    </div>
+                ) : (
+                    <div className="flex flex-col items-center justify-center opacity-40">
+                        <svg className="w-10 h-10 text-gray-300 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" /></svg>
+                        <p className="text-xs font-medium">No data available</p>
+                    </div>
+                )}
+            </div>
+
+            {/* TOP CLIENTS LIST */}
+            <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col min-h-[300px]">
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Top Clients by Revenue</p>
+                <div className="flex-1 flex flex-col justify-center space-y-3">
+                    {topClients.length === 0 ? (
+                        <div className="text-center opacity-40">
+                            <p className="text-xs font-medium">No clients yet.</p>
+                        </div>
+                    ) : (
+                        topClients.map((client, idx) => (
+                            <div key={idx} className="flex justify-between items-center group">
+                                <div className="flex items-center gap-3 w-3/5">
+                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${idx === 0 ? 'bg-yellow-100 text-yellow-600' : idx === 1 ? 'bg-gray-100 text-gray-600' : 'bg-orange-50 text-orange-600'}`}>
+                                        {idx + 1}
+                                    </div>
+                                    <span className="font-semibold text-sm text-gray-700 truncate">{client.name}</span>
+                                </div>
+                                <div className="text-right">
+                                    <span className="block font-bold text-sm text-gray-900">₹{client.value.toLocaleString('en-IN')}</span>
+                                    <div className="w-24 h-1 bg-gray-100 rounded-full mt-1 overflow-hidden ml-auto">
+                                        <div 
+                                            className="h-full bg-blue-500 rounded-full" 
+                                            style={{ width: `${(client.value / topClients[0].value) * 100}%` }}
+                                        ></div>
+                                    </div>
+                                </div>
+                            </div>
+                        ))
+                    )}
+                </div>
             </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             
-            {/* Left Col: Profile */}
+            {/* Left Col: Profile & Settings */}
             <div className="lg:col-span-1 bg-white p-5 rounded-xl shadow-sm h-fit">
                 <h2 className="text-lg font-bold mb-4 text-gray-800 border-b pb-2">Business Profile</h2>
                 
@@ -421,7 +537,9 @@ export default function Dashboard() {
                     <span className="text-xl">+</span> Create New Invoice
                 </button>
                 
-                <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100 relative">
+                {/* --- MAIN CONTAINER --- */}
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 relative">
+                    
                     {/* Header & Filter Bar */}
                     <div className="p-4 border-b bg-gray-50/50 space-y-3 rounded-t-xl">
                         <div className="flex flex-col md:flex-row gap-3 justify-between items-start md:items-center">
@@ -429,34 +547,75 @@ export default function Dashboard() {
                             <div className="flex gap-2 w-full md:w-auto">
                                 <div className="relative flex-1 md:w-64">
                                     <svg className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-                                    <input type="text" placeholder="Search Customer or Invoice #" className="w-full pl-9 pr-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                                    <input 
+                                        type="text" 
+                                        placeholder="Search Customer or Invoice #" 
+                                        className="w-full pl-9 pr-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none"
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                    />
                                 </div>
-                                <button onClick={() => setShowFilters(!showFilters)} className={`px-3 py-2 rounded-lg border text-sm font-medium flex items-center gap-2 transition-colors ${showFilters || activeFilterCount > 0 ? 'bg-blue-50 border-blue-200 text-blue-600' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
+                                <button 
+                                    onClick={() => setShowFilters(!showFilters)}
+                                    className={`px-3 py-2 rounded-lg border text-sm font-medium flex items-center gap-2 transition-colors ${showFilters || activeFilterCount > 0 ? 'bg-blue-50 border-blue-200 text-blue-600' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+                                >
                                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" /></svg>
                                     Filters {activeFilterCount > 0 && <span className="bg-blue-600 text-white text-[10px] px-1.5 py-0.5 rounded-full">{activeFilterCount}</span>}
                                 </button>
                             </div>
                         </div>
 
+                        {/* Collapsible Filters */}
                         {showFilters && (
                             <div className="pt-3 border-t border-gray-200 grid grid-cols-2 md:grid-cols-4 gap-3 animate-in fade-in slide-in-from-top-2 relative z-50">
-                                <div className="relative"><label className="text-[10px] uppercase font-bold text-gray-400 mb-1 block">From Date</label><DatePicker selected={filters.startDate} onChange={(date) => setFilters({...filters, startDate: date})} className="w-full p-2 text-xs border rounded bg-white focus:ring-2 focus:ring-blue-100 outline-none" placeholderText="Select Start Date" dateFormat="dd/MM/yyyy" /><svg className="w-3 h-3 absolute right-2 bottom-3 pointer-events-none text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg></div>
-                                <div className="relative"><label className="text-[10px] uppercase font-bold text-gray-400 mb-1 block">To Date</label><DatePicker selected={filters.endDate} onChange={(date) => setFilters({...filters, endDate: date})} className="w-full p-2 text-xs border rounded bg-white focus:ring-2 focus:ring-blue-100 outline-none" placeholderText="Select End Date" dateFormat="dd/MM/yyyy" minDate={filters.startDate} /><svg className="w-3 h-3 absolute right-2 bottom-3 pointer-events-none text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg></div>
-                                <div><label className="text-[10px] uppercase font-bold text-gray-400 mb-1 block">Min Amount</label><input type="number" placeholder="0" className="w-full p-2 text-xs border rounded bg-white focus:ring-2 focus:ring-blue-100 outline-none" value={filters.minAmount} onChange={e => setFilters({...filters, minAmount: e.target.value})} /></div>
-                                <div><label className="text-[10px] uppercase font-bold text-gray-400 mb-1 block">Max Amount</label><input type="number" placeholder="∞" className="w-full p-2 text-xs border rounded bg-white focus:ring-2 focus:ring-blue-100 outline-none" value={filters.maxAmount} onChange={e => setFilters({...filters, maxAmount: e.target.value})} /></div>
-                                <div className="col-span-2 md:col-span-4 flex justify-end"><button onClick={() => { setSearchTerm(''); setFilters({ startDate: null, endDate: null, minAmount: '', maxAmount: '' }) }} className="text-xs text-red-500 font-bold hover:underline">Clear All Filters</button></div>
+                                <div className="relative">
+                                    <label className="text-[10px] uppercase font-bold text-gray-400 mb-1 block">From Date</label>
+                                    <DatePicker 
+                                        selected={filters.startDate} 
+                                        onChange={(date) => setFilters({...filters, startDate: date})}
+                                        className="w-full p-2 text-xs border rounded bg-white focus:ring-2 focus:ring-blue-100 outline-none"
+                                        placeholderText="Select Start Date"
+                                        dateFormat="dd/MM/yyyy"
+                                    />
+                                    <svg className="w-3 h-3 absolute right-2 bottom-3 pointer-events-none text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                                </div>
+                                <div className="relative">
+                                    <label className="text-[10px] uppercase font-bold text-gray-400 mb-1 block">To Date</label>
+                                    <DatePicker 
+                                        selected={filters.endDate} 
+                                        onChange={(date) => setFilters({...filters, endDate: date})}
+                                        className="w-full p-2 text-xs border rounded bg-white focus:ring-2 focus:ring-blue-100 outline-none"
+                                        placeholderText="Select End Date"
+                                        dateFormat="dd/MM/yyyy"
+                                        minDate={filters.startDate}
+                                    />
+                                    <svg className="w-3 h-3 absolute right-2 bottom-3 pointer-events-none text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                                </div>
+                                <div>
+                                    <label className="text-[10px] uppercase font-bold text-gray-400 mb-1 block">Min Amount</label>
+                                    <input type="number" placeholder="0" className="w-full p-2 text-xs border rounded bg-white focus:ring-2 focus:ring-blue-100 outline-none" value={filters.minAmount} onChange={e => setFilters({...filters, minAmount: e.target.value})} />
+                                </div>
+                                <div>
+                                    <label className="text-[10px] uppercase font-bold text-gray-400 mb-1 block">Max Amount</label>
+                                    <input type="number" placeholder="∞" className="w-full p-2 text-xs border rounded bg-white focus:ring-2 focus:ring-blue-100 outline-none" value={filters.maxAmount} onChange={e => setFilters({...filters, maxAmount: e.target.value})} />
+                                </div>
+                                <div className="col-span-2 md:col-span-4 flex justify-end">
+                                    <button onClick={() => { setSearchTerm(''); setFilters({ startDate: null, endDate: null, minAmount: '', maxAmount: '' }) }} className="text-xs text-red-500 font-bold hover:underline">Clear All Filters</button>
+                                </div>
                             </div>
                         )}
                     </div>
 
+                    {/* Invoice List */}
                     {filteredInvoices.length === 0 ? (
                         <div className="p-12 text-center flex flex-col items-center justify-center opacity-60">
                             <svg className="w-12 h-12 text-gray-300 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                            <p className="text-gray-500 text-sm font-medium">No invoices found.</p>
+                            <p className="text-gray-500 text-sm font-medium">No invoices found matching your filters.</p>
                             <button onClick={() => { setSearchTerm(''); setFilters({ startDate: null, endDate: null, minAmount: '', maxAmount: '' }) }} className="mt-2 text-blue-600 text-xs font-bold hover:underline">Reset Filters</button>
                         </div>
                     ) : (
                         <>
+                            {/* Desktop Table View - Rounded Bottom */}
                             <table className="hidden md:table w-full text-left text-sm rounded-b-xl overflow-hidden">
                                 <thead className="bg-gray-50 text-gray-500 uppercase font-semibold text-xs border-b">
                                     <tr>
@@ -475,7 +634,10 @@ export default function Dashboard() {
                                             <td className="px-5 py-3 font-bold text-blue-600 group-hover:underline">{inv.invoice_no}</td>
                                             <td className="px-5 py-3 font-medium text-gray-800">{inv.invoice_data?.buyer_name}</td>
                                             <td className="px-5 py-3 text-center">
-                                                <button onClick={(e) => cycleStatus(e, inv)} className={`px-2.5 py-1 rounded-full text-[10px] font-bold border uppercase tracking-wide transition-all active:scale-95 ${getStatusBadgeStyles(inv.status || 'PENDING')}`}>
+                                                <button 
+                                                    onClick={(e) => cycleStatus(e, inv)}
+                                                    className={`px-2.5 py-1 rounded-full text-[10px] font-bold border uppercase tracking-wide transition-all active:scale-95 ${getStatusBadgeStyles(inv.status || 'PENDING')}`}
+                                                >
                                                     {inv.status || 'PENDING'}
                                                 </button>
                                             </td>
@@ -485,13 +647,19 @@ export default function Dashboard() {
                                     ))}
                                 </tbody>
                             </table>
-                            {/* Mobile List View Omitted for Brevity - Same logic as previous */}
+
+                            {/* Mobile List View - Rounded Bottom */}
                             <div className="md:hidden divide-y divide-gray-100 rounded-b-xl overflow-hidden">
                                 {filteredInvoices.map((inv) => (
                                     <div key={inv.id} onClick={() => navigate(`/edit-invoice/${inv.id}`)} className="p-4 active:bg-blue-50 transition-colors cursor-pointer">
                                         <div className="flex justify-between items-center mb-2">
                                             <span className="font-bold text-blue-600 text-sm">#{inv.invoice_no}</span>
-                                            <button onClick={(e) => cycleStatus(e, inv)} className={`px-2 py-0.5 rounded-full text-[10px] font-bold border uppercase ${getStatusBadgeStyles(inv.status || 'PENDING')}`}>{inv.status || 'PENDING'}</button>
+                                            <button 
+                                                onClick={(e) => cycleStatus(e, inv)}
+                                                className={`px-2 py-0.5 rounded-full text-[10px] font-bold border uppercase ${getStatusBadgeStyles(inv.status || 'PENDING')}`}
+                                            >
+                                                {inv.status || 'PENDING'}
+                                            </button>
                                         </div>
                                         <div className="flex justify-between items-end">
                                             <div className="flex flex-col gap-0.5">
@@ -500,7 +668,9 @@ export default function Dashboard() {
                                             </div>
                                             <div className="flex items-center gap-3">
                                                 <span className="font-bold text-gray-900 text-base">₹{inv.total_amount}</span>
-                                                <button onClick={(e) => handleDeleteClick(inv.id, e)} className="text-gray-400 hover:text-red-600 p-2 rounded-full hover:bg-red-50">🗑️</button>
+                                                <button onClick={(e) => handleDeleteClick(inv.id, e)} className="text-gray-400 hover:text-red-600 p-2 rounded-full hover:bg-red-50">
+                                                    🗑️
+                                                </button>
                                             </div>
                                         </div>
                                     </div>
