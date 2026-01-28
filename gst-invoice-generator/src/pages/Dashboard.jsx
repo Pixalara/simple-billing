@@ -11,6 +11,10 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recha
 import ExcelJS from 'exceljs'
 import { saveAs } from 'file-saver'
 
+// Components
+import BrandingFooter from '../components/BrandingFooter'
+
+
 // --- PREMIUM POPUP COMPONENT ---
 const Popup = ({ isOpen, onClose, title, message, type, actionLabel, onAction, cancelLabel }) => {
     if (!isOpen) return null;
