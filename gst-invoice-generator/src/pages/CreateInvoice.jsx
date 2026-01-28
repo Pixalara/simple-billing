@@ -168,7 +168,7 @@ export default function CreateInvoice() {
   const totals = calculateTotals(); const amountInWords = totals.grandTotal ? numberToWords(totals.grandTotal) : '';
   const getTaxRateText = (type) => { const rates = new Set(formData.items?.map(i => parseFloat(i.gstRate)).filter(r => r > 0)); if (rates.size === 1) { const r = [...rates][0]; if (type === 'IGST') return `(${r}%)`; if (type === 'CGST' || type === 'SGST') return `(${r/2}%)`; } return ''; }
 
-  // --- GENERATE SINGLE PDF BLOB ---
+  // --- PDF GENERATOR (ROBUST FIX) ---
   const generatePdfBlob = async (copyType = '') => {
       const originalElement = invoiceRef.current
       if (!originalElement) return null;
@@ -198,6 +198,7 @@ export default function CreateInvoice() {
           }
       }
 
+      // Force Styles for Capture
       clone.style.width = '794px' 
       clone.style.minHeight = '1122px'
       clone.style.height = 'auto'
@@ -205,38 +206,34 @@ export default function CreateInvoice() {
       clone.style.transform = 'none'
       clone.style.margin = '0'
       clone.style.backgroundColor = 'white'
-      clone.classList.remove('w-full', 'lg:w-7/12', 'flex', 'justify-center', 'shadow-2xl', 'p-8', 'hidden', 'lg:flex') 
       clone.style.display = 'block'
+      clone.classList.remove('w-full', 'lg:w-7/12', 'flex', 'justify-center', 'shadow-2xl', 'p-8', 'hidden', 'lg:flex') 
       
       const container = document.createElement('div')
       
       // --- FIX FOR EMPTY PDF ---
-      // We place the container ON TOP (z-index 9999) but make it NEARLY INVISIBLE (opacity 0.01).
-      // This forces the browser to render it fully, preventing blank pages.
+      // We position the container at 0,0 (so it's rendered by browser)
+      // But we hide it behind everything using z-index: -9999
+      // Removed opacity to ensure full painting.
       container.style.position = 'fixed'
       container.style.top = '0'
       container.style.left = '0'
-      container.style.zIndex = '9999' 
-      container.style.width = '794px'
+      container.style.zIndex = '-9999' 
+      container.style.width = '794px' 
       container.style.backgroundColor = 'white'
-      container.style.opacity = '0.01' // Key trick: Visible to engine, invisible to user
-      container.style.pointerEvents = 'none' // Click-through
       
       container.appendChild(clone)
       document.body.appendChild(container)
 
-      // --- CRITICAL FIX: WAIT FOR IMAGES ---
+      // --- CRITICAL: WAIT FOR IMAGES ---
       const images = Array.from(container.querySelectorAll('img'));
       await Promise.all(images.map(img => {
           if (img.complete) return Promise.resolve();
-          return new Promise(resolve => { 
-              img.onload = resolve; 
-              img.onerror = resolve; 
-          });
+          return new Promise(resolve => { img.onload = resolve; img.onerror = resolve; });
       }));
 
       // --- DELAY FOR RENDERING ---
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise(resolve => setTimeout(resolve, 800));
 
       const buyerName = formData.buyer_name || 'Customer'
       const invoiceNum = formData.invoice_no || 'DRAFT'
@@ -254,7 +251,7 @@ export default function CreateInvoice() {
             scrollY: 0, 
             letterRendering: true,
             width: 794,
-            windowWidth: 794 // Ensures consistent desktop layout
+            windowWidth: 794 // Ensures proper desktop layout even on mobile
         },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
       }
@@ -269,52 +266,63 @@ export default function CreateInvoice() {
       }
   }
 
-  // --- DOWNLOAD MANAGER (SEQUENTIAL) ---
   const handleDownloadPDF = async () => {
-    setLoading(true);
     try {
         // 1. ORIGINAL (Always)
         const res1 = await generatePdfBlob('ORIGINAL')
         downloadBlob(res1.blob, res1.filename)
 
-        // 2. DUPLICATE
+        // 2. DUPLICATE (Sequential with delay)
         if (sellerProfile?.print_duplicates) {
-            await new Promise(r => setTimeout(r, 1000)); // Wait 1s
-            const res2 = await generatePdfBlob('DUPLICATE')
-            downloadBlob(res2.blob, res2.filename)
+            setTimeout(async () => {
+                const res2 = await generatePdfBlob('DUPLICATE')
+                downloadBlob(res2.blob, res2.filename)
+            }, 1500)
         }
 
-        // 3. TRIPLICATE
+        // 3. TRIPLICATE (Sequential with delay)
         if (sellerProfile?.print_triplicates) {
-            await new Promise(r => setTimeout(r, 1000)); // Wait 1s
-            const res3 = await generatePdfBlob('TRIPLICATE')
-            downloadBlob(res3.blob, res3.filename)
+            setTimeout(async () => {
+                const res3 = await generatePdfBlob('TRIPLICATE')
+                downloadBlob(res3.blob, res3.filename)
+            }, 3000)
         }
-
-        if (!sellerProfile?.print_duplicates && !sellerProfile?.print_triplicates) {
-             // Already downloaded ORIGINAL
-        }
-        
-        showPopup('Success', 'Downloads started.', 'success');
 
     } catch (e) {
         showPopup('Error', 'Failed to generate PDF.', 'error');
-    } finally {
-        setLoading(false);
     }
   }
 
   const handleSendEmail = async () => {
-    // Note: Can't attach multiple files automatically via mailto.
-    // We just download them for the user to attach.
-    await handleDownloadPDF();
-    
+    try {
+        const res1 = await generatePdfBlob('ORIGINAL')
+        downloadBlob(res1.blob, res1.filename)
+
+        if (sellerProfile?.print_duplicates) {
+             setTimeout(async () => {
+                const res2 = await generatePdfBlob('DUPLICATE')
+                downloadBlob(res2.blob, res2.filename)
+             }, 1500)
+        }
+
+        if (sellerProfile?.print_triplicates) {
+             setTimeout(async () => {
+                const res3 = await generatePdfBlob('TRIPLICATE')
+                downloadBlob(res3.blob, res3.filename)
+             }, 3000)
+        }
+
+    } catch (e) {
+        showPopup('Error', 'Failed to generate PDF for email.', 'error');
+        return
+    }
+
     setTimeout(() => {
         const subject = `Invoice ${formData.invoice_no || ''} from ${sellerProfile?.business_name || 'Us'}`
         const body = `Dear ${formData.buyer_name || 'Customer'},\n\nPlease find the invoice attached.\n\nBest Regards,\n${sellerProfile?.business_name || ''}`
         window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
         
-        showPopup('Email Draft Opened', 'The invoice copies are downloading.\n\nPlease attach them manually to the email.', 'info', 'Got it');
+        showPopup('Email Draft Opened', 'The invoice copies have been downloaded.\n\nPlease attach them manually to the email.', 'info', 'Got it');
     }, 3500)
   }
 
