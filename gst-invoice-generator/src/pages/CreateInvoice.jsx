@@ -5,7 +5,6 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { INDIAN_STATES, HSN_CODES } from '../constants'
 import SearchableSelect from '../components/SearchableSelect'
 import html2pdf from 'html2pdf.js'
-import { jsPDF } from 'jspdf'
 
 // --- PREMIUM POPUP COMPONENT ---
 const Popup = ({ isOpen, onClose, title, message, type, actionLabel, onAction, cancelLabel }) => {
@@ -187,8 +186,8 @@ export default function CreateInvoice() {
   const totals = calculateTotals(); const amountInWords = totals.grandTotal ? numberToWords(totals.grandTotal) : '';
   const getTaxRateText = (type) => { const rates = new Set(formData.items?.map(i => parseFloat(i.gstRate)).filter(r => r > 0)); if (rates.size === 1) { const r = [...rates][0]; if (type === 'IGST') return `(${r}%)`; if (type === 'CGST' || type === 'SGST') return `(${r/2}%)`; } return ''; }
 
-  // NEW: Generate PDF page as canvas for a specific copy type
-  const generatePdfPage = async (copyType = '') => {
+  // Generate PDF blob for a specific copy type
+  const generatePdfBlob = async (copyType = '') => {
       const originalElement = invoiceRef.current
       if (!originalElement) return null;
 
@@ -228,101 +227,10 @@ export default function CreateInvoice() {
       container.appendChild(clone)
       document.body.appendChild(container)
 
-      try {
-        // Import html2canvas dynamically
-        const html2canvas = (await import('html2canvas')).default;
-        
-        const canvas = await html2canvas(clone, {
-          scale: 2,
-          useCORS: true,
-          scrollY: 0,
-          letterRendering: true,
-          width: 794,
-          windowWidth: 794,
-          backgroundColor: '#ffffff'
-        })
-        
-        document.body.removeChild(container)
-        return canvas
-      } catch (err) {
-        document.body.removeChild(container)
-        throw err
-      }
-  }
-
-  // NEW: Combined PDF generation for Original + Duplicate
-  const generateCombinedPDF = async () => {
-      try {
-        const buyerName = formData.buyer_name || 'Customer'
-        const invoiceNum = formData.invoice_no || 'DRAFT'
-        const safeFileName = `${buyerName}_${invoiceNum}_Combined.pdf`
-
-        // Generate both pages
-        const originalCanvas = await generatePdfPage('ORIGINAL')
-        const duplicateCanvas = await generatePdfPage('DUPLICATE')
-
-        if (!originalCanvas || !duplicateCanvas) {
-          throw new Error('Failed to generate invoice pages')
-        }
-
-        // Create PDF with jsPDF
-        const pdf = new jsPDF({
-          unit: 'mm',
-          format: 'a4',
-          orientation: 'portrait'
-        })
-
-        // A4 dimensions in mm
-        const pdfWidth = 210
-        const pdfHeight = 297
-
-        // Add Original page
-        const originalImgData = originalCanvas.toDataURL('image/jpeg', 0.98)
-        pdf.addImage(originalImgData, 'JPEG', 0, 0, pdfWidth, pdfHeight)
-
-        // Add new page for Duplicate
-        pdf.addPage()
-        const duplicateImgData = duplicateCanvas.toDataURL('image/jpeg', 0.98)
-        pdf.addImage(duplicateImgData, 'JPEG', 0, 0, pdfWidth, pdfHeight)
-
-        // Return as blob
-        const pdfBlob = pdf.output('blob')
-        return { blob: pdfBlob, filename: safeFileName }
-
-      } catch (err) {
-        console.error('Error generating combined PDF:', err)
-        throw err
-      }
-  }
-
-  // UPDATED: Single PDF generation (for when duplicates are disabled)
-  const generateSinglePDF = async () => {
-      const originalElement = invoiceRef.current
-      if (!originalElement) return null;
-
-      const clone = originalElement.cloneNode(true)
-
-      clone.style.width = '794px' 
-      clone.style.minHeight = '1122px'
-      clone.style.height = 'auto'
-      clone.style.overflow = 'visible'
-      clone.style.transform = 'none'
-      clone.style.margin = '0'
-      clone.style.backgroundColor = 'white'
-      clone.classList.remove('w-full', 'lg:w-7/12', 'flex', 'justify-center', 'shadow-2xl', 'p-8') 
-      
-      const container = document.createElement('div')
-      container.style.position = 'absolute'
-      container.style.top = '0'
-      container.style.left = '0'
-      container.style.zIndex = '-1000'
-      container.style.width = '794px'
-      container.appendChild(clone)
-      document.body.appendChild(container)
-
       const buyerName = formData.buyer_name || 'Customer'
       const invoiceNum = formData.invoice_no || 'DRAFT'
-      const safeFileName = `${buyerName}_${invoiceNum}.pdf`
+      const typeTag = copyType ? `_${copyType}` : '';
+      const safeFileName = `${buyerName}_${invoiceNum}${typeTag}.pdf`
 
       const opt = {
         margin: 0,
@@ -343,35 +251,76 @@ export default function CreateInvoice() {
       }
   }
 
-  // UPDATED: Download handler
+  // Merge two PDF blobs into one
+  const mergePDFBlobs = async (blob1, blob2, finalFilename) => {
+      try {
+          // Dynamically import pdf-lib
+          const { PDFDocument } = await import('pdf-lib');
+          
+          // Load both PDFs
+          const pdf1Bytes = await blob1.arrayBuffer();
+          const pdf2Bytes = await blob2.arrayBuffer();
+          
+          const pdf1Doc = await PDFDocument.load(pdf1Bytes);
+          const pdf2Doc = await PDFDocument.load(pdf2Bytes);
+          
+          // Create a new PDF
+          const mergedPdf = await PDFDocument.create();
+          
+          // Copy pages from first PDF
+          const pages1 = await mergedPdf.copyPages(pdf1Doc, pdf1Doc.getPageIndices());
+          pages1.forEach((page) => mergedPdf.addPage(page));
+          
+          // Copy pages from second PDF
+          const pages2 = await mergedPdf.copyPages(pdf2Doc, pdf2Doc.getPageIndices());
+          pages2.forEach((page) => mergedPdf.addPage(page));
+          
+          // Save the merged PDF
+          const mergedPdfBytes = await mergedPdf.save();
+          const mergedBlob = new Blob([mergedPdfBytes], { type: 'application/pdf' });
+          
+          return { blob: mergedBlob, filename: finalFilename };
+      } catch (error) {
+          console.error('Error merging PDFs:', error);
+          throw error;
+      }
+  }
+
+  // Download PDF handler
   const handleDownloadPDF = async () => {
     try {
         if (sellerProfile?.print_duplicates) {
-            // Generate combined PDF with both Original and Duplicate
-            const result = await generateCombinedPDF()
-            if (result) {
-              const url = URL.createObjectURL(result.blob)
-              const link = document.createElement('a')
-              link.href = url
-              link.download = result.filename
-              link.click()
-              URL.revokeObjectURL(url)
-              showPopup('Success', 'Combined PDF generated successfully!', 'success')
+            // Generate both Original and Duplicate
+            const originalResult = await generatePdfBlob('ORIGINAL');
+            const duplicateResult = await generatePdfBlob('DUPLICATE');
+            
+            if (!originalResult || !duplicateResult) {
+                throw new Error('Failed to generate invoice pages');
             }
+
+            const buyerName = formData.buyer_name || 'Customer';
+            const invoiceNum = formData.invoice_no || 'DRAFT';
+            const combinedFilename = `${buyerName}_${invoiceNum}_Combined.pdf`;
+
+            // Merge the two PDFs
+            const mergedResult = await mergePDFBlobs(
+                originalResult.blob, 
+                duplicateResult.blob, 
+                combinedFilename
+            );
+
+            // Download the merged PDF
+            downloadBlob(mergedResult.blob, mergedResult.filename);
+            showPopup('Success', 'Combined PDF generated successfully!', 'success');
         } else {
             // Generate single PDF
-            const result = await generateSinglePDF()
+            const result = await generatePdfBlob();
             if (result) {
-              const url = URL.createObjectURL(result.blob)
-              const link = document.createElement('a')
-              link.href = url
-              link.download = result.filename
-              link.click()
-              URL.revokeObjectURL(url)
+                downloadBlob(result.blob, result.filename);
             }
         }
     } catch (e) {
-        console.error('PDF generation error:', e)
+        console.error('PDF generation error:', e);
         showPopup('Error', 'Failed to generate PDF. Please try again.', 'error');
     }
   }
@@ -395,9 +344,25 @@ export default function CreateInvoice() {
         let pdfResult;
         
         if (sellerProfile?.print_duplicates) {
-            pdfResult = await generateCombinedPDF()
+            // Generate both PDFs and merge
+            const originalResult = await generatePdfBlob('ORIGINAL');
+            const duplicateResult = await generatePdfBlob('DUPLICATE');
+            
+            if (!originalResult || !duplicateResult) {
+                throw new Error('Failed to generate invoice pages');
+            }
+
+            const buyerName = formData.buyer_name || 'Customer';
+            const invoiceNum = formData.invoice_no || 'DRAFT';
+            const combinedFilename = `${buyerName}_${invoiceNum}_Combined.pdf`;
+
+            pdfResult = await mergePDFBlobs(
+                originalResult.blob, 
+                duplicateResult.blob, 
+                combinedFilename
+            );
         } else {
-            pdfResult = await generateSinglePDF()
+            pdfResult = await generatePdfBlob();
         }
 
         if (!pdfResult) throw new Error('Failed to generate PDF')
