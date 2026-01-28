@@ -3,6 +3,8 @@ import { supabase } from '../supabaseClient'
 import { useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { INDIAN_STATES } from '../constants'
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 
 // --- PREMIUM POPUP COMPONENT ---
 const Popup = ({ isOpen, onClose, title, message, type, actionLabel, onAction, cancelLabel }) => {
@@ -55,7 +57,7 @@ export default function Dashboard() {
   // --- FILTER STATES ---
   const [searchTerm, setSearchTerm] = useState('')
   const [showFilters, setShowFilters] = useState(false)
-  const [filters, setFilters] = useState({ startDate: '', endDate: '', minAmount: '', maxAmount: '' })
+  const [filters, setFilters] = useState({ startDate: null, endDate: null, minAmount: '', maxAmount: '' })
 
   const [popup, setPopup] = useState({ isOpen: false, title: '', message: '', type: 'info', actionLabel: 'OK', cancelLabel: null, onAction: null })
 
@@ -171,7 +173,6 @@ export default function Dashboard() {
         if (error) throw error
         const updatedInvoices = invoices.filter(inv => inv.id !== id)
         setInvoices(updatedInvoices)
-        // Recalculate stats based on remaining
         const totalRev = updatedInvoices.reduce((acc, curr) => acc + (curr.total_amount || 0), 0)
         setStats({ total: updatedInvoices.length, revenue: totalRev })
         
@@ -228,6 +229,54 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-6 pb-20">
+      
+      {/* CUSTOM CSS FOR PREMIUM CALENDAR LOOK */}
+      <style>{`
+        .react-datepicker-wrapper { width: 100%; }
+        .react-datepicker {
+            border: none !important;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
+            border-radius: 12px !important;
+            font-family: inherit !important;
+        }
+        .react-datepicker__header {
+            background-color: white !important;
+            border-bottom: 1px solid #f3f4f6 !important;
+            padding-top: 15px !important;
+            border-top-left-radius: 12px !important;
+            border-top-right-radius: 12px !important;
+        }
+        .react-datepicker__current-month {
+            color: #1f2937 !important;
+            font-weight: 700 !important;
+            margin-bottom: 10px !important;
+        }
+        .react-datepicker__day-name {
+            color: #9ca3af !important;
+            font-weight: 600 !important;
+            width: 2.2rem !important;
+        }
+        .react-datepicker__day {
+            color: #4b5563 !important;
+            width: 2.2rem !important;
+            line-height: 2.2rem !important;
+            margin: 0.1rem !important;
+            border-radius: 9999px !important;
+        }
+        .react-datepicker__day:hover {
+            background-color: #eff6ff !important;
+            color: #2563eb !important;
+        }
+        .react-datepicker__day--selected, .react-datepicker__day--keyboard-selected {
+            background-color: #2563eb !important;
+            color: white !important;
+            font-weight: bold !important;
+        }
+        .react-datepicker__navigation {
+            top: 15px !important;
+        }
+      `}</style>
+
       <Popup isOpen={popup.isOpen} onClose={closePopup} title={popup.title} message={popup.message} type={popup.type} actionLabel={popup.actionLabel} cancelLabel={popup.cancelLabel} onAction={popup.onAction} />
 
       <div className="max-w-6xl mx-auto">
@@ -341,27 +390,43 @@ export default function Dashboard() {
                             </div>
                         </div>
 
-                        {/* Collapsible Filters */}
+                        {/* Collapsible Filters - PREMIUM DATEPICKER */}
                         {showFilters && (
                             <div className="pt-3 border-t border-gray-200 grid grid-cols-2 md:grid-cols-4 gap-3 animate-in fade-in slide-in-from-top-2">
-                                <div>
+                                <div className="relative">
                                     <label className="text-[10px] uppercase font-bold text-gray-400 mb-1 block">From Date</label>
-                                    <input type="date" className="w-full p-2 text-xs border rounded bg-white" value={filters.startDate} onChange={e => setFilters({...filters, startDate: e.target.value})} />
+                                    <DatePicker 
+                                        selected={filters.startDate} 
+                                        onChange={(date) => setFilters({...filters, startDate: date})}
+                                        className="w-full p-2 text-xs border rounded bg-white focus:ring-2 focus:ring-blue-100 outline-none"
+                                        placeholderText="Select Start Date"
+                                        dateFormat="dd/MM/yyyy"
+                                    />
+                                    {/* Custom Calendar Icon */}
+                                    <svg className="w-3 h-3 absolute right-2 bottom-3 pointer-events-none text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                                 </div>
-                                <div>
+                                <div className="relative">
                                     <label className="text-[10px] uppercase font-bold text-gray-400 mb-1 block">To Date</label>
-                                    <input type="date" className="w-full p-2 text-xs border rounded bg-white" value={filters.endDate} onChange={e => setFilters({...filters, endDate: e.target.value})} />
+                                    <DatePicker 
+                                        selected={filters.endDate} 
+                                        onChange={(date) => setFilters({...filters, endDate: date})}
+                                        className="w-full p-2 text-xs border rounded bg-white focus:ring-2 focus:ring-blue-100 outline-none"
+                                        placeholderText="Select End Date"
+                                        dateFormat="dd/MM/yyyy"
+                                        minDate={filters.startDate}
+                                    />
+                                    <svg className="w-3 h-3 absolute right-2 bottom-3 pointer-events-none text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                                 </div>
                                 <div>
                                     <label className="text-[10px] uppercase font-bold text-gray-400 mb-1 block">Min Amount</label>
-                                    <input type="number" placeholder="0" className="w-full p-2 text-xs border rounded bg-white" value={filters.minAmount} onChange={e => setFilters({...filters, minAmount: e.target.value})} />
+                                    <input type="number" placeholder="0" className="w-full p-2 text-xs border rounded bg-white focus:ring-2 focus:ring-blue-100 outline-none" value={filters.minAmount} onChange={e => setFilters({...filters, minAmount: e.target.value})} />
                                 </div>
                                 <div>
                                     <label className="text-[10px] uppercase font-bold text-gray-400 mb-1 block">Max Amount</label>
-                                    <input type="number" placeholder="∞" className="w-full p-2 text-xs border rounded bg-white" value={filters.maxAmount} onChange={e => setFilters({...filters, maxAmount: e.target.value})} />
+                                    <input type="number" placeholder="∞" className="w-full p-2 text-xs border rounded bg-white focus:ring-2 focus:ring-blue-100 outline-none" value={filters.maxAmount} onChange={e => setFilters({...filters, maxAmount: e.target.value})} />
                                 </div>
                                 <div className="col-span-2 md:col-span-4 flex justify-end">
-                                    <button onClick={() => { setSearchTerm(''); setFilters({ startDate: '', endDate: '', minAmount: '', maxAmount: '' }) }} className="text-xs text-red-500 font-bold hover:underline">Clear All Filters</button>
+                                    <button onClick={() => { setSearchTerm(''); setFilters({ startDate: null, endDate: null, minAmount: '', maxAmount: '' }) }} className="text-xs text-red-500 font-bold hover:underline">Clear All Filters</button>
                                 </div>
                             </div>
                         )}
@@ -372,7 +437,7 @@ export default function Dashboard() {
                         <div className="p-12 text-center flex flex-col items-center justify-center opacity-60">
                             <svg className="w-12 h-12 text-gray-300 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
                             <p className="text-gray-500 text-sm font-medium">No invoices found matching your filters.</p>
-                            <button onClick={() => { setSearchTerm(''); setFilters({ startDate: '', endDate: '', minAmount: '', maxAmount: '' }) }} className="mt-2 text-blue-600 text-xs font-bold hover:underline">Reset Filters</button>
+                            <button onClick={() => { setSearchTerm(''); setFilters({ startDate: null, endDate: null, minAmount: '', maxAmount: '' }) }} className="mt-2 text-blue-600 text-xs font-bold hover:underline">Reset Filters</button>
                         </div>
                     ) : (
                         <>
