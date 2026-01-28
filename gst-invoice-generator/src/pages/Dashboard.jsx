@@ -5,8 +5,11 @@ import { useForm } from 'react-hook-form'
 import { INDIAN_STATES } from '../constants'
 import DatePicker from "react-datepicker"
 import "react-datepicker/dist/react-datepicker.css"
-// Updated Recharts Imports for Pie Chart
+// Charts
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts'
+// Excel Export
+import ExcelJS from 'exceljs'
+import { saveAs } from 'file-saver'
 
 // --- PREMIUM POPUP COMPONENT ---
 const Popup = ({ isOpen, onClose, title, message, type, actionLabel, onAction, cancelLabel }) => {
@@ -317,40 +320,85 @@ export default function Dashboard() {
   const filteredInvoices = getFilteredInvoices()
   const activeFilterCount = (filters.startDate ? 1 : 0) + (filters.endDate ? 1 : 0) + (filters.minAmount ? 1 : 0) + (filters.maxAmount ? 1 : 0)
 
-  // --- NEW FEATURE: GSTR-1 EXPORT ---
-  const handleExport = () => {
-    const headers = [
-        "Date", "Invoice No", "Customer Name", "GSTIN", 
-        "Taxable Value", "IGST", "CGST", "SGST", "Total Amount", "Status"
-    ].join(",");
+  // --- PREMIUM EXCEL EXPORT (GSTR-1) ---
+  const handleExport = async () => {
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('GSTR-1 Report');
 
-    const rows = filteredInvoices.map(inv => {
+    // 1. Define Columns & Widths
+    worksheet.columns = [
+      { header: 'Date', key: 'date', width: 15 },
+      { header: 'Invoice No', key: 'invoice_no', width: 15 },
+      { header: 'Customer Name', key: 'customer', width: 30 },
+      { header: 'GSTIN', key: 'gstin', width: 20 },
+      { header: 'Taxable Value', key: 'taxable', width: 15 },
+      { header: 'IGST', key: 'igst', width: 12 },
+      { header: 'CGST', key: 'cgst', width: 12 },
+      { header: 'SGST', key: 'sgst', width: 12 },
+      { header: 'Total Amount', key: 'total', width: 18 },
+      { header: 'Status', key: 'status', width: 15 },
+    ];
+
+    // 2. Add Header Row with Styling
+    const headerRow = worksheet.getRow(1);
+    headerRow.eachCell((cell) => {
+      cell.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 12 };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2563EB' } }; // Blue Background
+      cell.alignment = { vertical: 'middle', horizontal: 'center' };
+      cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+    });
+    headerRow.height = 30; // Taller header
+
+    // 3. Add Data Rows
+    filteredInvoices.forEach(inv => {
         const d = inv.invoice_data || {};
         const t = d.totals || { subtotal: 0, igst: 0, cgst: 0, sgst: 0 };
         
-        const date = new Date(inv.created_at).toLocaleDateString('en-GB'); // DD/MM/YYYY
-        const invNo = inv.invoice_no;
-        const name = (d.buyer_name || '').replace(/,/g, ' '); // Remove commas for CSV safety
-        const gstin = d.buyer_gstin || '-';
-        const taxable = t.subtotal || 0;
-        const igst = t.igst || 0;
-        const cgst = t.cgst || 0;
-        const sgst = t.sgst || 0;
-        const total = inv.total_amount || 0;
-        const status = inv.status || 'PENDING';
+        const row = worksheet.addRow({
+            date: new Date(inv.created_at).toLocaleDateString('en-GB'),
+            invoice_no: inv.invoice_no,
+            customer: d.buyer_name,
+            gstin: d.buyer_gstin || '-',
+            taxable: parseFloat(t.subtotal || 0),
+            igst: parseFloat(t.igst || 0),
+            cgst: parseFloat(t.cgst || 0),
+            sgst: parseFloat(t.sgst || 0),
+            total: parseFloat(inv.total_amount || 0),
+            status: inv.status || 'PENDING'
+        });
 
-        return [date, invNo, name, gstin, taxable, igst, cgst, sgst, total, status].join(",");
+        // 4. Row Styling
+        row.eachCell((cell, colNumber) => {
+            cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+            cell.alignment = { vertical: 'middle', horizontal: colNumber > 4 ? 'right' : 'left' }; // Numbers aligned right
+            
+            // Currency Formatting for columns 5 to 9
+            if (colNumber >= 5 && colNumber <= 9) {
+                cell.numFmt = '₹ #,##0.00';
+            }
+        });
+
+        // 5. Conditional Status Coloring (Last Column)
+        const statusCell = row.getCell(10);
+        statusCell.font = { bold: true };
+        statusCell.alignment = { horizontal: 'center' };
+        
+        if (statusCell.value === 'PAID') {
+            statusCell.font.color = { argb: 'FF166534' }; // Green
+            statusCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDCFCE7' } }; // Light Green Bg
+        } else if (statusCell.value === 'OVERDUE') {
+            statusCell.font.color = { argb: 'FF991B1B' }; // Red
+            statusCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEE2E2' } }; // Light Red Bg
+        } else {
+            statusCell.font.color = { argb: 'FF92400E' }; // Amber
+            statusCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEF3C7' } }; // Light Amber Bg
+        }
     });
 
-    const csvContent = [headers, ...rows].join("\n");
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", `GSTR1_Export_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // 6. Generate File
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    saveAs(blob, `GSTR1_Export_${new Date().toISOString().split('T')[0]}.xlsx`);
   }
 
   if (loading) return <div className="p-10 text-center">Loading...</div>
