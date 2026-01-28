@@ -6,7 +6,16 @@ const BrandingFooter = () => (
       Made for small traders & growing businesses in India
     </p>
     <p className="text-[12px] text-gray-400 font-medium tracking-wide font-sans">
-      Crafted by <span className="text-gray-500 font-semibold">Pixalara</span> to keep billing simple
+      Crafted by{' '}
+      <a 
+        href="https://pixalara.com" 
+        target="_blank" 
+        rel="noreferrer" 
+        className="text-gray-500 font-semibold hover:text-gray-700 transition-colors pointer-events-auto cursor-pointer"
+      >
+        Pixalara
+      </a>{' '}
+      to keep billing simple
     </p>
   </div>
 )
