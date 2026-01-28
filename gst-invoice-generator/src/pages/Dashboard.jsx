@@ -52,6 +52,11 @@ export default function Dashboard() {
   const [invoices, setInvoices] = useState([]) 
   const [stats, setStats] = useState({ total: 0, revenue: 0 })
   
+  // --- FILTER STATES ---
+  const [searchTerm, setSearchTerm] = useState('')
+  const [showFilters, setShowFilters] = useState(false)
+  const [filters, setFilters] = useState({ startDate: '', endDate: '', minAmount: '', maxAmount: '' })
+
   const [popup, setPopup] = useState({ isOpen: false, title: '', message: '', type: 'info', actionLabel: 'OK', cancelLabel: null, onAction: null })
 
   const navigate = useNavigate()
@@ -87,7 +92,6 @@ export default function Dashboard() {
       setValue('ifsc_code', data.ifsc_code)
       setValue('branch_name', data.branch_name)
       
-      // Load Settings
       setValue('print_duplicates', data.print_duplicates)
       setValue('print_triplicates', data.print_triplicates) 
       setValue('enable_manual_invoice_no', data.enable_manual_invoice_no)
@@ -167,7 +171,10 @@ export default function Dashboard() {
         if (error) throw error
         const updatedInvoices = invoices.filter(inv => inv.id !== id)
         setInvoices(updatedInvoices)
-        setStats({ total: updatedInvoices.length, revenue: updatedInvoices.reduce((acc, curr) => acc + (curr.total_amount || 0), 0) })
+        // Recalculate stats based on remaining
+        const totalRev = updatedInvoices.reduce((acc, curr) => acc + (curr.total_amount || 0), 0)
+        setStats({ total: updatedInvoices.length, revenue: totalRev })
+        
         closePopup()
         setTimeout(() => showPopup('Deleted', 'Invoice removed.', 'success'), 300)
     } catch (error) {
@@ -182,6 +189,41 @@ export default function Dashboard() {
   const enforceUpperCase = (e, f) => setValue(f, e.target.value.toUpperCase())
   const enforceCapitalLetters = (e, f) => setValue(f, e.target.value.replace(/[^A-Za-z\s]/g, '').toUpperCase())
 
+  // --- FILTERING LOGIC ---
+  const getFilteredInvoices = () => {
+    return invoices.filter(inv => {
+        // 1. Search Text
+        const searchLower = searchTerm.toLowerCase().trim()
+        const matchesSearch = 
+            !searchLower ||
+            inv.invoice_no.toLowerCase().includes(searchLower) ||
+            (inv.invoice_data?.buyer_name || '').toLowerCase().includes(searchLower)
+
+        // 2. Date Range
+        const invDate = new Date(inv.created_at)
+        let matchesDate = true
+        if (filters.startDate) {
+            const start = new Date(filters.startDate); start.setHours(0,0,0,0)
+            if (invDate < start) matchesDate = false
+        }
+        if (filters.endDate && matchesDate) {
+            const end = new Date(filters.endDate); end.setHours(23,59,59,999)
+            if (invDate > end) matchesDate = false
+        }
+
+        // 3. Amount Range
+        let matchesAmount = true
+        const amount = inv.total_amount || 0
+        if (filters.minAmount && amount < parseFloat(filters.minAmount)) matchesAmount = false
+        if (filters.maxAmount && matchesAmount && amount > parseFloat(filters.maxAmount)) matchesAmount = false
+
+        return matchesSearch && matchesDate && matchesAmount
+    })
+  }
+
+  const filteredInvoices = getFilteredInvoices()
+  const activeFilterCount = (filters.startDate ? 1 : 0) + (filters.endDate ? 1 : 0) + (filters.minAmount ? 1 : 0) + (filters.maxAmount ? 1 : 0)
+
   if (loading) return <div className="p-10 text-center">Loading...</div>
 
   return (
@@ -191,9 +233,10 @@ export default function Dashboard() {
       <div className="max-w-6xl mx-auto">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Dashboard</h1>
-          <button onClick={handleLogout} className="text-red-600 font-medium text-sm">Sign Out</button>
+          <button onClick={handleLogout} className="text-red-600 font-medium text-sm hover:underline">Sign Out</button>
         </div>
 
+        {/* Stats Cards */}
         <div className="grid grid-cols-2 gap-4 mb-6">
             <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
                 <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Total Invoices</p>
@@ -206,6 +249,8 @@ export default function Dashboard() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            {/* Left Col: Profile & Settings */}
             <div className="lg:col-span-1 bg-white p-5 rounded-xl shadow-sm h-fit">
                 <h2 className="text-lg font-bold mb-4 text-gray-800 border-b pb-2">Business Profile</h2>
                 
@@ -245,18 +290,15 @@ export default function Dashboard() {
                     </div>
 
                     <div className="pt-4 border-t mt-4 space-y-2">
-                        {/* Duplicate Toggle */}
+                        {/* Settings Toggles */}
                         <div className="flex items-center gap-2">
                             <input type="checkbox" {...register('print_duplicates')} id="print_dup" className="w-4 h-4 text-blue-600 rounded cursor-pointer" />
-                            {/* UPDATED LABEL */}
                             <label htmlFor="print_dup" className="text-xs font-bold text-gray-700 cursor-pointer">Generate Original & Duplicate?</label>
                         </div>
-                        {/* Triplicate Toggle */}
                         <div className="flex items-center gap-2">
                             <input type="checkbox" {...register('print_triplicates')} id="print_trip" className="w-4 h-4 text-blue-600 rounded cursor-pointer" />
                             <label htmlFor="print_trip" className="text-xs font-bold text-gray-700 cursor-pointer">Generate Triplicate Copy?</label>
                         </div>
-                        {/* Manual Invoice Number Toggle */}
                         <div className="flex items-center gap-2">
                             <input type="checkbox" {...register('enable_manual_invoice_no')} id="manual_inv" className="w-4 h-4 text-blue-600 rounded cursor-pointer" />
                             <label htmlFor="manual_inv" className="text-xs font-bold text-gray-700 cursor-pointer">Enable Manual Invoice Numbering?</label>
@@ -267,16 +309,76 @@ export default function Dashboard() {
                 </form>
             </div>
 
+            {/* Right Col: Actions & List */}
             <div className="lg:col-span-2 space-y-4">
-                <button onClick={() => navigate('/create-invoice')} className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-4 rounded-xl font-bold shadow-lg flex items-center justify-center gap-2 transform active:scale-95 transition-all"><span>+</span> Create New Invoice</button>
+                <button onClick={() => navigate('/create-invoice')} className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-4 rounded-xl font-bold shadow-lg flex items-center justify-center gap-2 transform active:scale-95 transition-all">
+                    <span className="text-xl">+</span> Create New Invoice
+                </button>
                 
-                <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-                    <div className="px-5 py-3 border-b bg-gray-50"><h3 className="font-bold text-gray-700 text-sm">Recent Invoices</h3></div>
-                    {invoices.length === 0 ? <div className="p-8 text-center text-gray-400 text-sm">No invoices yet.</div> : (
+                <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100">
+                    {/* Header & Filter Bar */}
+                    <div className="p-4 border-b bg-gray-50/50 space-y-3">
+                        <div className="flex flex-col md:flex-row gap-3 justify-between items-start md:items-center">
+                            <h3 className="font-bold text-gray-700 text-sm">All Invoices ({invoices.length})</h3>
+                            <div className="flex gap-2 w-full md:w-auto">
+                                <div className="relative flex-1 md:w-64">
+                                    <svg className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                                    <input 
+                                        type="text" 
+                                        placeholder="Search Customer or Invoice #" 
+                                        className="w-full pl-9 pr-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none"
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                    />
+                                </div>
+                                <button 
+                                    onClick={() => setShowFilters(!showFilters)}
+                                    className={`px-3 py-2 rounded-lg border text-sm font-medium flex items-center gap-2 transition-colors ${showFilters || activeFilterCount > 0 ? 'bg-blue-50 border-blue-200 text-blue-600' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+                                >
+                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" /></svg>
+                                    Filters {activeFilterCount > 0 && <span className="bg-blue-600 text-white text-[10px] px-1.5 py-0.5 rounded-full">{activeFilterCount}</span>}
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Collapsible Filters */}
+                        {showFilters && (
+                            <div className="pt-3 border-t border-gray-200 grid grid-cols-2 md:grid-cols-4 gap-3 animate-in fade-in slide-in-from-top-2">
+                                <div>
+                                    <label className="text-[10px] uppercase font-bold text-gray-400 mb-1 block">From Date</label>
+                                    <input type="date" className="w-full p-2 text-xs border rounded bg-white" value={filters.startDate} onChange={e => setFilters({...filters, startDate: e.target.value})} />
+                                </div>
+                                <div>
+                                    <label className="text-[10px] uppercase font-bold text-gray-400 mb-1 block">To Date</label>
+                                    <input type="date" className="w-full p-2 text-xs border rounded bg-white" value={filters.endDate} onChange={e => setFilters({...filters, endDate: e.target.value})} />
+                                </div>
+                                <div>
+                                    <label className="text-[10px] uppercase font-bold text-gray-400 mb-1 block">Min Amount</label>
+                                    <input type="number" placeholder="0" className="w-full p-2 text-xs border rounded bg-white" value={filters.minAmount} onChange={e => setFilters({...filters, minAmount: e.target.value})} />
+                                </div>
+                                <div>
+                                    <label className="text-[10px] uppercase font-bold text-gray-400 mb-1 block">Max Amount</label>
+                                    <input type="number" placeholder="∞" className="w-full p-2 text-xs border rounded bg-white" value={filters.maxAmount} onChange={e => setFilters({...filters, maxAmount: e.target.value})} />
+                                </div>
+                                <div className="col-span-2 md:col-span-4 flex justify-end">
+                                    <button onClick={() => { setSearchTerm(''); setFilters({ startDate: '', endDate: '', minAmount: '', maxAmount: '' }) }} className="text-xs text-red-500 font-bold hover:underline">Clear All Filters</button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Invoice List */}
+                    {filteredInvoices.length === 0 ? (
+                        <div className="p-12 text-center flex flex-col items-center justify-center opacity-60">
+                            <svg className="w-12 h-12 text-gray-300 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                            <p className="text-gray-500 text-sm font-medium">No invoices found matching your filters.</p>
+                            <button onClick={() => { setSearchTerm(''); setFilters({ startDate: '', endDate: '', minAmount: '', maxAmount: '' }) }} className="mt-2 text-blue-600 text-xs font-bold hover:underline">Reset Filters</button>
+                        </div>
+                    ) : (
                         <>
                             {/* Desktop Table View */}
                             <table className="hidden md:table w-full text-left text-sm">
-                                <thead className="bg-gray-50 text-gray-500 uppercase font-semibold text-xs">
+                                <thead className="bg-gray-50 text-gray-500 uppercase font-semibold text-xs border-b">
                                     <tr>
                                         <th className="px-5 py-3">Date</th>
                                         <th className="px-5 py-3">Invoice #</th>
@@ -286,21 +388,21 @@ export default function Dashboard() {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100">
-                                    {invoices.map((inv) => (
-                                        <tr key={inv.id} onClick={() => navigate(`/edit-invoice/${inv.id}`)} className="hover:bg-blue-50 cursor-pointer group">
-                                            <td className="px-5 py-3">{new Date(inv.created_at).toLocaleDateString('en-IN')}</td>
-                                            <td className="px-5 py-3 font-medium text-blue-600">{inv.invoice_no}</td>
-                                            <td className="px-5 py-3">{inv.invoice_data?.buyer_name}</td>
-                                            <td className="px-5 py-3 text-right font-bold">₹{inv.total_amount}</td>
-                                            <td className="px-5 py-3 text-center"><button onClick={(e) => handleDeleteClick(inv.id, e)} className="text-gray-400 hover:text-red-600 p-1 rounded">🗑️</button></td>
+                                    {filteredInvoices.map((inv) => (
+                                        <tr key={inv.id} onClick={() => navigate(`/edit-invoice/${inv.id}`)} className="hover:bg-blue-50 cursor-pointer group transition-colors">
+                                            <td className="px-5 py-3 text-gray-600">{new Date(inv.created_at).toLocaleDateString('en-IN')}</td>
+                                            <td className="px-5 py-3 font-bold text-blue-600 group-hover:underline">{inv.invoice_no}</td>
+                                            <td className="px-5 py-3 font-medium text-gray-800">{inv.invoice_data?.buyer_name}</td>
+                                            <td className="px-5 py-3 text-right font-bold text-gray-900">₹{inv.total_amount}</td>
+                                            <td className="px-5 py-3 text-center"><button onClick={(e) => handleDeleteClick(inv.id, e)} className="text-gray-400 hover:text-red-600 p-1.5 hover:bg-red-50 rounded transition-all">🗑️</button></td>
                                         </tr>
                                     ))}
                                 </tbody>
                             </table>
 
-                            {/* Mobile List View (Visible only on small screens) */}
+                            {/* Mobile List View */}
                             <div className="md:hidden divide-y divide-gray-100">
-                                {invoices.map((inv) => (
+                                {filteredInvoices.map((inv) => (
                                     <div key={inv.id} onClick={() => navigate(`/edit-invoice/${inv.id}`)} className="p-4 active:bg-blue-50 transition-colors cursor-pointer">
                                         <div className="flex justify-between items-center mb-2">
                                             <span className="font-bold text-blue-600 text-sm">#{inv.invoice_no}</span>
