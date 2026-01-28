@@ -5,6 +5,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { INDIAN_STATES, HSN_CODES } from '../constants'
 import SearchableSelect from '../components/SearchableSelect'
 import html2pdf from 'html2pdf.js'
+import { jsPDF } from 'jspdf'
 
 // --- PREMIUM POPUP COMPONENT ---
 const Popup = ({ isOpen, onClose, title, message, type, actionLabel, onAction, cancelLabel }) => {
@@ -179,13 +180,15 @@ export default function CreateInvoice() {
   useEffect(() => {
     const handleResize = () => { if (containerRef.current) { const s = (containerRef.current.offsetWidth - 32) / 794; setPreviewScale(s > 1 ? 1 : s) } }; handleResize(); window.addEventListener('resize', handleResize); return () => window.removeEventListener('resize', handleResize);
   }, [mobileTab])
+  
   const handleImageUpload = (e) => { const file = e.target.files[0]; if (file) { const reader = new FileReader(); reader.onloadend = () => setSignaturePreview(reader.result); reader.readAsDataURL(file) } }
   const handleItemSelect = (index, item) => { setValue(`items.${index}.description`, item.description); if (item.code) setValue(`items.${index}.hsn`, item.code); if (item.rate) setValue(`items.${index}.gstRate`, item.rate) }
   const calculateTotals = () => { let s=0,t=0; (formData.items||[]).forEach(i=>{const q=parseFloat(i.quantity)||0,p=parseFloat(i.price)||0,r=parseFloat(i.gstRate)||0,l=q*p; s+=l; t+=(l*r)/100}); const isInter=sellerProfile?.state&&formData.buyer_state&&(sellerProfile.state!==formData.buyer_state); return { subtotal: s.toFixed(2), cgst: isInter?0:(t/2).toFixed(2), sgst: isInter?0:(t/2).toFixed(2), igst: isInter?t.toFixed(2):0, grandTotal: (s+t).toFixed(2) } }
   const totals = calculateTotals(); const amountInWords = totals.grandTotal ? numberToWords(totals.grandTotal) : '';
   const getTaxRateText = (type) => { const rates = new Set(formData.items?.map(i => parseFloat(i.gstRate)).filter(r => r > 0)); if (rates.size === 1) { const r = [...rates][0]; if (type === 'IGST') return `(${r}%)`; if (type === 'CGST' || type === 'SGST') return `(${r/2}%)`; } return ''; }
 
-  const generatePdfBlob = async (copyType = '') => {
+  // NEW: Generate PDF page as canvas for a specific copy type
+  const generatePdfPage = async (copyType = '') => {
       const originalElement = invoiceRef.current
       if (!originalElement) return null;
 
@@ -196,7 +199,6 @@ export default function CreateInvoice() {
           if (titleElement) {
               const copyLabel = document.createElement('p');
               copyLabel.innerText = copyType === 'ORIGINAL' ? 'ORIGINAL FOR RECIPIENT' : 'DUPLICATE FOR SUPPLIER';
-              // --- STYLED HEADER ---
               copyLabel.style.fontSize = '12px';  
               copyLabel.style.fontWeight = 'bold'; 
               copyLabel.style.color = '#ffffff';   
@@ -226,10 +228,101 @@ export default function CreateInvoice() {
       container.appendChild(clone)
       document.body.appendChild(container)
 
+      try {
+        // Import html2canvas dynamically
+        const html2canvas = (await import('html2canvas')).default;
+        
+        const canvas = await html2canvas(clone, {
+          scale: 2,
+          useCORS: true,
+          scrollY: 0,
+          letterRendering: true,
+          width: 794,
+          windowWidth: 794,
+          backgroundColor: '#ffffff'
+        })
+        
+        document.body.removeChild(container)
+        return canvas
+      } catch (err) {
+        document.body.removeChild(container)
+        throw err
+      }
+  }
+
+  // NEW: Combined PDF generation for Original + Duplicate
+  const generateCombinedPDF = async () => {
+      try {
+        const buyerName = formData.buyer_name || 'Customer'
+        const invoiceNum = formData.invoice_no || 'DRAFT'
+        const safeFileName = `${buyerName}_${invoiceNum}_Combined.pdf`
+
+        // Generate both pages
+        const originalCanvas = await generatePdfPage('ORIGINAL')
+        const duplicateCanvas = await generatePdfPage('DUPLICATE')
+
+        if (!originalCanvas || !duplicateCanvas) {
+          throw new Error('Failed to generate invoice pages')
+        }
+
+        // Create PDF with jsPDF
+        const pdf = new jsPDF({
+          unit: 'mm',
+          format: 'a4',
+          orientation: 'portrait'
+        })
+
+        // A4 dimensions in mm
+        const pdfWidth = 210
+        const pdfHeight = 297
+
+        // Add Original page
+        const originalImgData = originalCanvas.toDataURL('image/jpeg', 0.98)
+        pdf.addImage(originalImgData, 'JPEG', 0, 0, pdfWidth, pdfHeight)
+
+        // Add new page for Duplicate
+        pdf.addPage()
+        const duplicateImgData = duplicateCanvas.toDataURL('image/jpeg', 0.98)
+        pdf.addImage(duplicateImgData, 'JPEG', 0, 0, pdfWidth, pdfHeight)
+
+        // Return as blob
+        const pdfBlob = pdf.output('blob')
+        return { blob: pdfBlob, filename: safeFileName }
+
+      } catch (err) {
+        console.error('Error generating combined PDF:', err)
+        throw err
+      }
+  }
+
+  // UPDATED: Single PDF generation (for when duplicates are disabled)
+  const generateSinglePDF = async () => {
+      const originalElement = invoiceRef.current
+      if (!originalElement) return null;
+
+      const clone = originalElement.cloneNode(true)
+
+      clone.style.width = '794px' 
+      clone.style.minHeight = '1122px'
+      clone.style.height = 'auto'
+      clone.style.overflow = 'visible'
+      clone.style.transform = 'none'
+      clone.style.margin = '0'
+      clone.style.backgroundColor = 'white'
+      clone.classList.remove('w-full', 'lg:w-7/12', 'flex', 'justify-center', 'shadow-2xl', 'p-8') 
+      
+      const container = document.createElement('div')
+      container.style.position = 'absolute'
+      container.style.top = '0'
+      container.style.left = '0'
+      container.style.zIndex = '-1000'
+      container.style.width = '794px'
+      container.appendChild(clone)
+      document.body.appendChild(container)
+
       const buyerName = formData.buyer_name || 'Customer'
       const invoiceNum = formData.invoice_no || 'DRAFT'
-      const typeTag = copyType ? `_${copyType}` : '';
-      const safeFileName = `${buyerName}_${invoiceNum}${typeTag}.pdf`
+      const safeFileName = `${buyerName}_${invoiceNum}.pdf`
 
       const opt = {
         margin: 0,
@@ -250,231 +343,242 @@ export default function CreateInvoice() {
       }
   }
 
+  // UPDATED: Download handler
   const handleDownloadPDF = async () => {
     try {
         if (sellerProfile?.print_duplicates) {
-            const res1 = await generatePdfBlob('ORIGINAL')
-            downloadBlob(res1.blob, res1.filename)
-            setTimeout(async () => {
-                const res2 = await generatePdfBlob('DUPLICATE')
-                downloadBlob(res2.blob, res2.filename)
-            }, 800)
+            // Generate combined PDF with both Original and Duplicate
+            const result = await generateCombinedPDF()
+            if (result) {
+              const url = URL.createObjectURL(result.blob)
+              const link = document.createElement('a')
+              link.href = url
+              link.download = result.filename
+              link.click()
+              URL.revokeObjectURL(url)
+              showPopup('Success', 'Combined PDF generated successfully!', 'success')
+            }
         } else {
-            const result = await generatePdfBlob()
-            if (result) downloadBlob(result.blob, result.filename)
+            // Generate single PDF
+            const result = await generateSinglePDF()
+            if (result) {
+              const url = URL.createObjectURL(result.blob)
+              const link = document.createElement('a')
+              link.href = url
+              link.download = result.filename
+              link.click()
+              URL.revokeObjectURL(url)
+            }
         }
     } catch (e) {
-        showPopup('Error', 'Failed to generate PDF.', 'error');
+        console.error('PDF generation error:', e)
+        showPopup('Error', 'Failed to generate PDF. Please try again.', 'error');
     }
-  }
-
-  const handleSendEmail = async () => {
-    try {
-        if (sellerProfile?.print_duplicates) {
-             const res1 = await generatePdfBlob('ORIGINAL')
-             downloadBlob(res1.blob, res1.filename)
-             setTimeout(async () => {
-                const res2 = await generatePdfBlob('DUPLICATE')
-                downloadBlob(res2.blob, res2.filename)
-             }, 800)
-        } else {
-             const result = await generatePdfBlob()
-             if (result) downloadBlob(result.blob, result.filename)
-        }
-    } catch (e) {
-        showPopup('Error', 'Failed to generate PDF for email.', 'error');
-        return
-    }
-
-    setTimeout(() => {
-        const subject = `Invoice ${formData.invoice_no || ''} from ${sellerProfile?.business_name || 'Us'}`
-        const body = `Dear ${formData.buyer_name || 'Customer'},\n\nPlease find the invoice attached.\n\nBest Regards,\n${sellerProfile?.business_name || ''}`
-        window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
-        
-        // Show Premium Info Popup
-        showPopup('Email Draft Opened', 'The PDF has been downloaded to your device.\n\nPlease attach it manually to the email draft that just opened.', 'info', 'Got it');
-    }, 1000)
   }
 
   const downloadBlob = (blob, filename) => {
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = filename
-      a.click()
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    a.click()
+    URL.revokeObjectURL(url)
   }
 
-  const handleShare = async () => { setSharing(true); try { const result = await generatePdfBlob(); if(!result) return; const file = new File([result.blob], result.filename, { type: 'application/pdf' }); if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: 'Invoice', text: `Invoice from ${sellerProfile?.business_name}` }) } else { downloadBlob(result.blob, result.filename); showPopup('Downloaded', 'Browser doesn\'t support sharing.', 'info'); } } catch(e){ showPopup('Error','Failed share','error') } finally { setSharing(false) } }
-  
-  const onSubmit = async (data) => { 
-      setLoading(true); 
-      try { 
-          const { data: { user } } = await supabase.auth.getUser(); 
-          const payload = { 
-              user_id: user.id, 
-              invoice_no: data.invoice_no, 
-              invoice_data: { ...data, totals, theme: theme.hex }, 
-              total_amount: totals.grandTotal 
-          }; 
-          
-          if (id) await supabase.from('invoices').update(payload).eq('id', id); 
-          else await supabase.from('invoices').insert(payload); 
-          
-          // --- UPDATED SUCCESS POPUP ---
-          showPopup(
-              'Success!', 
-              'Invoice has been saved successfully.', 
-              'success', 
-              'Go to Dashboard', 
-              () => navigate('/dashboard'), // Action: Go Home
-              'Stay Here'                   // Cancel: Stay
-          ); 
-      } catch (error) { 
-          showPopup('Error', error.message, 'error'); 
-      } finally { 
-          setLoading(false) 
-      } 
+  const handleSendEmail = async () => {
+    showPopup('Feature Coming Soon', 'Email sending feature will be available soon!', 'info')
+  }
+
+  const handleShare = async () => {
+    setSharing(true)
+    try {
+        let pdfResult;
+        
+        if (sellerProfile?.print_duplicates) {
+            pdfResult = await generateCombinedPDF()
+        } else {
+            pdfResult = await generateSinglePDF()
+        }
+
+        if (!pdfResult) throw new Error('Failed to generate PDF')
+
+        const file = new File([pdfResult.blob], pdfResult.filename, { type: 'application/pdf' })
+        
+        if (navigator.share && navigator.canShare({ files: [file] })) {
+            await navigator.share({
+                files: [file],
+                title: pdfResult.filename,
+                text: `Invoice ${formData.invoice_no || 'DRAFT'}`
+            })
+            showPopup('Shared!', 'Invoice shared successfully', 'success')
+        } else {
+            const url = URL.createObjectURL(pdfResult.blob)
+            const whatsappUrl = `https://wa.me/?text=Invoice%20${encodeURIComponent(formData.invoice_no || 'DRAFT')}`
+            window.open(whatsappUrl, '_blank')
+            setTimeout(() => {
+                const a = document.createElement('a')
+                a.href = url
+                a.download = pdfResult.filename
+                a.click()
+                URL.revokeObjectURL(url)
+            }, 1000)
+            showPopup('Opening WhatsApp', 'PDF will download automatically. Attach it to your WhatsApp message.', 'info')
+        }
+    } catch (error) {
+        console.error('Share error:', error)
+        showPopup('Share Failed', 'Could not share invoice. Please download and share manually.', 'error')
+    }
+    setSharing(false)
+  }
+
+  const onSubmit = async (data) => {
+    if (!formData.invoice_no || formData.invoice_no.trim() === '') {
+      return showPopup('Error', 'Invoice number is required', 'error')
+    }
+
+    setLoading(true)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      
+      if (id) {
+        const { error } = await supabase.from('invoices').update({
+          invoice_no: formData.invoice_no,
+          invoice_data: { ...data, theme: theme.hex },
+          total_amount: parseFloat(totals.grandTotal)
+        }).eq('id', id)
+        if (error) throw error
+        showPopup('Updated!', 'Invoice updated successfully', 'success', 'OK', () => {
+          closePopup()
+          navigate('/dashboard')
+        })
+      } else {
+        const { data: existing } = await supabase.from('invoices').select('id').eq('user_id', user.id).eq('invoice_no', formData.invoice_no).maybeSingle()
+        if (existing) {
+          return showPopup('Duplicate Invoice', 'This invoice number already exists. Please use a different number.', 'error')
+        }
+
+        const { error } = await supabase.from('invoices').insert({
+          user_id: user.id,
+          invoice_no: formData.invoice_no,
+          invoice_data: { ...data, theme: theme.hex },
+          total_amount: parseFloat(totals.grandTotal)
+        })
+        if (error) throw error
+        showPopup('Saved!', 'Invoice created successfully', 'success', 'OK', () => {
+          closePopup()
+          navigate('/dashboard')
+        })
+      }
+    } catch (error) {
+      showPopup('Error', error.message, 'error')
+    }
+    setLoading(false)
+  }
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut()
+    navigate('/login')
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 p-0 md:p-4 lg:p-8 flex flex-col lg:flex-row gap-6">
+    <div className="min-h-screen bg-gray-100 flex flex-col lg:flex-row">
+      <Popup {...popup} onClose={closePopup} />
       
-      {/* --- RENDER POPUP --- */}
-      <Popup 
-        isOpen={popup.isOpen}
-        onClose={closePopup}
-        title={popup.title}
-        message={popup.message}
-        type={popup.type}
-        actionLabel={popup.actionLabel}
-        cancelLabel={popup.cancelLabel}
-        onAction={popup.onAction}
-      />
-
-      <style>{`
-        @media print {
-          .no-print, .no-print * {
-            display: none !important;
-            height: 0 !important;
-            width: 0 !important;
-            overflow: hidden !important;
-          }
-          body {
-            background-color: white !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            overflow: visible !important;
-          }
-          #print-scaler {
-            display: block !important;
-            position: relative !important;
-            width: 100% !important;
-            height: auto !important;
-            transform: none !important; 
-            margin: 0 !important;
-            padding: 0 !important;
-            left: 0 !important;
-            top: 0 !important;
-            overflow: visible !important;
-          }
-          #invoice-preview {
-            display: block !important;
-            visibility: visible !important;
-            width: 100% !important;
-            max-width: 210mm !important;
-            margin: 0 auto !important;
-            box-shadow: none !important;
-            border: none !important;
-          }
-        }
-      `}</style>
-      
-      {/* --- MOBILE TABS --- */}
-      <div className="lg:hidden sticky top-0 z-20 bg-white border-b flex text-sm font-bold shadow-sm">
-        <button onClick={() => setMobileTab('edit')} className={`flex-1 py-3 text-center ${mobileTab === 'edit' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500'}`}>✎ Editor</button>
-        <button onClick={() => setMobileTab('preview')} className={`flex-1 py-3 text-center ${mobileTab === 'preview' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500'}`}>👁 Preview</button>
+      {/* Mobile Tab Toggle */}
+      <div className="lg:hidden flex sticky top-0 z-20 bg-white border-b shadow-sm">
+        <button onClick={() => setMobileTab('edit')} className={`flex-1 py-4 font-bold text-sm ${mobileTab === 'edit' ? 'bg-blue-600 text-white' : 'text-gray-600'}`}>Edit</button>
+        <button onClick={() => setMobileTab('preview')} className={`flex-1 py-4 font-bold text-sm ${mobileTab === 'preview' ? 'bg-blue-600 text-white' : 'text-gray-600'}`}>Preview</button>
       </div>
 
-      {/* --- LEFT SIDE: EDITOR --- */}
-      <div className={`w-full lg:w-5/12 bg-white p-4 md:p-6 rounded-lg shadow-lg h-fit overflow-y-auto max-h-screen custom-scrollbar ${mobileTab === 'preview' ? 'hidden lg:block' : 'block'}`}>
-        
-        <button 
-          onClick={() => navigate('/dashboard')}
-          className="flex items-center text-sm text-gray-500 hover:text-gray-800 mb-4 transition-colors font-medium"
-        >
-          ← Back to Dashboard
-        </button>
-
-        <div className="flex justify-between items-center mb-4 border-t pt-4">
-          <h2 className="text-xl font-bold text-gray-800">{id ? 'Edit Invoice' : 'New Invoice'}</h2>
-          <div className="flex gap-2">
-            {THEMES.map((t) => (
-              <button key={t.name} onClick={() => setTheme(t)} className={`w-6 h-6 rounded-full border-2 ${theme.name === t.name ? 'border-black scale-110' : 'border-transparent'}`} style={{ backgroundColor: t.hex }} />
-            ))}
-          </div>
+      {/* --- LEFT SIDE: FORM --- */}
+      <div className={`w-full lg:w-5/12 bg-white lg:overflow-y-auto p-4 md:p-8 ${mobileTab === 'preview' ? 'hidden lg:block' : 'block'}`}>
+        <div className="flex justify-between items-center mb-6 pb-4 border-b">
+          <h2 className="text-2xl font-bold text-gray-800">
+            {id ? 'Edit Invoice' : 'Create Invoice'}
+          </h2>
+          <button onClick={handleSignOut} className="text-sm text-red-600 hover:underline font-semibold">
+            Sign Out
+          </button>
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg border border-blue-200">
+            <label className="text-xs font-bold text-gray-600 mb-2 block">Choose Theme</label>
+            <div className="flex gap-2 flex-wrap">
+              {THEMES.map((t) => (
+                <button
+                  key={t.name}
+                  type="button"
+                  onClick={() => setTheme(t)}
+                  className={`px-4 py-2 rounded-lg font-bold text-xs transition-all ${
+                    theme.hex === t.hex 
+                      ? 'ring-4 ring-blue-500 scale-110 shadow-lg' 
+                      : 'opacity-60 hover:opacity-100'
+                  }`}
+                  style={{ backgroundColor: t.hex, color: t.text }}
+                >
+                  {t.name}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="text-xs text-gray-500">Invoice No</label>
+            <input 
+              {...register('invoice_no')} 
+              className="w-full p-2 border rounded text-sm bg-gray-50" 
+              placeholder="Auto-generated or Manual"
+              disabled={!manualInvoiceEnabled && !id}
+            />
+            {!manualInvoiceEnabled && !id && (
+              <p className="text-xs text-gray-400 mt-1">Auto-generated. Enable manual mode in settings.</p>
+            )}
+          </div>
+
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs text-gray-500">Invoice No</label>
-              <input 
-                  {...register('invoice_no')} 
-                  className={`w-full p-2 border rounded text-sm ${!manualInvoiceEnabled ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : 'bg-white'}`}
-                  readOnly={!manualInvoiceEnabled}
-                  onChange={(e) => setValue('invoice_no', e.target.value.toUpperCase())}
-              />
+              <label className="text-xs text-gray-500">Invoice Date</label>
+              <input {...register('invoiceDate')} type="date" className="w-full p-2 border rounded text-sm" />
             </div>
             <div>
-              <label className="text-xs text-gray-500">Date</label>
-              <input type="date" {...register('invoiceDate')} className="w-full p-2 border rounded text-sm" />
+              <label className="text-xs text-gray-500">Due Date</label>
+              <input {...register('dueDate')} type="date" className="w-full p-2 border rounded text-sm" />
             </div>
           </div>
-          <div>
-              <label className="text-xs text-gray-500">Due Date</label>
-              <input type="date" {...register('dueDate')} className="w-full p-2 border rounded text-sm" />
+
+          <div className="pt-4 border-t">
+            <h3 className="text-sm font-bold text-gray-700 mb-3">Bill To</h3>
+            <div className="space-y-2">
+              <input {...register('buyer_name')} placeholder="Customer Name" className="w-full p-2 border rounded text-sm" />
+              <textarea {...register('buyer_address')} placeholder="Address" rows="2" className="w-full p-2 border rounded text-sm"></textarea>
+              <SearchableSelect
+                options={INDIAN_STATES}
+                placeholder="Select State"
+                onSelect={(val) => setValue('buyer_state', val)}
+                value={formData.buyer_state}
+              />
+              <input {...register('buyer_gstin')} placeholder="GSTIN (Optional)" className="w-full p-2 border rounded text-sm" />
+            </div>
           </div>
 
-          <div className="bg-gray-50 p-3 rounded border">
-            <h3 className="text-sm font-semibold mb-2 text-gray-700">Bill To</h3>
-            
-            <input 
-                {...register('buyer_name')} 
-                placeholder="Client Name" 
-                className="w-full p-2 border rounded mb-2 text-sm" 
-                onChange={(e) => setValue('buyer_name', e.target.value.toUpperCase())}
-            />
-            
-            <select {...register('buyer_state')} className="w-full p-2 border rounded mb-2 text-sm">
-                <option value="">Select State</option>
-                {INDIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
-            
-            <input 
-                {...register('buyer_gstin')} 
-                placeholder="GSTIN (Optional)" 
-                className="w-full p-2 border rounded text-sm" 
-                onChange={(e) => setValue('buyer_gstin', e.target.value.toUpperCase())}
-            />
-            
-            <input {...register('buyer_address')} placeholder="Address" className="w-full p-2 border rounded mt-2 text-sm" />
-          </div>
-
-          <div>
-            <h3 className="text-sm font-semibold mb-2 text-gray-700">Items</h3>
-            {fields.map((item, index) => (
-              <div key={item.id} className="flex flex-col gap-2 mb-4 p-3 bg-gray-50 rounded border">
-                <div className="w-full">
-                    <label className="text-xs text-gray-500 font-bold">Search Item</label>
-                    <SearchableSelect 
-                        options={HSN_CODES} 
-                        value={formData.items[index]?.description}
-                        placeholder="Start typing..."
-                        onChange={(selected) => handleItemSelect(index, selected)}
-                    />
-                </div>
-                <div className="flex gap-2">
-                    <div className="w-2/5">
+          <div className="pt-4 border-t">
+            <h3 className="text-sm font-bold text-gray-700 mb-3">Items</h3>
+            {fields.map((field, index) => (
+              <div key={field.id} className="mb-4 p-3 border rounded bg-gray-50">
+                <SearchableSelect
+                  options={HSN_CODES}
+                  placeholder="Search Item or HSN"
+                  onSelect={(item) => handleItemSelect(index, item)}
+                  value={formData.items?.[index]?.description || ''}
+                  displayKey="description"
+                />
+                <div className="flex gap-2 mt-2">
+                    <div className="flex-1">
+                        <label className="text-xs text-gray-500">HSN</label>
+                        <input {...register(`items.${index}.hsn`)} className="w-full p-2 border rounded text-sm" />
+                    </div>
+                    <div className="w-1/3">
                         <label className="text-xs text-gray-500">Price</label>
                         <input {...register(`items.${index}.price`)} type="number" className="w-full p-2 border rounded text-sm" />
                     </div>
@@ -517,13 +621,15 @@ export default function CreateInvoice() {
 
           <div className="flex flex-col gap-3 pt-4 border-t sticky bottom-0 bg-white z-10 pb-4 md:pb-0">
             <button type="button" onClick={handleShare} disabled={sharing} className="w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 font-bold shadow flex items-center justify-center gap-2">
-               {sharing ? '...' : 'Share Invoice'} 
+               {sharing ? 'Generating...' : 'Share Invoice'} 
                <span className="text-xs font-normal opacity-75">(WhatsApp)</span>
             </button>
 
             <div className="flex gap-2">
                 <button type="button" onClick={handleSendEmail} className="flex-1 bg-gray-200 text-gray-800 py-3 rounded hover:bg-gray-300 font-bold">Send Email</button>
-                <button type="button" onClick={handleDownloadPDF} className="flex-1 bg-gray-900 text-white py-3 rounded hover:bg-black font-bold">PDF</button>
+                <button type="button" onClick={handleDownloadPDF} className="flex-1 bg-gray-900 text-white py-3 rounded hover:bg-black font-bold">
+                  {sellerProfile?.print_duplicates ? 'PDF (Combined)' : 'Download PDF'}
+                </button>
                 <button type="submit" disabled={loading} className="flex-1 bg-blue-600 text-white py-3 rounded hover:bg-blue-700 font-bold">
                     {loading ? '...' : (id ? 'Update' : 'Save')}
                 </button>
@@ -575,10 +681,7 @@ export default function CreateInvoice() {
                     <p className="opacity-90 text-sm leading-tight">{sellerProfile?.state}</p>
                     {sellerProfile?.business_email && <p className="opacity-90 text-sm leading-tight">{sellerProfile.business_email}</p>}
                     {sellerProfile?.business_phone && <p className="opacity-90 text-sm leading-tight">{sellerProfile.business_phone}</p>}
-                    
-                    {/* WEBSITE URL (Updated) */}
                     {sellerProfile?.website && <p className="opacity-90 text-sm leading-tight">{sellerProfile.website}</p>}
-                    
                     {sellerProfile?.gstin && <p className="font-semibold mt-1 text-base">GSTIN: {sellerProfile.gstin}</p>}
                 </div>
             </div>
