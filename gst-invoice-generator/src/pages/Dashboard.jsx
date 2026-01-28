@@ -317,6 +317,42 @@ export default function Dashboard() {
   const filteredInvoices = getFilteredInvoices()
   const activeFilterCount = (filters.startDate ? 1 : 0) + (filters.endDate ? 1 : 0) + (filters.minAmount ? 1 : 0) + (filters.maxAmount ? 1 : 0)
 
+  // --- NEW FEATURE: GSTR-1 EXPORT ---
+  const handleExport = () => {
+    const headers = [
+        "Date", "Invoice No", "Customer Name", "GSTIN", 
+        "Taxable Value", "IGST", "CGST", "SGST", "Total Amount", "Status"
+    ].join(",");
+
+    const rows = filteredInvoices.map(inv => {
+        const d = inv.invoice_data || {};
+        const t = d.totals || { subtotal: 0, igst: 0, cgst: 0, sgst: 0 };
+        
+        const date = new Date(inv.created_at).toLocaleDateString('en-GB'); // DD/MM/YYYY
+        const invNo = inv.invoice_no;
+        const name = (d.buyer_name || '').replace(/,/g, ' '); // Remove commas for CSV safety
+        const gstin = d.buyer_gstin || '-';
+        const taxable = t.subtotal || 0;
+        const igst = t.igst || 0;
+        const cgst = t.cgst || 0;
+        const sgst = t.sgst || 0;
+        const total = inv.total_amount || 0;
+        const status = inv.status || 'PENDING';
+
+        return [date, invNo, name, gstin, taxable, igst, cgst, sgst, total, status].join(",");
+    });
+
+    const csvContent = [headers, ...rows].join("\n");
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `GSTR1_Export_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
   if (loading) return <div className="p-10 text-center">Loading...</div>
 
   return (
@@ -394,7 +430,7 @@ export default function Dashboard() {
             </div>
         </div>
 
-        {/* --- NEW INSIGHTS ROW: PIE CHART + TOP CLIENTS --- */}
+        {/* --- INSIGHTS ROW --- */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             
             {/* PIE CHART (PAYMENT STATUS) */}
@@ -555,6 +591,14 @@ export default function Dashboard() {
                                         onChange={(e) => setSearchTerm(e.target.value)}
                                     />
                                 </div>
+                                {/* NEW EXPORT BUTTON */}
+                                <button 
+                                    onClick={handleExport}
+                                    className="px-3 py-2 rounded-lg border border-gray-200 text-sm font-medium flex items-center gap-2 text-gray-600 hover:bg-gray-50 transition-colors"
+                                >
+                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                                    Export
+                                </button>
                                 <button 
                                     onClick={() => setShowFilters(!showFilters)}
                                     className={`px-3 py-2 rounded-lg border text-sm font-medium flex items-center gap-2 transition-colors ${showFilters || activeFilterCount > 0 ? 'bg-blue-50 border-blue-200 text-blue-600' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}
