@@ -233,18 +233,22 @@ export default function Dashboard() {
       {/* CUSTOM CSS FOR PREMIUM CALENDAR LOOK */}
       <style>{`
         .react-datepicker-wrapper { width: 100%; }
+        /* Fix for clipping: ensure calendar is on top */
+        .react-datepicker-popper { z-index: 9999 !important; }
+        
         .react-datepicker {
             border: none !important;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
-            border-radius: 12px !important;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
+            border-radius: 16px !important;
             font-family: inherit !important;
+            border: 1px solid #f3f4f6 !important;
         }
         .react-datepicker__header {
             background-color: white !important;
             border-bottom: 1px solid #f3f4f6 !important;
             padding-top: 15px !important;
-            border-top-left-radius: 12px !important;
-            border-top-right-radius: 12px !important;
+            border-top-left-radius: 16px !important;
+            border-top-right-radius: 16px !important;
         }
         .react-datepicker__current-month {
             color: #1f2937 !important;
@@ -275,6 +279,7 @@ export default function Dashboard() {
         .react-datepicker__navigation {
             top: 15px !important;
         }
+        .react-datepicker__triangle { display: none !important; }
       `}</style>
 
       <Popup isOpen={popup.isOpen} onClose={closePopup} title={popup.title} message={popup.message} type={popup.type} actionLabel={popup.actionLabel} cancelLabel={popup.cancelLabel} onAction={popup.onAction} />
@@ -364,9 +369,11 @@ export default function Dashboard() {
                     <span className="text-xl">+</span> Create New Invoice
                 </button>
                 
-                <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100">
-                    {/* Header & Filter Bar */}
-                    <div className="p-4 border-b bg-gray-50/50 space-y-3">
+                {/* --- MAIN CONTAINER FIXED: Removed overflow-hidden so DatePicker can fly out --- */}
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 relative">
+                    
+                    {/* Header & Filter Bar - Rounded Top */}
+                    <div className="p-4 border-b bg-gray-50/50 space-y-3 rounded-t-xl">
                         <div className="flex flex-col md:flex-row gap-3 justify-between items-start md:items-center">
                             <h3 className="font-bold text-gray-700 text-sm">All Invoices ({invoices.length})</h3>
                             <div className="flex gap-2 w-full md:w-auto">
@@ -390,9 +397,9 @@ export default function Dashboard() {
                             </div>
                         </div>
 
-                        {/* Collapsible Filters - PREMIUM DATEPICKER */}
+                        {/* Collapsible Filters */}
                         {showFilters && (
-                            <div className="pt-3 border-t border-gray-200 grid grid-cols-2 md:grid-cols-4 gap-3 animate-in fade-in slide-in-from-top-2">
+                            <div className="pt-3 border-t border-gray-200 grid grid-cols-2 md:grid-cols-4 gap-3 animate-in fade-in slide-in-from-top-2 relative z-50">
                                 <div className="relative">
                                     <label className="text-[10px] uppercase font-bold text-gray-400 mb-1 block">From Date</label>
                                     <DatePicker 
@@ -402,7 +409,6 @@ export default function Dashboard() {
                                         placeholderText="Select Start Date"
                                         dateFormat="dd/MM/yyyy"
                                     />
-                                    {/* Custom Calendar Icon */}
                                     <svg className="w-3 h-3 absolute right-2 bottom-3 pointer-events-none text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                                 </div>
                                 <div className="relative">
@@ -441,8 +447,8 @@ export default function Dashboard() {
                         </div>
                     ) : (
                         <>
-                            {/* Desktop Table View */}
-                            <table className="hidden md:table w-full text-left text-sm">
+                            {/* Desktop Table View - Rounded Bottom */}
+                            <table className="hidden md:table w-full text-left text-sm rounded-b-xl overflow-hidden">
                                 <thead className="bg-gray-50 text-gray-500 uppercase font-semibold text-xs border-b">
                                     <tr>
                                         <th className="px-5 py-3">Date</th>
@@ -465,8 +471,8 @@ export default function Dashboard() {
                                 </tbody>
                             </table>
 
-                            {/* Mobile List View */}
-                            <div className="md:hidden divide-y divide-gray-100">
+                            {/* Mobile List View - Rounded Bottom */}
+                            <div className="md:hidden divide-y divide-gray-100 rounded-b-xl overflow-hidden">
                                 {filteredInvoices.map((inv) => (
                                     <div key={inv.id} onClick={() => navigate(`/edit-invoice/${inv.id}`)} className="p-4 active:bg-blue-50 transition-colors cursor-pointer">
                                         <div className="flex justify-between items-center mb-2">
