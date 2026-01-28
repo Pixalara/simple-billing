@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '../supabaseClient'
 import { useNavigate } from 'react-router-dom'
@@ -11,9 +12,8 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recha
 import ExcelJS from 'exceljs'
 import { saveAs } from 'file-saver'
 
-// Components
+// --- IMPORT THE FOOTER ---
 import BrandingFooter from '../components/BrandingFooter'
-
 
 // --- PREMIUM POPUP COMPONENT ---
 const Popup = ({ isOpen, onClose, title, message, type, actionLabel, onAction, cancelLabel }) => {
@@ -778,6 +778,9 @@ export default function Dashboard() {
             </div>
         </div>
       </div>
+{/* BRANDING FOOTER */}
+      <BrandingFooter />
+
     </div>
   )
 }
