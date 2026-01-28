@@ -106,6 +106,7 @@ export default function Dashboard() {
   }
 
   const fetchInvoices = async (userId) => {
+    // Fetches status automatically since we select *
     const { data } = await supabase.from('invoices').select('*').eq('user_id', userId).order('created_at', { ascending: false })
     if (data) {
         setInvoices(data)
@@ -162,31 +163,54 @@ export default function Dashboard() {
     }
   }
 
+  // --- NEW: STATUS UPDATE LOGIC ---
+  const cycleStatus = async (e, invoice) => {
+      e.stopPropagation(); // Prevent opening edit mode
+      
+      const statusOrder = ['PENDING', 'PAID', 'OVERDUE'];
+      const currentStatus = invoice.status || 'PENDING';
+      const nextStatus = statusOrder[(statusOrder.indexOf(currentStatus) + 1) % statusOrder.length];
+
+      try {
+          // Optimistic Update
+          setInvoices(prev => prev.map(inv => inv.id === invoice.id ? { ...inv, status: nextStatus } : inv));
+          
+          const { error } = await supabase.from('invoices').update({ status: nextStatus }).eq('id', invoice.id);
+          if (error) throw error;
+      } catch (err) {
+          // Revert on error
+          setInvoices(prev => prev.map(inv => inv.id === invoice.id ? { ...inv, status: currentStatus } : inv));
+          showPopup('Error', 'Failed to update status', 'error');
+      }
+  }
+
+  const getStatusBadgeStyles = (status) => {
+      switch(status) {
+          case 'PAID': return 'bg-green-100 text-green-700 border-green-200 hover:bg-green-200';
+          case 'OVERDUE': return 'bg-red-100 text-red-700 border-red-200 hover:bg-red-200';
+          default: return 'bg-amber-100 text-amber-700 border-amber-200 hover:bg-amber-200'; // Pending
+      }
+  }
+
   const handleDeleteClick = (id, e) => {
     e.stopPropagation() 
     showPopup('Delete Invoice?', 'Are you sure?', 'warning', 'Delete', () => confirmDelete(id), 'Cancel')
   }
 
-  // --- UPDATED DELETE FUNCTION ---
   const confirmDelete = async (id) => {
     try {
         const { error } = await supabase.from('invoices').delete().eq('id', id)
-        
         if (error) throw error
         
-        // UI Update
         const updatedInvoices = invoices.filter(inv => inv.id !== id)
         setInvoices(updatedInvoices)
-        
-        // Stats Update
         const totalRev = updatedInvoices.reduce((acc, curr) => acc + (curr.total_amount || 0), 0)
         setStats({ total: updatedInvoices.length, revenue: totalRev })
         
         closePopup()
         setTimeout(() => showPopup('Deleted', 'Invoice removed.', 'success'), 300)
     } catch (error) {
-        closePopup(); 
-        setTimeout(() => showPopup('Error', error.message + " (Check RLS Policies)", 'error'), 300)
+        closePopup(); setTimeout(() => showPopup('Error', error.message, 'error'), 300)
     }
   }
 
@@ -376,10 +400,10 @@ export default function Dashboard() {
                     <span className="text-xl">+</span> Create New Invoice
                 </button>
                 
-                {/* --- MAIN CONTAINER FIXED: Removed overflow-hidden so DatePicker can fly out --- */}
+                {/* --- MAIN CONTAINER --- */}
                 <div className="bg-white rounded-xl shadow-sm border border-gray-100 relative">
                     
-                    {/* Header & Filter Bar - Rounded Top */}
+                    {/* Header & Filter Bar */}
                     <div className="p-4 border-b bg-gray-50/50 space-y-3 rounded-t-xl">
                         <div className="flex flex-col md:flex-row gap-3 justify-between items-start md:items-center">
                             <h3 className="font-bold text-gray-700 text-sm">All Invoices ({invoices.length})</h3>
@@ -454,13 +478,14 @@ export default function Dashboard() {
                         </div>
                     ) : (
                         <>
-                            {/* Desktop Table View - Rounded Bottom */}
+                            {/* Desktop Table View */}
                             <table className="hidden md:table w-full text-left text-sm rounded-b-xl overflow-hidden">
                                 <thead className="bg-gray-50 text-gray-500 uppercase font-semibold text-xs border-b">
                                     <tr>
                                         <th className="px-5 py-3">Date</th>
                                         <th className="px-5 py-3">Invoice #</th>
                                         <th className="px-5 py-3">Customer</th>
+                                        <th className="px-5 py-3 text-center">Status</th>
                                         <th className="px-5 py-3 text-right">Amount</th>
                                         <th className="px-5 py-3 text-center">Action</th>
                                     </tr>
@@ -471,6 +496,15 @@ export default function Dashboard() {
                                             <td className="px-5 py-3 text-gray-600">{new Date(inv.created_at).toLocaleDateString('en-IN')}</td>
                                             <td className="px-5 py-3 font-bold text-blue-600 group-hover:underline">{inv.invoice_no}</td>
                                             <td className="px-5 py-3 font-medium text-gray-800">{inv.invoice_data?.buyer_name}</td>
+                                            {/* STATUS BADGE */}
+                                            <td className="px-5 py-3 text-center">
+                                                <button 
+                                                    onClick={(e) => cycleStatus(e, inv)}
+                                                    className={`px-2.5 py-1 rounded-full text-[10px] font-bold border uppercase tracking-wide transition-all active:scale-95 ${getStatusBadgeStyles(inv.status || 'PENDING')}`}
+                                                >
+                                                    {inv.status || 'PENDING'}
+                                                </button>
+                                            </td>
                                             <td className="px-5 py-3 text-right font-bold text-gray-900">₹{inv.total_amount}</td>
                                             <td className="px-5 py-3 text-center"><button onClick={(e) => handleDeleteClick(inv.id, e)} className="text-gray-400 hover:text-red-600 p-1.5 hover:bg-red-50 rounded transition-all">🗑️</button></td>
                                         </tr>
@@ -478,22 +512,31 @@ export default function Dashboard() {
                                 </tbody>
                             </table>
 
-                            {/* Mobile List View - Rounded Bottom */}
+                            {/* Mobile List View */}
                             <div className="md:hidden divide-y divide-gray-100 rounded-b-xl overflow-hidden">
                                 {filteredInvoices.map((inv) => (
                                     <div key={inv.id} onClick={() => navigate(`/edit-invoice/${inv.id}`)} className="p-4 active:bg-blue-50 transition-colors cursor-pointer">
                                         <div className="flex justify-between items-center mb-2">
                                             <span className="font-bold text-blue-600 text-sm">#{inv.invoice_no}</span>
-                                            <span className="font-bold text-gray-900 text-base">₹{inv.total_amount}</span>
+                                            {/* STATUS BADGE MOBILE */}
+                                            <button 
+                                                onClick={(e) => cycleStatus(e, inv)}
+                                                className={`px-2 py-0.5 rounded-full text-[10px] font-bold border uppercase ${getStatusBadgeStyles(inv.status || 'PENDING')}`}
+                                            >
+                                                {inv.status || 'PENDING'}
+                                            </button>
                                         </div>
                                         <div className="flex justify-between items-end">
                                             <div className="flex flex-col gap-0.5">
                                                 <span className="text-sm font-semibold text-gray-800">{inv.invoice_data?.buyer_name}</span>
                                                 <span className="text-xs text-gray-400">{new Date(inv.created_at).toLocaleDateString('en-IN')}</span>
                                             </div>
-                                            <button onClick={(e) => handleDeleteClick(inv.id, e)} className="text-gray-400 hover:text-red-600 p-2 rounded-full hover:bg-red-50">
-                                                🗑️
-                                            </button>
+                                            <div className="flex items-center gap-3">
+                                                <span className="font-bold text-gray-900 text-base">₹{inv.total_amount}</span>
+                                                <button onClick={(e) => handleDeleteClick(inv.id, e)} className="text-gray-400 hover:text-red-600 p-2 rounded-full hover:bg-red-50">
+                                                    🗑️
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 ))}
