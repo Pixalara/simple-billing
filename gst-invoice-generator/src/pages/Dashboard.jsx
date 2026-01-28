@@ -774,6 +774,30 @@ export default function Dashboard() {
             </div>
         </div>
       </div>
+
+// ... inside Dashboard() component return statement ...
+
+return (
+  <div className="min-h-screen bg-gray-50 p-4 md:p-6 pb-20">
+    
+    {/* ... existing styles and Popup ... */}
+
+    <div className="max-w-7xl mx-auto">
+        {/* ... existing header, stats, and grid layout ... */}
+        
+        {/* ... end of grid layout ... */}
+    </div>
+
+    {/* INSERT FOOTER HERE */}
+    <BrandingFooter />
+
+  </div>
+)
+
+
+
+
+
     </div>
   )
 }
