@@ -173,7 +173,6 @@ export default function CreateInvoice() {
       const originalElement = invoiceRef.current
       if (!originalElement) return null;
 
-      // Helper to create copy
       const createCopy = (label) => {
           const clone = originalElement.cloneNode(true)
           
@@ -184,9 +183,7 @@ export default function CreateInvoice() {
           clone.style.transform = 'none'
           clone.style.margin = '0'
           clone.style.backgroundColor = 'white'
-          // Remove UI classes that interfere with PDF generation
-          clone.classList.remove('w-full', 'lg:w-7/12', 'flex', 'justify-center', 'shadow-2xl', 'p-8') 
-          // Ensure it is displayed as block
+          clone.classList.remove('w-full', 'lg:w-7/12', 'flex', 'justify-center', 'shadow-2xl', 'p-8', 'hidden', 'lg:flex') 
           clone.style.display = 'block'
           
           if (label) {
@@ -207,32 +204,26 @@ export default function CreateInvoice() {
           return clone;
       }
 
-      // Container for single or multiple pages
       const container = document.createElement('div')
       
-      // FIX: Position at 0,0 but behind content using z-index
-      // This ensures html2canvas can "see" it within the viewport coordinates
-      container.style.position = 'absolute'
-      container.style.left = '0'
+      // FIX: Move off-screen to the RIGHT (100vw) so it's not "behind" things
+      // This prevents the "white overlay" issue
+      container.style.position = 'fixed'
+      container.style.left = '100vw' 
       container.style.top = '0'
       container.style.width = '794px'
-      container.style.zIndex = '-1000' 
+      container.style.zIndex = '9999'
       
-      // LOGIC: If "Duplicate" setting is ON, append both copies to one container
       if (sellerProfile?.print_duplicates) {
-          // 1. Original
           container.appendChild(createCopy('ORIGINAL FOR RECIPIENT'));
           
-          // 2. Page Break
           const pageBreak = document.createElement('div');
           pageBreak.style.pageBreakBefore = 'always';
           pageBreak.className = 'html2pdf__page-break'; 
           container.appendChild(pageBreak);
 
-          // 3. Duplicate
           container.appendChild(createCopy('DUPLICATE FOR SUPPLIER'));
       } else {
-          // Single Copy (Default)
           container.appendChild(createCopy(''));
       }
 
@@ -260,19 +251,17 @@ export default function CreateInvoice() {
       
       try {
         const pdfBlob = await html2pdf().set(opt).from(container).output('blob')
-        document.body.removeChild(container)
+        if(document.body.contains(container)) document.body.removeChild(container)
         return { blob: pdfBlob, filename: opt.filename }
       } catch (err) {
-        if(document.body.contains(container)) {
-            document.body.removeChild(container)
-        }
+        if(document.body.contains(container)) document.body.removeChild(container)
         throw err
       }
   }
 
   const handleDownloadPDF = async () => {
     try {
-        const result = await generatePdfBlob() // Generates single file
+        const result = await generatePdfBlob() 
         if (result) downloadBlob(result.blob, result.filename)
     } catch (e) {
         showPopup('Error', 'Failed to generate PDF.', 'error');
@@ -281,7 +270,7 @@ export default function CreateInvoice() {
 
   const handleSendEmail = async () => {
     try {
-        const result = await generatePdfBlob() // Generates single file
+        const result = await generatePdfBlob()
         if (result) downloadBlob(result.blob, result.filename)
     } catch (e) {
         showPopup('Error', 'Failed to generate PDF for email.', 'error');
@@ -419,6 +408,7 @@ export default function CreateInvoice() {
                     <p className="opacity-90 text-sm leading-tight">{sellerProfile?.state}</p>
                     {sellerProfile?.business_email && <p className="opacity-90 text-sm leading-tight">{sellerProfile.business_email}</p>}
                     {sellerProfile?.business_phone && <p className="opacity-90 text-sm leading-tight">{sellerProfile.business_phone}</p>}
+                    {sellerProfile?.website && <p className="opacity-90 text-sm leading-tight">{sellerProfile.website}</p>}
                     {sellerProfile?.gstin && <p className="font-semibold mt-1 text-base">GSTIN: {sellerProfile.gstin}</p>}
                 </div>
             </div>
