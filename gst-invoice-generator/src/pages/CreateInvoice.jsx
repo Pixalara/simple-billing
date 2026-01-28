@@ -168,15 +168,16 @@ export default function CreateInvoice() {
   const totals = calculateTotals(); const amountInWords = totals.grandTotal ? numberToWords(totals.grandTotal) : '';
   const getTaxRateText = (type) => { const rates = new Set(formData.items?.map(i => parseFloat(i.gstRate)).filter(r => r > 0)); if (rates.size === 1) { const r = [...rates][0]; if (type === 'IGST') return `(${r}%)`; if (type === 'CGST' || type === 'SGST') return `(${r/2}%)`; } return ''; }
 
-  // --- UPDATED PDF GENERATOR FOR SINGLE FILE ---
+  // --- UPDATED PDF GENERATOR FOR SINGLE FILE (ORIGINAL + DUPLICATE) ---
   const generatePdfBlob = async () => {
       const originalElement = invoiceRef.current
       if (!originalElement) return null;
 
-      // Helper to create copy
+      // Helper function to create a clean clone for PDF generation
       const createCopy = (label) => {
           const clone = originalElement.cloneNode(true)
           
+          // Reset container styles for PDF generation (A4 dimensions)
           clone.style.width = '794px' 
           clone.style.minHeight = '1122px'
           clone.style.height = 'auto'
@@ -184,8 +185,12 @@ export default function CreateInvoice() {
           clone.style.transform = 'none'
           clone.style.margin = '0'
           clone.style.backgroundColor = 'white'
-          clone.classList.remove('w-full', 'lg:w-7/12', 'flex', 'justify-center', 'shadow-2xl', 'p-8') 
+          // Remove UI-specific layout classes that might break print
+          clone.classList.remove('w-full', 'lg:w-7/12', 'flex', 'justify-center', 'shadow-2xl', 'p-8', 'hidden', 'lg:flex') 
           
+          // Ensure it's strictly block display
+          clone.style.display = 'block'
+
           if (label) {
               const titleElement = clone.querySelector('h1'); 
               if (titleElement) {
@@ -206,15 +211,17 @@ export default function CreateInvoice() {
 
       // Container for single or multiple pages
       const container = document.createElement('div')
-      container.style.position = 'absolute'
-      container.style.top = '0'
-      container.style.left = '0'
-      container.style.zIndex = '-1000'
-      container.style.width = '794px'
       
-      // LOGIC: If "Duplicate" setting is ON, append both pages to the SAME container
+      // FIX: Position OFF-SCREEN to avoid blank PDF issues (instead of z-index: -1000)
+      container.style.position = 'fixed' 
+      container.style.left = '-10000px'
+      container.style.top = '0'
+      container.style.width = '794px'
+      container.style.zIndex = '9999' // Keep it logically "above" but physically off-screen
+      
+      // LOGIC: If "Duplicate" setting is ON, append BOTH copies to one container
       if (sellerProfile?.print_duplicates) {
-          // 1. Original
+          // 1. Original Copy
           container.appendChild(createCopy('ORIGINAL FOR RECIPIENT'));
           
           // 2. Page Break
@@ -223,10 +230,10 @@ export default function CreateInvoice() {
           pageBreak.className = 'html2pdf__page-break'; 
           container.appendChild(pageBreak);
 
-          // 3. Duplicate
+          // 3. Duplicate Copy
           container.appendChild(createCopy('DUPLICATE FOR SUPPLIER'));
       } else {
-          // Single Copy
+          // Single Copy (Default)
           container.appendChild(createCopy(''));
       }
 
@@ -241,7 +248,14 @@ export default function CreateInvoice() {
         filename: safeFileName,
         image: { type: 'jpeg', quality: 0.98 },
         enableLinks: true, 
-        html2canvas: { scale: 2, useCORS: true, scrollY: 0, letterRendering: true, width: 794, windowWidth: 794 },
+        html2canvas: { 
+            scale: 2, 
+            useCORS: true, 
+            scrollY: 0, 
+            letterRendering: true,
+            width: 794,
+            windowWidth: 794 // Force width capture to avoid mobile clipping
+        },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
       }
       
@@ -250,14 +264,16 @@ export default function CreateInvoice() {
         document.body.removeChild(container)
         return { blob: pdfBlob, filename: opt.filename }
       } catch (err) {
-        document.body.removeChild(container)
+        if (document.body.contains(container)) {
+            document.body.removeChild(container)
+        }
         throw err
       }
   }
 
   const handleDownloadPDF = async () => {
     try {
-        const result = await generatePdfBlob() // Generates single file (possibly multipage)
+        const result = await generatePdfBlob() // Generates ONE file (possibly multi-page)
         if (result) downloadBlob(result.blob, result.filename)
     } catch (e) {
         showPopup('Error', 'Failed to generate PDF.', 'error');
@@ -266,7 +282,7 @@ export default function CreateInvoice() {
 
   const handleSendEmail = async () => {
     try {
-        const result = await generatePdfBlob() // Generates single file
+        const result = await generatePdfBlob() // Generates ONE file
         if (result) downloadBlob(result.blob, result.filename)
     } catch (e) {
         showPopup('Error', 'Failed to generate PDF for email.', 'error');
@@ -404,7 +420,6 @@ export default function CreateInvoice() {
                     <p className="opacity-90 text-sm leading-tight">{sellerProfile?.state}</p>
                     {sellerProfile?.business_email && <p className="opacity-90 text-sm leading-tight">{sellerProfile.business_email}</p>}
                     {sellerProfile?.business_phone && <p className="opacity-90 text-sm leading-tight">{sellerProfile.business_phone}</p>}
-                    {sellerProfile?.website && <p className="opacity-90 text-sm leading-tight">{sellerProfile.website}</p>}
                     {sellerProfile?.gstin && <p className="font-semibold mt-1 text-base">GSTIN: {sellerProfile.gstin}</p>}
                 </div>
             </div>
