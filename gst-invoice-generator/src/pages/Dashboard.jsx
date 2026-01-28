@@ -41,13 +41,10 @@ const Popup = ({ isOpen, onClose, title, message, type, actionLabel, onAction, c
 export default function Dashboard() {
   const [session, setSession] = useState(null)
   const [loading, setLoading] = useState(true)
-  
-  // Upload States
   const [uploadingLogo, setUploadingLogo] = useState(false)
   const [uploadingSig, setUploadingSig] = useState(false)
   const [uploadingStamp, setUploadingStamp] = useState(false)
   
-  // Saved URLs
   const [savedLogo, setSavedLogo] = useState(null)
   const [savedSignature, setSavedSignature] = useState(null)
   const [savedStamp, setSavedStamp] = useState(null)
@@ -84,13 +81,13 @@ export default function Dashboard() {
       setValue('gstin', data.gstin)
       setValue('business_email', data.business_email)
       setValue('business_phone', data.business_phone)
-      setValue('website', data.website) // Load Website
-      
+      setValue('website', data.website)
       setValue('bank_name', data.bank_name)
       setValue('account_number', data.account_number)
       setValue('ifsc_code', data.ifsc_code)
       setValue('branch_name', data.branch_name)
       
+      // Load Settings
       setValue('print_duplicates', data.print_duplicates)
       setValue('enable_manual_invoice_no', data.enable_manual_invoice_no)
 
@@ -232,7 +229,7 @@ export default function Dashboard() {
                     <input {...register('business_name')} placeholder="BUSINESS NAME" onChange={(e) => enforceLettersOnly(e, 'business_name')} className="w-full p-2 border rounded text-sm bg-gray-50" />
                     <input {...register('business_email')} placeholder="BUSINESS EMAIL" className="w-full p-2 border rounded text-sm bg-gray-50" />
                     <input {...register('business_phone')} placeholder="BUSINESS PHONE" onChange={(e) => enforceNumbersOnly(e, 'business_phone')} maxLength={10} className="w-full p-2 border rounded text-sm bg-gray-50" />
-                    <input {...register('website')} placeholder="WEBSITE (Optional)" className="w-full p-2 border rounded text-sm bg-gray-50" />
+                    <input {...register('website')} placeholder="WEBSITE" className="w-full p-2 border rounded text-sm bg-gray-50" />
                     <input {...register('gstin')} placeholder="GSTIN" onChange={(e) => enforceUpperCase(e, 'gstin')} className="w-full p-2 border rounded text-sm bg-gray-50" />
                     <select {...register('state')} className="w-full p-2 border rounded text-sm bg-gray-50"><option value="">Select State</option>{INDIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}</select>
 
@@ -246,14 +243,16 @@ export default function Dashboard() {
                         </div>
                     </div>
 
-                    <div className="pt-4 border-t mt-4 space-y-3">
-                        <div className="flex items-center gap-3">
-                            <input type="checkbox" {...register('print_duplicates')} id="print_dup" className="w-5 h-5 text-blue-600 rounded cursor-pointer accent-blue-600" />
-                            <label htmlFor="print_dup" className="text-sm font-semibold text-gray-800 cursor-pointer select-none">Generate Original & Duplicate</label>
+                    <div className="pt-4 border-t mt-4 space-y-2">
+                        {/* Duplicate Toggle */}
+                        <div className="flex items-center gap-2">
+                            <input type="checkbox" {...register('print_duplicates')} id="print_dup" className="w-4 h-4 text-blue-600 rounded cursor-pointer" />
+                            <label htmlFor="print_dup" className="text-xs font-bold text-gray-700 cursor-pointer">Generate Original & Duplicate?</label>
                         </div>
-                        <div className="flex items-center gap-3">
-                            <input type="checkbox" {...register('enable_manual_invoice_no')} id="manual_inv" className="w-5 h-5 text-blue-600 rounded cursor-pointer accent-blue-600" />
-                            <label htmlFor="manual_inv" className="text-sm font-semibold text-gray-800 cursor-pointer select-none">Enable Manual Invoice Numbering</label>
+                        {/* Manual Invoice Number Toggle */}
+                        <div className="flex items-center gap-2">
+                            <input type="checkbox" {...register('enable_manual_invoice_no')} id="manual_inv" className="w-4 h-4 text-blue-600 rounded cursor-pointer" />
+                            <label htmlFor="manual_inv" className="text-xs font-bold text-gray-700 cursor-pointer">Enable Manual Invoice Numbering?</label>
                         </div>
                     </div>
 
@@ -263,31 +262,56 @@ export default function Dashboard() {
 
             <div className="lg:col-span-2 space-y-4">
                 <button onClick={() => navigate('/create-invoice')} className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-4 rounded-xl font-bold shadow-lg flex items-center justify-center gap-2 transform active:scale-95 transition-all"><span>+</span> Create New Invoice</button>
+                
                 <div className="bg-white rounded-xl shadow-sm overflow-hidden">
                     <div className="px-5 py-3 border-b bg-gray-50"><h3 className="font-bold text-gray-700 text-sm">Recent Invoices</h3></div>
                     {invoices.length === 0 ? <div className="p-8 text-center text-gray-400 text-sm">No invoices yet.</div> : (
-                        <table className="hidden md:table w-full text-left text-sm">
-                            <thead className="bg-gray-50 text-gray-500 uppercase font-semibold text-xs">
-                                <tr>
-                                    <th className="px-5 py-3">Date</th>
-                                    <th className="px-5 py-3">Invoice #</th>
-                                    <th className="px-5 py-3">Customer</th>
-                                    <th className="px-5 py-3 text-right">Amount</th>
-                                    <th className="px-5 py-3 text-center">Action</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-100">
-                                {invoices.map((inv) => (
-                                    <tr key={inv.id} onClick={() => navigate(`/edit-invoice/${inv.id}`)} className="hover:bg-blue-50 cursor-pointer group">
-                                        <td className="px-5 py-3">{new Date(inv.created_at).toLocaleDateString('en-IN')}</td>
-                                        <td className="px-5 py-3 font-medium text-blue-600">{inv.invoice_no}</td>
-                                        <td className="px-5 py-3">{inv.invoice_data?.buyer_name}</td>
-                                        <td className="px-5 py-3 text-right font-bold">₹{inv.total_amount}</td>
-                                        <td className="px-5 py-3 text-center"><button onClick={(e) => handleDeleteClick(inv.id, e)} className="text-gray-400 hover:text-red-600 p-1 rounded">🗑️</button></td>
+                        <>
+                            {/* Desktop Table View */}
+                            <table className="hidden md:table w-full text-left text-sm">
+                                <thead className="bg-gray-50 text-gray-500 uppercase font-semibold text-xs">
+                                    <tr>
+                                        <th className="px-5 py-3">Date</th>
+                                        <th className="px-5 py-3">Invoice #</th>
+                                        <th className="px-5 py-3">Customer</th>
+                                        <th className="px-5 py-3 text-right">Amount</th>
+                                        <th className="px-5 py-3 text-center">Action</th>
                                     </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100">
+                                    {invoices.map((inv) => (
+                                        <tr key={inv.id} onClick={() => navigate(`/edit-invoice/${inv.id}`)} className="hover:bg-blue-50 cursor-pointer group">
+                                            <td className="px-5 py-3">{new Date(inv.created_at).toLocaleDateString('en-IN')}</td>
+                                            <td className="px-5 py-3 font-medium text-blue-600">{inv.invoice_no}</td>
+                                            <td className="px-5 py-3">{inv.invoice_data?.buyer_name}</td>
+                                            <td className="px-5 py-3 text-right font-bold">₹{inv.total_amount}</td>
+                                            <td className="px-5 py-3 text-center"><button onClick={(e) => handleDeleteClick(inv.id, e)} className="text-gray-400 hover:text-red-600 p-1 rounded">🗑️</button></td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+
+                            {/* Mobile List View (Visible only on small screens) */}
+                            <div className="md:hidden divide-y divide-gray-100">
+                                {invoices.map((inv) => (
+                                    <div key={inv.id} onClick={() => navigate(`/edit-invoice/${inv.id}`)} className="p-4 active:bg-blue-50 transition-colors cursor-pointer">
+                                        <div className="flex justify-between items-center mb-2">
+                                            <span className="font-bold text-blue-600 text-sm">#{inv.invoice_no}</span>
+                                            <span className="font-bold text-gray-900 text-base">₹{inv.total_amount}</span>
+                                        </div>
+                                        <div className="flex justify-between items-end">
+                                            <div className="flex flex-col gap-0.5">
+                                                <span className="text-sm font-semibold text-gray-800">{inv.invoice_data?.buyer_name}</span>
+                                                <span className="text-xs text-gray-400">{new Date(inv.created_at).toLocaleDateString('en-IN')}</span>
+                                            </div>
+                                            <button onClick={(e) => handleDeleteClick(inv.id, e)} className="text-gray-400 hover:text-red-600 p-2 rounded-full hover:bg-red-50">
+                                                🗑️
+                                            </button>
+                                        </div>
+                                    </div>
                                 ))}
-                            </tbody>
-                        </table>
+                            </div>
+                        </>
                     )}
                 </div>
             </div>
