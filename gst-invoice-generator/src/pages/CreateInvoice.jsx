@@ -168,24 +168,23 @@ export default function CreateInvoice() {
   const totals = calculateTotals(); const amountInWords = totals.grandTotal ? numberToWords(totals.grandTotal) : '';
   const getTaxRateText = (type) => { const rates = new Set(formData.items?.map(i => parseFloat(i.gstRate)).filter(r => r > 0)); if (rates.size === 1) { const r = [...rates][0]; if (type === 'IGST') return `(${r}%)`; if (type === 'CGST' || type === 'SGST') return `(${r/2}%)`; } return ''; }
 
-  // --- PDF GENERATOR (Fix for Empty PDF) ---
   const generatePdfBlob = async (copyType = '') => {
       const originalElement = invoiceRef.current
       if (!originalElement) return null;
 
       const clone = originalElement.cloneNode(true)
       
-      // -- HEADER LABELS --
       if (copyType) {
           const titleElement = clone.querySelector('h1'); 
           if (titleElement) {
               const copyLabel = document.createElement('p');
               
+              // --- GST STANDARD LABELS ---
               if (copyType === 'ORIGINAL') copyLabel.innerText = 'ORIGINAL FOR RECIPIENT';
               else if (copyType === 'DUPLICATE') copyLabel.innerText = 'DUPLICATE FOR TRANSPORTER';
               else if (copyType === 'TRIPLICATE') copyLabel.innerText = 'TRIPLICATE FOR SUPPLIER';
-              else copyLabel.innerText = copyType;
-
+              
+              // --- STYLED HEADER ---
               copyLabel.style.fontSize = '12px';  
               copyLabel.style.fontWeight = 'bold'; 
               copyLabel.style.color = '#ffffff';   
@@ -197,7 +196,6 @@ export default function CreateInvoice() {
           }
       }
 
-      // Force Styles for Capture
       clone.style.width = '794px' 
       clone.style.minHeight = '1122px'
       clone.style.height = 'auto'
@@ -205,36 +203,16 @@ export default function CreateInvoice() {
       clone.style.transform = 'none'
       clone.style.margin = '0'
       clone.style.backgroundColor = 'white'
-      clone.style.display = 'block'
-      // Remove any UI classes
-      clone.classList.remove('w-full', 'lg:w-7/12', 'flex', 'justify-center', 'shadow-2xl', 'p-8', 'hidden', 'lg:flex') 
+      clone.classList.remove('w-full', 'lg:w-7/12', 'flex', 'justify-center', 'shadow-2xl', 'p-8') 
       
       const container = document.createElement('div')
-      
-      // --- FIX FOR EMPTY PDF ---
-      // Use absolute positioning off-screen.
-      // Do NOT use opacity or display: none as they can cause blank captures.
       container.style.position = 'absolute'
-      container.style.left = '-10000px'
       container.style.top = '0'
-      container.style.width = '794px' 
-      container.style.backgroundColor = 'white'
-      
+      container.style.left = '0'
+      container.style.zIndex = '-1000'
+      container.style.width = '794px'
       container.appendChild(clone)
       document.body.appendChild(container)
-
-      // --- CRITICAL FIX: WAIT FOR IMAGES TO LOAD ---
-      const images = Array.from(container.querySelectorAll('img'));
-      await Promise.all(images.map(img => {
-          if (img.complete) return Promise.resolve();
-          return new Promise(resolve => { 
-              img.onload = resolve; 
-              img.onerror = resolve; 
-          });
-      }));
-
-      // --- DELAY FOR RENDERING ---
-      await new Promise(resolve => setTimeout(resolve, 800));
 
       const buyerName = formData.buyer_name || 'Customer'
       const invoiceNum = formData.invoice_no || 'DRAFT'
@@ -246,52 +224,45 @@ export default function CreateInvoice() {
         filename: safeFileName,
         image: { type: 'jpeg', quality: 0.98 },
         enableLinks: true, 
-        html2canvas: { 
-            scale: 2, 
-            useCORS: true, 
-            scrollY: 0, 
-            letterRendering: true,
-            width: 794,
-            windowWidth: 794 
-        },
+        html2canvas: { scale: 2, useCORS: true, scrollY: 0, letterRendering: true, width: 794, windowWidth: 794 },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
       }
       
       try {
-        const pdfBlob = await html2pdf().set(opt).from(container).output('blob')
+        const pdfBlob = await html2pdf().set(opt).from(clone).output('blob')
         document.body.removeChild(container)
         return { blob: pdfBlob, filename: opt.filename }
       } catch (err) {
-        if(document.body.contains(container)) document.body.removeChild(container)
+        document.body.removeChild(container)
         throw err
       }
   }
 
   const handleDownloadPDF = async () => {
     try {
-        // 1. ORIGINAL (Always)
+        // 1. ORIGINAL
         const res1 = await generatePdfBlob('ORIGINAL')
         downloadBlob(res1.blob, res1.filename)
 
-        // 2. DUPLICATE (Sequential with delay)
+        // 2. DUPLICATE (if enabled)
         if (sellerProfile?.print_duplicates) {
             setTimeout(async () => {
                 const res2 = await generatePdfBlob('DUPLICATE')
                 downloadBlob(res2.blob, res2.filename)
-            }, 1000)
+            }, 800)
         }
 
-        // 3. TRIPLICATE (Sequential with delay)
+        // 3. TRIPLICATE (if enabled)
         if (sellerProfile?.print_triplicates) {
             setTimeout(async () => {
                 const res3 = await generatePdfBlob('TRIPLICATE')
                 downloadBlob(res3.blob, res3.filename)
-            }, 2000)
+            }, 1600)
         }
 
-        // Default Single
+        // Default case (if settings loaded late or generic)
         if (!sellerProfile?.print_duplicates && !sellerProfile?.print_triplicates) {
-             // Already downloaded ORIGINAL above
+             // Already downloaded original, do nothing else.
         }
 
     } catch (e) {
@@ -301,6 +272,7 @@ export default function CreateInvoice() {
 
   const handleSendEmail = async () => {
     try {
+        // Similar sequence logic for email generation
         const res1 = await generatePdfBlob('ORIGINAL')
         downloadBlob(res1.blob, res1.filename)
 
@@ -308,14 +280,14 @@ export default function CreateInvoice() {
              setTimeout(async () => {
                 const res2 = await generatePdfBlob('DUPLICATE')
                 downloadBlob(res2.blob, res2.filename)
-             }, 1000)
+             }, 800)
         }
 
         if (sellerProfile?.print_triplicates) {
              setTimeout(async () => {
                 const res3 = await generatePdfBlob('TRIPLICATE')
                 downloadBlob(res3.blob, res3.filename)
-             }, 2000)
+             }, 1600)
         }
 
     } catch (e) {
@@ -329,7 +301,7 @@ export default function CreateInvoice() {
         window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
         
         showPopup('Email Draft Opened', 'The invoice copies have been downloaded.\n\nPlease attach them manually to the email.', 'info', 'Got it');
-    }, 2500)
+    }, 2000)
   }
 
   const downloadBlob = (blob, filename) => {
@@ -730,7 +702,8 @@ export default function CreateInvoice() {
                             <div className="pt-2">
                                 <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2 border-b border-gray-200 pb-1 w-fit pr-8">Bank Details</p>
                                 <div className="grid grid-cols-[80px_1fr] gap-y-1 text-xs w-fit min-w-[200px]">
-                                    <span className="text-gray-500 font-medium">Bank:</span><span className="font-bold text-gray-800">{sellerProfile.bank_name}</span>
+                                    <span className="text-gray-500 font-medium">Bank:</span>
+                                    <span className="font-bold text-gray-800">{sellerProfile.bank_name}</span>
                                     
                                     <span className="text-gray-500 font-medium">A/c No:</span>
                                     <span className="font-bold text-gray-800">{sellerProfile.account_number}</span>
