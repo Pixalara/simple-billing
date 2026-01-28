@@ -167,19 +167,26 @@ export default function Dashboard() {
     showPopup('Delete Invoice?', 'Are you sure?', 'warning', 'Delete', () => confirmDelete(id), 'Cancel')
   }
 
+  // --- UPDATED DELETE FUNCTION ---
   const confirmDelete = async (id) => {
     try {
         const { error } = await supabase.from('invoices').delete().eq('id', id)
+        
         if (error) throw error
+        
+        // UI Update
         const updatedInvoices = invoices.filter(inv => inv.id !== id)
         setInvoices(updatedInvoices)
+        
+        // Stats Update
         const totalRev = updatedInvoices.reduce((acc, curr) => acc + (curr.total_amount || 0), 0)
         setStats({ total: updatedInvoices.length, revenue: totalRev })
         
         closePopup()
         setTimeout(() => showPopup('Deleted', 'Invoice removed.', 'success'), 300)
     } catch (error) {
-        closePopup(); setTimeout(() => showPopup('Error', error.message, 'error'), 300)
+        closePopup(); 
+        setTimeout(() => showPopup('Error', error.message + " (Check RLS Policies)", 'error'), 300)
     }
   }
 
