@@ -168,7 +168,7 @@ export default function CreateInvoice() {
   const totals = calculateTotals(); const amountInWords = totals.grandTotal ? numberToWords(totals.grandTotal) : '';
   const getTaxRateText = (type) => { const rates = new Set(formData.items?.map(i => parseFloat(i.gstRate)).filter(r => r > 0)); if (rates.size === 1) { const r = [...rates][0]; if (type === 'IGST') return `(${r}%)`; if (type === 'CGST' || type === 'SGST') return `(${r/2}%)`; } return ''; }
 
-  // --- UPDATED PDF GENERATOR FOR SINGLE FILE (WITH DELAY FIX) ---
+  // --- ROBUST PDF GENERATOR (Fixes Empty PDF Issue) ---
   const generatePdfBlob = async () => {
       const originalElement = invoiceRef.current
       if (!originalElement) return null;
@@ -177,18 +177,19 @@ export default function CreateInvoice() {
       const createCopy = (label) => {
           const clone = originalElement.cloneNode(true)
           
-          // Force layout styles to prevent collapse
           clone.style.width = '794px' 
           clone.style.minHeight = '1122px'
           clone.style.height = 'auto'
           clone.style.overflow = 'visible'
           clone.style.transform = 'none'
           clone.style.margin = '0'
-          clone.style.padding = '0' // Ensure no padding shift
           clone.style.backgroundColor = 'white'
-          clone.style.position = 'relative'
+          // Remove UI classes
           clone.classList.remove('w-full', 'lg:w-7/12', 'flex', 'justify-center', 'shadow-2xl', 'p-8', 'hidden', 'lg:flex') 
+          // Force visibility logic
           clone.style.display = 'block'
+          clone.style.opacity = '1'
+          clone.style.visibility = 'visible'
           
           if (label) {
               const titleElement = clone.querySelector('h1'); 
@@ -208,16 +209,21 @@ export default function CreateInvoice() {
           return clone;
       }
 
+      // Container for PDF pages
       const container = document.createElement('div')
       
-      // FIX: Position fixed at negative left coordinates to ensure rendering
-      // using z-index sometimes fails with certain rendering engines.
+      // FIX: Position "fixed" so it's in viewport but "behind" everything
+      // Using opacity: 0.01 ensures it's "visible" to the renderer but invisible to user
+      // left: 0 ensures it's within standard viewport coordinates
       container.style.position = 'fixed'
-      container.style.left = '-10000px'
+      container.style.left = '0'
       container.style.top = '0'
       container.style.width = '794px'
-      container.style.zIndex = '9999'
+      container.style.zIndex = '-9999'
+      container.style.opacity = '0.01' 
+      container.style.backgroundColor = '#ffffff' // Ensure white background
       
+      // LOGIC: Original + Duplicate if enabled
       if (sellerProfile?.print_duplicates) {
           container.appendChild(createCopy('ORIGINAL FOR RECIPIENT'));
           
@@ -233,8 +239,19 @@ export default function CreateInvoice() {
 
       document.body.appendChild(container)
 
-      // --- CRITICAL FIX: Add delay to allow DOM/Images to paint ---
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // --- CRITICAL FIX: WAIT FOR IMAGES TO LOAD ---
+      // This prevents blank PDFs caused by images (logos/sigs) not being ready
+      const images = Array.from(container.querySelectorAll('img'));
+      await Promise.all(images.map(img => {
+          if (img.complete) return Promise.resolve();
+          return new Promise(resolve => { 
+              img.onload = resolve; 
+              img.onerror = resolve; 
+          });
+      }));
+
+      // Extra delay for fonts/styles to settle
+      await new Promise(resolve => setTimeout(resolve, 800));
 
       const buyerName = formData.buyer_name || 'Customer'
       const invoiceNum = formData.invoice_no || 'DRAFT'
@@ -250,14 +267,15 @@ export default function CreateInvoice() {
             useCORS: true, 
             scrollY: 0, 
             letterRendering: true,
-            // Removing windowWidth to let it detect the element's natural width
+            width: 794,
+            windowWidth: 1200 // Force a standard window width
         },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
       }
       
       try {
         const pdfBlob = await html2pdf().set(opt).from(container).output('blob')
-        document.body.removeChild(container)
+        if(document.body.contains(container)) document.body.removeChild(container)
         return { blob: pdfBlob, filename: opt.filename }
       } catch (err) {
         if(document.body.contains(container)) document.body.removeChild(container)
