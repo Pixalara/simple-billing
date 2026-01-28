@@ -168,7 +168,7 @@ export default function CreateInvoice() {
   const totals = calculateTotals(); const amountInWords = totals.grandTotal ? numberToWords(totals.grandTotal) : '';
   const getTaxRateText = (type) => { const rates = new Set(formData.items?.map(i => parseFloat(i.gstRate)).filter(r => r > 0)); if (rates.size === 1) { const r = [...rates][0]; if (type === 'IGST') return `(${r}%)`; if (type === 'CGST' || type === 'SGST') return `(${r/2}%)`; } return ''; }
 
-  // --- SEPARATE FILE PDF GENERATOR (Fixed Empty PDF) ---
+  // --- PDF GENERATOR (Fix for Empty PDF) ---
   const generatePdfBlob = async (copyType = '') => {
       const originalElement = invoiceRef.current
       if (!originalElement) return null;
@@ -206,15 +206,14 @@ export default function CreateInvoice() {
       clone.style.margin = '0'
       clone.style.backgroundColor = 'white'
       clone.style.display = 'block'
-      // Remove any hidden classes or responsiveness that could hide it
+      // Remove any UI classes
       clone.classList.remove('w-full', 'lg:w-7/12', 'flex', 'justify-center', 'shadow-2xl', 'p-8', 'hidden', 'lg:flex') 
       
       const container = document.createElement('div')
       
       // --- FIX FOR EMPTY PDF ---
-      // Position off-screen using top/left coordinates.
-      // Do NOT use opacity: 0.01 (causes transparent PDFs).
-      // Do NOT use display: none (causes zero-dimension PDFs).
+      // Use absolute positioning off-screen.
+      // Do NOT use opacity or display: none as they can cause blank captures.
       container.style.position = 'absolute'
       container.style.left = '-10000px'
       container.style.top = '0'
@@ -253,7 +252,7 @@ export default function CreateInvoice() {
             scrollY: 0, 
             letterRendering: true,
             width: 794,
-            windowWidth: 794 // Ensures proper desktop layout even on mobile
+            windowWidth: 794 
         },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
       }
@@ -290,7 +289,7 @@ export default function CreateInvoice() {
             }, 2000)
         }
 
-        // Default Single if nothing selected
+        // Default Single
         if (!sellerProfile?.print_duplicates && !sellerProfile?.print_triplicates) {
              // Already downloaded ORIGINAL above
         }
