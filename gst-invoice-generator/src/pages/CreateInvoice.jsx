@@ -254,6 +254,7 @@ export default function CreateInvoice() {
       }
       
       try {
+        // Changed to use container instead of clone for better reliability
         const pdfBlob = await html2pdf().set(opt).from(container).output('blob')
         document.body.removeChild(container)
         return { blob: pdfBlob, filename: opt.filename }
@@ -500,7 +501,7 @@ export default function CreateInvoice() {
                             onChange={(selected) => handleItemSelect(index, selected)}
                         />
                     </div>
-                    {/* --- ADDED GRID LAYOUT FOR HSN INPUT --- */}
+                    {/* --- ADDED GRID LAYOUT WITH HSN INPUT --- */}
                     <div className="grid grid-cols-12 gap-2 mt-2">
                         <div className="col-span-3">
                             <label className="text-xs text-gray-500">HSN Code</label>
@@ -768,8 +769,7 @@ export default function CreateInvoice() {
       <div className="w-full mt-auto">
           <BrandingFooter />
       </div>
-
-    </div>
+</div>
     </div>
   )
 }
