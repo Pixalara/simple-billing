@@ -168,9 +168,17 @@ export default function CreateInvoice() {
   }, [mobileTab])
   
   const handleImageUpload = (e) => { const file = e.target.files[0]; if (file) { const reader = new FileReader(); reader.onloadend = () => setSignaturePreview(reader.result); reader.readAsDataURL(file) } }
-  const handleItemSelect = (index, item) => { setValue(`items.${index}.description`, item.description); if (item.code) setValue(`items.${index}.hsn`, item.code); if (item.rate) setValue(`items.${index}.gstRate`, item.rate) }
+  
+  const handleItemSelect = (index, item) => { 
+      setValue(`items.${index}.description`, item.description); 
+      if (item.code) setValue(`items.${index}.hsn`, item.code); 
+      if (item.rate) setValue(`items.${index}.gstRate`, item.rate) 
+  }
+  
   const calculateTotals = () => { let s=0,t=0; (formData.items||[]).forEach(i=>{const q=parseFloat(i.quantity)||0,p=parseFloat(i.price)||0,r=parseFloat(i.gstRate)||0,l=q*p; s+=l; t+=(l*r)/100}); const isInter=sellerProfile?.state&&formData.buyer_state&&(sellerProfile.state!==formData.buyer_state); return { subtotal: s.toFixed(2), cgst: isInter?0:(t/2).toFixed(2), sgst: isInter?0:(t/2).toFixed(2), igst: isInter?t.toFixed(2):0, grandTotal: (s+t).toFixed(2) } }
+  
   const totals = calculateTotals(); const amountInWords = totals.grandTotal ? numberToWords(totals.grandTotal) : '';
+  
   const getTaxRateText = (type) => { const rates = new Set(formData.items?.map(i => parseFloat(i.gstRate)).filter(r => r > 0)); if (rates.size === 1) { const r = [...rates][0]; if (type === 'IGST') return `(${r}%)`; if (type === 'CGST' || type === 'SGST') return `(${r/2}%)`; } return ''; }
 
   const generatePdfBlob = async (copyType = '') => {
@@ -183,9 +191,12 @@ export default function CreateInvoice() {
           const titleElement = clone.querySelector('h1'); 
           if (titleElement) {
               const copyLabel = document.createElement('p');
-              copyLabel.innerText = copyType === 'ORIGINAL' ? 'ORIGINAL FOR RECIPIENT' : 
-                                   copyType === 'DUPLICATE' ? 'DUPLICATE FOR SUPPLIER' : 
-                                   'TRIPLICATE FOR TRANSPORTER';
+              
+              if (copyType === 'ORIGINAL') copyLabel.innerText = 'ORIGINAL FOR RECIPIENT';
+              else if (copyType === 'DUPLICATE') copyLabel.innerText = 'DUPLICATE FOR TRANSPORTER';
+              else if (copyType === 'TRIPLICATE') copyLabel.innerText = 'TRIPLICATE FOR SUPPLIER';
+              else copyLabel.innerText = copyType;
+
               copyLabel.style.fontSize = '12px';  
               copyLabel.style.fontWeight = 'bold'; 
               copyLabel.style.color = '#ffffff';   
@@ -271,6 +282,10 @@ export default function CreateInvoice() {
             }, 2000)
         }
 
+        if (!sellerProfile?.print_duplicates && !sellerProfile?.print_triplicates) {
+             // Already downloaded ORIGINAL
+        }
+
     } catch (e) {
         showPopup('Error', 'Failed to generate PDF.', 'error');
     }
@@ -316,24 +331,7 @@ export default function CreateInvoice() {
       a.click()
   }
 
-  const handleShare = async () => { 
-    setSharing(true); 
-    try { 
-      const result = await generatePdfBlob(); 
-      if(!result) return; 
-      const file = new File([result.blob], result.filename, { type: 'application/pdf' }); 
-      if (navigator.canShare && navigator.canShare({ files: [file] })) { 
-        await navigator.share({ files: [file], title: 'Invoice', text: `Invoice from ${sellerProfile?.business_name}` }) 
-      } else { 
-        downloadBlob(result.blob, result.filename); 
-        showPopup('Downloaded', 'Browser doesn\'t support sharing.', 'info'); 
-      } 
-    } catch(e){ 
-      showPopup('Error','Failed share','error') 
-    } finally { 
-      setSharing(false) 
-    } 
-  }
+  const handleShare = async () => { setSharing(true); try { const result = await generatePdfBlob(); if(!result) return; const file = new File([result.blob], result.filename, { type: 'application/pdf' }); if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: 'Invoice', text: `Invoice from ${sellerProfile?.business_name}` }) } else { downloadBlob(result.blob, result.filename); showPopup('Downloaded', 'Browser doesn\'t support sharing.', 'info'); } } catch(e){ showPopup('Error','Failed share','error') } finally { setSharing(false) } }
   
   const onSubmit = async (data) => { 
       setLoading(true); 
@@ -410,385 +408,359 @@ export default function CreateInvoice() {
             visibility: visible !important;
             width: 100% !important;
             max-width: 210mm !important;
-            height: auto !important;
-            transform: none !important;
+            margin: 0 auto !important;
             box-shadow: none !important;
+            border: none !important;
           }
         }
       `}</style>
+      
+      {/* --- MOBILE TABS --- */}
+      <div className="lg:hidden sticky top-0 z-20 bg-white border-b flex text-sm font-bold shadow-sm">
+        <button onClick={() => setMobileTab('edit')} className={`flex-1 py-3 text-center ${mobileTab === 'edit' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500'}`}>✎ Editor</button>
+        <button onClick={() => setMobileTab('preview')} className={`flex-1 py-3 text-center ${mobileTab === 'preview' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500'}`}>👁 Preview</button>
+      </div>
 
-      <div className="w-full flex flex-col lg:flex-row gap-0 lg:gap-4 flex-1 no-print">
-        
-        {/* MOBILE TAB SWITCHER */}
-        <div className="lg:hidden sticky top-0 z-50 bg-white border-b shadow-sm">
-            <div className="flex">
-                <button 
-                    onClick={() => setMobileTab('edit')} 
-                    className={`flex-1 py-3 text-sm font-bold transition-colors ${mobileTab === 'edit' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}
-                >
-                    ✏️ Edit
-                </button>
-                <button 
-                    onClick={() => setMobileTab('preview')} 
-                    className={`flex-1 py-3 text-sm font-bold transition-colors ${mobileTab === 'preview' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}
-                >
-                    👁️ Preview
-                </button>
-            </div>
-        </div>
-
-        {/* LEFT PANEL: FORM */}
-        <div className={`w-full lg:w-5/12 bg-white lg:rounded-xl shadow-lg p-4 md:p-6 overflow-y-auto ${mobileTab === 'preview' ? 'hidden lg:block' : 'block'}`}>
-          <div className="flex justify-between items-center mb-4 pb-3 border-b">
-            <h2 className="text-2xl font-bold text-gray-800">
-              {id ? '✏️ Edit Invoice' : '➕ Create Invoice'}
-            </h2>
-            <button onClick={() => navigate('/dashboard')} className="text-sm text-blue-600 hover:underline font-semibold">
-              ← Dashboard
-            </button>
-          </div>
-
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <div className="flex flex-col lg:flex-row gap-6 flex-1">
+        {/* --- LEFT SIDE: EDITOR --- */}
+        <div className={`w-full lg:w-5/12 bg-white p-4 md:p-6 rounded-lg shadow-lg h-fit overflow-y-auto max-h-screen custom-scrollbar ${mobileTab === 'preview' ? 'hidden lg:block' : 'block'}`}>
             
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg border border-blue-200">
-              <label className="text-xs font-bold text-gray-600 mb-2 block">Choose Theme Color</label>
-              <div className="flex gap-2 flex-wrap">
+            <button 
+            onClick={() => navigate('/dashboard')}
+            className="flex items-center text-sm text-gray-500 hover:text-gray-800 mb-4 transition-colors font-medium"
+            >
+            ← Back to Dashboard
+            </button>
+
+            <div className="flex justify-between items-center mb-4 border-t pt-4">
+            <h2 className="text-xl font-bold text-gray-800">{id ? 'Edit Invoice' : 'New Invoice'}</h2>
+            <div className="flex gap-2">
                 {THEMES.map((t) => (
-                  <button
-                    key={t.name}
-                    type="button"
-                    onClick={() => setTheme(t)}
-                    className={`px-4 py-2 rounded-lg font-bold text-xs transition-all ${
-                      theme.hex === t.hex 
-                        ? 'ring-4 ring-blue-500 scale-110 shadow-lg' 
-                        : 'opacity-60 hover:opacity-100'
-                    }`}
-                    style={{ backgroundColor: t.hex, color: t.text }}
-                  >
-                    {t.name}
-                  </button>
+                <button key={t.name} onClick={() => setTheme(t)} className={`w-6 h-6 rounded-full border-2 ${theme.name === t.name ? 'border-black scale-110' : 'border-transparent'}`} style={{ backgroundColor: t.hex }} />
                 ))}
-              </div>
+            </div>
+            </div>
+
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+                <div>
+                <label className="text-xs text-gray-500">Invoice No</label>
+                <input 
+                    {...register('invoice_no')} 
+                    className={`w-full p-2 border rounded text-sm ${!manualInvoiceEnabled ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : 'bg-white'}`}
+                    readOnly={!manualInvoiceEnabled}
+                    onChange={(e) => setValue('invoice_no', e.target.value.toUpperCase())}
+                />
+                </div>
+                <div>
+                <label className="text-xs text-gray-500">Date</label>
+                <input type="date" {...register('invoiceDate')} className="w-full p-2 border rounded text-sm" />
+                </div>
+            </div>
+            <div>
+                <label className="text-xs text-gray-500">Due Date</label>
+                <input type="date" {...register('dueDate')} className="w-full p-2 border rounded text-sm" />
+            </div>
+
+            <div className="bg-gray-50 p-3 rounded border">
+                <h3 className="text-sm font-semibold mb-2 text-gray-700">Bill To</h3>
+                
+                <input 
+                    {...register('buyer_name')} 
+                    placeholder="Client Name" 
+                    className="w-full p-2 border rounded mb-2 text-sm" 
+                    onChange={(e) => setValue('buyer_name', e.target.value.toUpperCase())}
+                />
+                
+                <select {...register('buyer_state')} className="w-full p-2 border rounded mb-2 text-sm">
+                    <option value="">Select State</option>
+                    {INDIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+                
+                <input 
+                    {...register('buyer_gstin')} 
+                    placeholder="GSTIN (Optional)" 
+                    className="w-full p-2 border rounded text-sm" 
+                    onChange={(e) => setValue('buyer_gstin', e.target.value.toUpperCase())}
+                />
+                
+                <input {...register('buyer_address')} placeholder="Address" className="w-full p-2 border rounded mt-2 text-sm" />
             </div>
 
             <div>
-              <label className="text-xs text-gray-500">Invoice No</label>
-              <input 
-                {...register('invoice_no')} 
-                className="w-full p-2 border rounded text-sm bg-gray-50" 
-                placeholder="Auto-generated or Manual"
-                disabled={!manualInvoiceEnabled && !id}
-              />
-              {!manualInvoiceEnabled && !id && (
-                <p className="text-xs text-gray-400 mt-1">Auto-generated. Enable manual mode in settings.</p>
-              )}
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs text-gray-500">Invoice Date</label>
-                <input {...register('invoiceDate')} type="date" className="w-full p-2 border rounded text-sm" />
-              </div>
-              <div>
-                <label className="text-xs text-gray-500">Due Date (Optional)</label>
-                <input {...register('dueDate')} type="date" className="w-full p-2 border rounded text-sm" />
-              </div>
-            </div>
-
-            <div className="pt-4 border-t">
-              <h3 className="text-sm font-bold text-gray-700 mb-3">Bill To</h3>
-              <div className="space-y-2">
-                <input {...register('buyer_name')} placeholder="Customer Name" className="w-full p-2 border rounded text-sm" />
-                <textarea {...register('buyer_address')} placeholder="Address" rows="2" className="w-full p-2 border rounded text-sm"></textarea>
-                <SearchableSelect
-                  options={INDIAN_STATES}
-                  placeholder="Select State"
-                  onSelect={(val) => setValue('buyer_state', val)}
-                  value={formData.buyer_state}
-                />
-                <input {...register('buyer_gstin')} placeholder="GSTIN (Optional)" className="w-full p-2 border rounded text-sm" />
-              </div>
-            </div>
-
-            <div className="pt-4 border-t">
-              <h3 className="text-sm font-bold text-gray-700 mb-3">Items / Services</h3>
-              {fields.map((field, index) => (
-                <div key={field.id} className="mb-4 p-3 border rounded bg-gray-50">
-                  <SearchableSelect
-                    options={HSN_CODES}
-                    placeholder="Search Item or HSN"
-                    onSelect={(item) => handleItemSelect(index, item)}
-                    value={formData.items?.[index]?.description || ''}
-                    displayKey="description"
-                  />
-                  <div className="flex gap-2 mt-2">
-                      <div className="flex-1">
-                          <label className="text-xs text-gray-500">HSN Code</label>
-                          <input {...register(`items.${index}.hsn`)} className="w-full p-2 border rounded text-sm" />
-                      </div>
-                      <div className="w-1/3">
-                          <label className="text-xs text-gray-500">Price</label>
-                          <input {...register(`items.${index}.price`)} type="number" step="0.01" className="w-full p-2 border rounded text-sm" />
-                      </div>
-                      <div className="w-1/5">
-                          <label className="text-xs text-gray-500">Qty</label>
-                          <input {...register(`items.${index}.quantity`)} type="number" className="w-full p-2 border rounded text-sm" />
-                      </div>
-                      <div className="w-2/5">
-                          <label className="text-xs text-gray-500">GST %</label>
-                          <select {...register(`items.${index}.gstRate`)} className="w-full p-2 border rounded text-sm">
-                              <option value="0">0%</option>
-                              <option value="5">5%</option>
-                              <option value="12">12%</option>
-                              <option value="18">18%</option>
-                              <option value="28">28%</option>
-                          </select>
-                      </div>
-                  </div>
-                  <button type="button" onClick={() => remove(index)} className="text-red-500 text-xs text-right hover:underline mt-1">
-                    🗑️ Remove Item
-                  </button>
+                <h3 className="text-sm font-semibold mb-2 text-gray-700">Items</h3>
+                {fields.map((item, index) => (
+                <div key={item.id} className="flex flex-col gap-2 mb-4 p-3 bg-gray-50 rounded border">
+                    <div className="w-full">
+                        <label className="text-xs text-gray-500 font-bold">Search Item</label>
+                        <SearchableSelect 
+                            options={HSN_CODES} 
+                            value={formData.items[index]?.description}
+                            placeholder="Start typing..."
+                            onChange={(selected) => handleItemSelect(index, selected)}
+                        />
+                    </div>
+                    {/* --- FIXED: MANUAL HSN INPUT ADDED HERE --- */}
+                    <div className="grid grid-cols-12 gap-2 mt-2">
+                        <div className="col-span-3">
+                            <label className="text-xs text-gray-500">HSN</label>
+                            <input {...register(`items.${index}.hsn`)} placeholder="Code" className="w-full p-2 border rounded text-sm" />
+                        </div>
+                        <div className="col-span-4">
+                            <label className="text-xs text-gray-500">Price</label>
+                            <input {...register(`items.${index}.price`)} type="number" className="w-full p-2 border rounded text-sm" />
+                        </div>
+                        <div className="col-span-2">
+                            <label className="text-xs text-gray-500">Qty</label>
+                            <input {...register(`items.${index}.quantity`)} type="number" className="w-full p-2 border rounded text-sm" />
+                        </div>
+                        <div className="col-span-3">
+                            <label className="text-xs text-gray-500">GST %</label>
+                            <select {...register(`items.${index}.gstRate`)} className="w-full p-2 border rounded text-sm">
+                                <option value="0">0%</option>
+                                <option value="5">5%</option>
+                                <option value="12">12%</option>
+                                <option value="18">18%</option>
+                                <option value="28">28%</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button type="button" onClick={() => remove(index)} className="text-red-500 text-xs text-right hover:underline mt-1">Remove Item</button>
                 </div>
-              ))}
-              <button type="button" onClick={() => append({ description: '', hsn: '', quantity: 1, price: 0, gstRate: 18 })} className="text-blue-600 text-sm font-bold p-1 hover:underline">
-                + Add Another Item
-              </button>
+                ))}
+                <button type="button" onClick={() => append({ description: '', hsn: '', quantity: 1, price: 0, gstRate: 18 })} className="text-blue-600 text-sm font-bold p-1">
+                + Add Item
+                </button>
             </div>
 
             <div className="space-y-3">
-               <div className="bg-gray-50 p-3 rounded border">
-                  <div className="flex justify-between items-center mb-2">
-                      <label className="text-xs font-bold text-gray-500">Signature</label>
-                      {signaturePreview && <span className="text-xs text-green-600 font-semibold">✓ Loaded</span>}
-                  </div>
-                  <input type="file" accept="image/*" onChange={handleImageUpload} className="block w-full text-sm text-gray-500 mt-1" />
-              </div>
-              <div>
-                <label className="text-xs text-gray-500">Terms & Conditions</label>
+                <div className="bg-gray-50 p-3 rounded border">
+                    <div className="flex justify-between items-center mb-2">
+                        <label className="text-xs font-bold text-gray-500">Signature</label>
+                        {signaturePreview && <span className="text-xs text-green-600 font-semibold">✓ Loaded from Profile</span>}
+                    </div>
+                    <input type="file" accept="image/*" onChange={handleImageUpload} className="block w-full text-sm text-gray-500 mt-1" />
+                </div>
+                <div>
+                <label className="text-xs text-gray-500">Terms</label>
                 <textarea {...register('terms')} rows="3" className="w-full p-2 border rounded text-sm"></textarea>
-              </div>
+                </div>
             </div>
 
             <div className="flex flex-col gap-3 pt-4 border-t sticky bottom-0 bg-white z-10 pb-4 md:pb-0">
-              <button type="button" onClick={handleShare} disabled={sharing} className="w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 font-bold shadow flex items-center justify-center gap-2">
-                 {sharing ? 'Generating...' : '📤 Share Invoice'} 
-              </button>
+                <button type="button" onClick={handleShare} disabled={sharing} className="w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 font-bold shadow flex items-center justify-center gap-2">
+                {sharing ? '...' : 'Share Invoice'} 
+                <span className="text-xs font-normal opacity-75">(WhatsApp)</span>
+                </button>
 
-              <div className="flex gap-2">
-                  <button type="button" onClick={handleSendEmail} className="flex-1 bg-gray-200 text-gray-800 py-3 rounded hover:bg-gray-300 font-bold">
-                    📧 Email
-                  </button>
-                  <button type="button" onClick={handleDownloadPDF} className="flex-1 bg-gray-900 text-white py-3 rounded hover:bg-black font-bold">
-                    📥 Download
-                  </button>
-                  <button type="submit" disabled={loading} className="flex-1 bg-blue-600 text-white py-3 rounded hover:bg-blue-700 font-bold">
-                      {loading ? '...' : (id ? '💾 Update' : '💾 Save')}
-                  </button>
-              </div>
+                <div className="flex gap-2">
+                    <button type="button" onClick={handleSendEmail} className="flex-1 bg-gray-200 text-gray-800 py-3 rounded hover:bg-gray-300 font-bold">Send Email</button>
+                    <button type="button" onClick={handleDownloadPDF} className="flex-1 bg-gray-900 text-white py-3 rounded hover:bg-black font-bold">PDF</button>
+                    <button type="submit" disabled={loading} className="flex-1 bg-blue-600 text-white py-3 rounded hover:bg-blue-700 font-bold">
+                        {loading ? '...' : (id ? 'Update' : 'Save')}
+                    </button>
+                </div>
             </div>
-          </form>
+            </form>
         </div>
 
-        {/* RIGHT PANEL: PREVIEW */}
+        {/* --- RIGHT SIDE: PREVIEW --- */}
         <div 
-          ref={containerRef}
-          className={`w-full lg:w-7/12 flex justify-center bg-gray-300 p-0 md:p-8 overflow-auto ${mobileTab === 'edit' ? 'hidden lg:flex' : 'flex'}`}
+            ref={containerRef}
+            className={`w-full lg:w-7/12 flex justify-center bg-gray-300 p-0 md:p-8 overflow-hidden ${mobileTab === 'edit' ? 'hidden lg:flex' : 'flex'}`}
         >
-          <div 
-              id="print-scaler" 
-              className="flex justify-center origin-top p-4 md:p-0 transition-transform duration-200 ease-out"
-              style={{ 
-                  transform: `scale(${previewScale})`, 
-                  transformOrigin: 'top center',
-                  height: previewScale < 1 ? `${(297 * 3.78 * previewScale) + 30}px` : 'auto' 
-              }}
-          >
-              <div 
-                  id="invoice-preview" 
-                  ref={invoiceRef} 
-                  className="bg-white shadow-2xl relative shrink-0" 
-                  style={{ width: '210mm', minHeight: '297mm', padding: '0' }}
-              >
-              
-              <div className="px-6 py-4 flex justify-between" style={{ backgroundColor: theme.hex, color: theme.text }}>
-                  <div style={{ width: '50%' }}>
-                      {sellerProfile?.logo_url && (
-                          <img 
-                              src={sellerProfile.logo_url} 
-                              alt="Logo" 
-                              crossOrigin="anonymous" 
-                              className="h-12 w-auto mb-1 object-contain bg-white rounded p-0.5" 
-                          />
-                      )}
-                      <h1 className="text-2xl font-bold uppercase tracking-wide">Invoice</h1>
-                      <p className="opacity-80 text-xs"># {formData.invoice_no || 'DRAFT'}</p>
-                  </div>
-                  <div className="text-right" style={{ width: '50%' }}>
-                      <h2 className="text-3xl font-bold leading-tight mb-1">{sellerProfile?.business_name || 'Your Business Name'}</h2>
-                      <p className="opacity-90 text-sm leading-tight">{sellerProfile?.state}</p>
-                      {sellerProfile?.business_email && <p className="opacity-90 text-sm leading-tight">{sellerProfile.business_email}</p>}
-                      {sellerProfile?.business_phone && <p className="opacity-90 text-sm leading-tight">{sellerProfile.business_phone}</p>}
-                      {sellerProfile?.website && <p className="opacity-90 text-sm leading-tight">{sellerProfile.website}</p>}
-                      {sellerProfile?.gstin && <p className="font-semibold mt-1 text-base">GSTIN: {sellerProfile.gstin}</p>}
-                  </div>
-              </div>
+            <div 
+                id="print-scaler" 
+                className="flex justify-center origin-top p-4 md:p-0 transition-transform duration-200 ease-out"
+                style={{ 
+                    transform: `scale(${previewScale})`, 
+                    transformOrigin: 'top center',
+                    height: previewScale < 1 ? `${(297 * 3.78 * previewScale) + 30}px` : 'auto' 
+                }}
+            >
+                <div 
+                    id="invoice-preview" 
+                    ref={invoiceRef} 
+                    className="bg-white shadow-2xl relative shrink-0" 
+                    style={{ width: '210mm', minHeight: '297mm', padding: '0' }}
+                >
+                
+                <div className="px-6 py-4 flex justify-between" style={{ backgroundColor: theme.hex, color: theme.text }}>
+                    <div style={{ width: '50%' }}>
+                        {sellerProfile?.logo_url && (
+                            <img 
+                                src={sellerProfile.logo_url} 
+                                alt="Logo" 
+                                crossOrigin="anonymous" 
+                                className="h-12 w-auto mb-1 object-contain bg-white rounded p-0.5" 
+                            />
+                        )}
+                        <h1 className="text-2xl font-bold uppercase tracking-wide">Invoice</h1>
+                        <p className="opacity-80 text-xs"># {formData.invoice_no || 'DRAFT'}</p>
+                    </div>
+                    <div className="text-right" style={{ width: '50%' }}>
+                        <h2 className="text-3xl font-bold leading-tight mb-1">{sellerProfile?.business_name || 'Your Business Name'}</h2>
+                        <p className="opacity-90 text-sm leading-tight">{sellerProfile?.state}</p>
+                        {sellerProfile?.business_email && <p className="opacity-90 text-sm leading-tight">{sellerProfile.business_email}</p>}
+                        {sellerProfile?.business_phone && <p className="opacity-90 text-sm leading-tight">{sellerProfile.business_phone}</p>}
+                        
+                        {/* WEBSITE URL (Updated) */}
+                        {sellerProfile?.website && <p className="opacity-90 text-sm leading-tight">{sellerProfile.website}</p>}
+                        
+                        {sellerProfile?.gstin && <p className="font-semibold mt-1 text-base">GSTIN: {sellerProfile.gstin}</p>}
+                    </div>
+                </div>
 
-              <div className="px-6 py-4 pb-12">
-                  <div className="flex justify-between mb-6">
-                      <div style={{ width: '60%' }}>
-                          <h3 className="text-gray-500 text-[10px] uppercase font-bold mb-1">Bill To</h3>
-                          <p className="text-base font-bold text-gray-800 leading-tight">{formData.buyer_name || 'Client Name'}</p>
-                          <p className="text-gray-600 text-xs whitespace-pre-wrap leading-tight">{formData.buyer_address}</p>
-                          <p className="text-gray-600 text-xs">{formData.buyer_state}</p>
-                          {formData.buyer_gstin && <p className="text-xs font-semibold mt-1">GSTIN: {formData.buyer_gstin}</p>}
-                      </div>
-                      <div className="text-right" style={{ width: '35%' }}>
-                          <div className="grid grid-cols-[auto_auto] gap-x-3 justify-end items-baseline">
-                              <span className="text-gray-500 text-xs text-right">Date:</span>
-                              <span className="font-semibold text-sm text-right">{formatDate(formData.invoiceDate)}</span>
-                              
-                              {formData.dueDate && (
-                                  <>
-                                      <span className="text-gray-500 text-xs text-right">Due Date:</span>
-                                      <span className="font-semibold text-sm text-right">{formatDate(formData.dueDate)}</span>
-                                  </>
-                              )}
-                          </div>
-                      </div>
-                  </div>
+                <div className="px-6 py-4 pb-12">
+                    <div className="flex justify-between mb-6">
+                        <div style={{ width: '60%' }}>
+                            <h3 className="text-gray-500 text-[10px] uppercase font-bold mb-1">Bill To</h3>
+                            <p className="text-base font-bold text-gray-800 leading-tight">{formData.buyer_name || 'Client Name'}</p>
+                            <p className="text-gray-600 text-xs whitespace-pre-wrap leading-tight">{formData.buyer_address}</p>
+                            <p className="text-gray-600 text-xs">{formData.buyer_state}</p>
+                            {formData.buyer_gstin && <p className="text-xs font-semibold mt-1">GSTIN: {formData.buyer_gstin}</p>}
+                        </div>
+                        <div className="text-right" style={{ width: '35%' }}>
+                            <div className="grid grid-cols-[auto_auto] gap-x-3 justify-end items-baseline">
+                                <span className="text-gray-500 text-xs text-right">Date:</span>
+                                <span className="font-semibold text-sm text-right">{formatDate(formData.invoiceDate)}</span>
+                                
+                                {formData.dueDate && (
+                                    <>
+                                        <span className="text-gray-500 text-xs text-right">Due Date:</span>
+                                        <span className="font-semibold text-sm text-right">{formatDate(formData.dueDate)}</span>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+                    </div>
 
-                  <div style={{ width: '740px', display: 'block', margin: '0 auto 24px auto' }}>
-                      <table style={{ width: '740px', tableLayout: 'fixed', borderCollapse: 'collapse' }}>
-                          <thead>
-                              <tr style={{ backgroundColor: theme.hex, color: theme.text }}>
-                                  <th style={{ 
-                                      width: '300px', 
-                                      height: '35px', 
-                                      maxHeight: '35px',
-                                      overflow: 'hidden',
-                                      verticalAlign: 'middle', 
-                                      backgroundColor: theme.hex, 
-                                      color: theme.text 
-                                  }}>
-                                      <div style={{ display: 'flex', alignItems: 'center', height: '100%', paddingLeft: '12px', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }}>ITEM</div>
-                                  </th>
-                                  <th style={{ width: '110px', height: '35px', maxHeight: '35px', overflow: 'hidden', verticalAlign: 'middle', backgroundColor: theme.hex, color: theme.text }}>
-                                      <div style={{ display: 'flex', alignItems: 'center', height: '100%', paddingLeft: '8px', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }}>HSN</div>
-                                  </th>
-                                  <th style={{ width: '70px', height: '35px', maxHeight: '35px', overflow: 'hidden', verticalAlign: 'middle', backgroundColor: theme.hex, color: theme.text }}>
-                                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }}>QTY</div>
-                                  </th>
-                                  <th style={{ width: '120px', height: '35px', maxHeight: '35px', overflow: 'hidden', verticalAlign: 'middle', backgroundColor: theme.hex, color: theme.text }}>
-                                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', height: '100%', paddingRight: '12px', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }}>PRICE</div>
-                                  </th>
-                                  <th style={{ width: '140px', height: '35px', maxHeight: '35px', overflow: 'hidden', verticalAlign: 'middle', backgroundColor: theme.hex, color: theme.text }}>
-                                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', height: '100%', paddingRight: '12px', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }}>TOTAL</div>
-                                  </th>
-                              </tr>
-                          </thead>
-                          <tbody>
-                              {formData.items?.map((item, i) => {
-                                  const amount = ((item.quantity||0) * (item.price||0));
-                                  return (
-                                      <tr key={i} style={{ borderBottom: '1px solid #e5e7eb' }}>
-                                          <td style={{ width: '300px', padding: '8px 0 8px 12px', verticalAlign: 'top' }}>
-                                              <p style={{ fontWeight: 600, fontSize: '13px', margin: 0, color: '#1f2937' }}>{item.description}</p>
-                                          </td>
-                                          <td style={{ width: '110px', padding: '8px 0 8px 12px', verticalAlign: 'top', fontSize: '12px', color: '#4b5563' }}>{item.hsn}</td>
-                                          <td style={{ width: '70px', padding: '8px 0', textAlign: 'center', verticalAlign: 'top', fontSize: '13px', color: '#1f2937' }}>{item.quantity}</td>
-                                          <td style={{ width: '120px', padding: '8px 12px 8px 0', textAlign: 'right', verticalAlign: 'top', fontSize: '13px', color: '#1f2937' }}>₹{item.price}</td>
-                                          <td style={{ width: '140px', padding: '8px 12px 8px 0', textAlign: 'right', verticalAlign: 'top', fontWeight: 'bold', fontSize: '13px', color: '#1f2937' }}>₹{(amount).toFixed(2)}</td>
-                                      </tr>
-                                  )
-                              })}
-                          </tbody>
-                      </table>
-                  </div>
-                  
-                  <div className="flex justify-end">
-                      <div className="w-5/12 space-y-1 border-b pb-3">
-                          <div className="flex justify-between text-gray-600 text-sm">
-                            <span>Subtotal</span>
-                            <span>₹{totals.subtotal}</span>
-                          </div>
-                          {parseFloat(totals.igst) > 0 ? (
-                          <div className="flex justify-between text-gray-600 text-xs">
-                              <span>IGST {getTaxRateText('IGST')}</span>
-                              <span>₹{totals.igst}</span>
-                          </div>
-                          ) : (
-                          <>
-                              <div className="flex justify-between text-gray-600 text-xs">
-                                  <span>CGST {getTaxRateText('CGST')}</span>
-                                  <span>₹{totals.cgst}</span>
-                              </div>
-                              <div className="flex justify-between text-gray-600 text-xs">
-                                  <span>SGST {getTaxRateText('SGST')}</span>
-                                  <span>₹{totals.sgst}</span>
-                              </div>
-                          </>
-                          )}
-                          <div className="flex justify-between py-2 text-xl font-bold" style={{ color: theme.hex }}>
-                              <span>Total</span>
-                              <span>₹{totals.grandTotal}</span>
-                          </div>
-                      </div>
-                  </div>
+                    <div style={{ width: '740px', display: 'block', margin: '0 auto 24px auto' }}>
+                        <table style={{ width: '740px', tableLayout: 'fixed', borderCollapse: 'collapse' }}>
+                            <thead>
+                                <tr style={{ backgroundColor: theme.hex, color: theme.text }}>
+                                    <th style={{ 
+                                        width: '300px', 
+                                        height: '35px', 
+                                        maxHeight: '35px',
+                                        overflow: 'hidden',
+                                        verticalAlign: 'middle', 
+                                        backgroundColor: theme.hex, 
+                                        color: theme.text 
+                                    }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', height: '100%', paddingLeft: '12px', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }}>ITEM</div>
+                                    </th>
+                                    <th style={{ width: '110px', height: '35px', maxHeight: '35px', overflow: 'hidden', verticalAlign: 'middle', backgroundColor: theme.hex, color: theme.text }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', height: '100%', paddingLeft: '8px', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }}>HSN</div>
+                                    </th>
+                                    <th style={{ width: '70px', height: '35px', maxHeight: '35px', overflow: 'hidden', verticalAlign: 'middle', backgroundColor: theme.hex, color: theme.text }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }}>QTY</div>
+                                    </th>
+                                    <th style={{ width: '120px', height: '35px', maxHeight: '35px', overflow: 'hidden', verticalAlign: 'middle', backgroundColor: theme.hex, color: theme.text }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', height: '100%', paddingRight: '12px', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }}>PRICE</div>
+                                    </th>
+                                    <th style={{ width: '140px', height: '35px', maxHeight: '35px', overflow: 'hidden', verticalAlign: 'middle', backgroundColor: theme.hex, color: theme.text }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', height: '100%', paddingRight: '12px', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }}>TOTAL</div>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {formData.items?.map((item, i) => {
+                                    const amount = ((item.quantity||0) * (item.price||0));
+                                    return (
+                                        <tr key={i} style={{ borderBottom: '1px solid #e5e7eb' }}>
+                                            <td style={{ width: '300px', padding: '8px 0 8px 12px', verticalAlign: 'top' }}>
+                                                <p style={{ fontWeight: 600, fontSize: '13px', margin: 0, color: '#1f2937' }}>{item.description}</p>
+                                            </td>
+                                            <td style={{ width: '110px', padding: '8px 0 8px 12px', verticalAlign: 'top', fontSize: '12px', color: '#4b5563' }}>{item.hsn}</td>
+                                            <td style={{ width: '70px', padding: '8px 0', textAlign: 'center', verticalAlign: 'top', fontSize: '13px', color: '#1f2937' }}>{item.quantity}</td>
+                                            <td style={{ width: '120px', padding: '8px 12px 8px 0', textAlign: 'right', verticalAlign: 'top', fontSize: '13px', color: '#1f2937' }}>₹{item.price}</td>
+                                            <td style={{ width: '140px', padding: '8px 12px 8px 0', textAlign: 'right', verticalAlign: 'top', fontWeight: 'bold', fontSize: '13px', color: '#1f2937' }}>₹{(amount).toFixed(2)}</td>
+                                        </tr>
+                                    )
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div className="flex justify-end">
+                        <div className="w-5/12 space-y-1 border-b pb-3">
+                            <div className="flex justify-between text-gray-600 text-sm"><span>Subtotal</span><span>₹{totals.subtotal}</span></div>
+                            {parseFloat(totals.igst) > 0 ? (
+                            <div className="flex justify-between text-gray-600 text-xs">
+                                <span>IGST {getTaxRateText('IGST')}</span>
+                                <span>₹{totals.igst}</span>
+                            </div>
+                            ) : (
+                            <>
+                                <div className="flex justify-between text-gray-600 text-xs">
+                                    <span>CGST {getTaxRateText('CGST')}</span>
+                                    <span>₹{totals.cgst}</span>
+                                </div>
+                                <div className="flex justify-between text-gray-600 text-xs">
+                                    <span>SGST {getTaxRateText('SGST')}</span>
+                                    <span>₹{totals.sgst}</span>
+                                </div>
+                            </>
+                            )}
+                            <div className="flex justify-between py-2 text-xl font-bold" style={{ color: theme.hex }}>
+                                <span>Total</span><span>₹{totals.grandTotal}</span>
+                            </div>
+                        </div>
+                    </div>
 
-                  <div className="mt-2 text-right">
-                      <p className="text-xs text-gray-500 font-semibold italic">Amount in Words:</p>
-                      <p className="text-xs font-bold text-gray-800">{amountInWords}</p>
-                  </div>
-                  
-                  {/* Footer / Bank Info & Signature */}
-                  <div className="flex justify-between items-end mt-10 pt-6 border-t border-gray-100">
-                      
-                      {/* Clean Bank Details - Content Only */}
-                      <div className="w-[55%]">
-                          {sellerProfile?.bank_name && (
-                              <div className="pt-2">
-                                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2 border-b border-gray-200 pb-1 w-fit pr-8">Bank Details</p>
-                                  <div className="grid grid-cols-[80px_1fr] gap-y-1 text-xs w-fit min-w-[200px]">
-                                      <span className="text-gray-500 font-medium">Bank:</span>
-                                      <span className="font-bold text-gray-800">{sellerProfile.bank_name}</span>
-                                      
-                                      <span className="text-gray-500 font-medium">A/c No:</span>
-                                      <span className="font-bold text-gray-800">{sellerProfile.account_number}</span>
-                                      
-                                      <span className="text-gray-500 font-medium">IFSC:</span>
-                                      <span className="font-bold text-gray-800">{sellerProfile.ifsc_code}</span>
-                                      
-                                      {sellerProfile.branch_name && (
-                                          <>
-                                              <span className="text-gray-500 font-medium">Branch:</span>
-                                              <span className="font-bold text-gray-800">{sellerProfile.branch_name}</span>
-                                          </>
-                                      )}
-                                  </div>
-                              </div>
-                          )}
-                      </div>
+                    <div className="mt-2 text-right">
+                        <p className="text-xs text-gray-500 font-semibold italic">Amount in Words:</p>
+                        <p className="text-xs font-bold text-gray-800">{amountInWords}</p>
+                    </div>
+                    
+                    {/* Footer / Bank Info & Signature */}
+                    <div className="flex justify-between items-end mt-10 pt-6 border-t border-gray-100">
+                        
+                        {/* Clean Bank Details - Content Only */}
+                        <div className="w-[55%]">
+                            {sellerProfile?.bank_name && (
+                                <div className="pt-2">
+                                    <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2 border-b border-gray-200 pb-1 w-fit pr-8">Bank Details</p>
+                                    <div className="grid grid-cols-[80px_1fr] gap-y-1 text-xs w-fit min-w-[200px]">
+                                        <span className="text-gray-500 font-medium">Bank:</span><span className="font-bold text-gray-800">{sellerProfile.bank_name}</span>
+                                        
+                                        <span className="text-gray-500 font-medium">A/c No:</span>
+                                        <span className="font-bold text-gray-800">{sellerProfile.account_number}</span>
+                                        
+                                        <span className="text-gray-500 font-medium">IFSC:</span>
+                                        <span className="font-bold text-gray-800">{sellerProfile.ifsc_code}</span>
+                                        
+                                        {sellerProfile.branch_name && (
+                                            <>
+                                                <span className="text-gray-500 font-medium">Branch:</span>
+                                                <span className="font-bold text-gray-800">{sellerProfile.branch_name}</span>
+                                            </>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
 
-                      <div className="w-[40%] text-right flex flex-col items-end">
-                          <div className="flex items-end gap-4 mb-2">
-                              {stampPreview && <img src={stampPreview} alt="Stamp" crossOrigin="anonymous" className="h-20 w-20 object-contain opacity-80 rotate-[-5deg]" />}
-                              {signaturePreview && <img src={signaturePreview} alt="Sign" crossOrigin="anonymous" className="h-14 mb-2 object-contain" />}
-                          </div>
-                          <div className="border-t border-gray-300 w-32 mt-auto"></div> 
-                          <p className="text-[10px] font-bold uppercase mt-1 text-gray-600">Authorized Signatory</p>
-                          <p className="text-[10px] text-gray-400">{sellerProfile?.business_name}</p>
-                      </div>
-                  </div>
-                  
-                  <div className="mt-6 pt-3 border-t text-xs text-gray-600">
-                      <h4 className="font-bold text-gray-800 mb-1">Terms & Conditions</h4>
-                      <p className="whitespace-pre-wrap text-[10px]">{formData.terms}</p>
-                  </div>
-              </div>
+                        <div className="w-[40%] text-right flex flex-col items-end">
+                            <div className="flex items-end gap-4 mb-2">
+                                {stampPreview && <img src={stampPreview} alt="Stamp" crossOrigin="anonymous" className="h-20 w-20 object-contain opacity-80 rotate-[-5deg]" />}
+                                {signaturePreview && <img src={signaturePreview} alt="Sign" crossOrigin="anonymous" className="h-14 mb-2 object-contain" />}
+                            </div>
+                            <div className="border-t border-gray-300 w-32 mt-auto"></div> 
+                            <p className="text-[10px] font-bold uppercase mt-1 text-gray-600">Authorized Signatory</p>
+                            <p className="text-[10px] text-gray-400">{sellerProfile?.business_name}</p>
+                        </div>
+                    </div>
+                    
+                    <div className="mt-6 pt-3 border-t text-xs text-gray-600">
+                        <h4 className="font-bold text-gray-800 mb-1">Terms & Conditions</h4>
+                        <p className="whitespace-pre-wrap text-[10px]">{formData.terms}</p>
+                    </div>
+                </div>
 
-              <div className="h-6 w-full absolute bottom-0" style={{ backgroundColor: theme.hex }}></div>
-              </div>
-          </div>
+                <div className="h-6 w-full absolute bottom-0" style={{ backgroundColor: theme.hex }}></div>
+            </div>
         </div>
       </div>
       
@@ -796,6 +768,7 @@ export default function CreateInvoice() {
       <div className="w-full mt-auto">
           <BrandingFooter />
       </div>
+    </div>
     </div>
   )
 }
