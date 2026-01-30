@@ -768,7 +768,7 @@ export default function CreateInvoice() {
       <div className="w-full mt-auto">
           <BrandingFooter />
       </div>
-
+</div>
     </div>
   )
 }
