@@ -500,11 +500,11 @@ export default function CreateInvoice() {
                             onChange={(selected) => handleItemSelect(index, selected)}
                         />
                     </div>
-                    {/* --- FIXED: MANUAL HSN INPUT ADDED HERE --- */}
+                    {/* --- ADDED GRID LAYOUT FOR HSN INPUT --- */}
                     <div className="grid grid-cols-12 gap-2 mt-2">
                         <div className="col-span-3">
-                            <label className="text-xs text-gray-500">HSN</label>
-                            <input {...register(`items.${index}.hsn`)} placeholder="Code" className="w-full p-2 border rounded text-sm" />
+                            <label className="text-xs text-gray-500">HSN Code</label>
+                            <input {...register(`items.${index}.hsn`)} placeholder="HSN" className="w-full p-2 border rounded text-sm" />
                         </div>
                         <div className="col-span-4">
                             <label className="text-xs text-gray-500">Price</label>
@@ -768,6 +768,7 @@ export default function CreateInvoice() {
       <div className="w-full mt-auto">
           <BrandingFooter />
       </div>
+
     </div>
     </div>
   )
