@@ -166,24 +166,18 @@ export default function CreateInvoice() {
   useEffect(() => {
     const handleResize = () => { if (containerRef.current) { const s = (containerRef.current.offsetWidth - 32) / 794; setPreviewScale(s > 1 ? 1 : s) } }; handleResize(); window.addEventListener('resize', handleResize); return () => window.removeEventListener('resize', handleResize);
   }, [mobileTab])
-  
   const handleImageUpload = (e) => { const file = e.target.files[0]; if (file) { const reader = new FileReader(); reader.onloadend = () => setSignaturePreview(reader.result); reader.readAsDataURL(file) } }
-  
-  const handleItemSelect = (index, item) => { 
-      setValue(`items.${index}.description`, item.description); 
-      if (item.code) setValue(`items.${index}.hsn`, item.code); 
-      if (item.rate) setValue(`items.${index}.gstRate`, item.rate) 
-  }
-  
+  const handleItemSelect = (index, item) => { setValue(`items.${index}.description`, item.description); if (item.code) setValue(`items.${index}.hsn`, item.code); if (item.rate) setValue(`items.${index}.gstRate`, item.rate) }
   const calculateTotals = () => { let s=0,t=0; (formData.items||[]).forEach(i=>{const q=parseFloat(i.quantity)||0,p=parseFloat(i.price)||0,r=parseFloat(i.gstRate)||0,l=q*p; s+=l; t+=(l*r)/100}); const isInter=sellerProfile?.state&&formData.buyer_state&&(sellerProfile.state!==formData.buyer_state); return { subtotal: s.toFixed(2), cgst: isInter?0:(t/2).toFixed(2), sgst: isInter?0:(t/2).toFixed(2), igst: isInter?t.toFixed(2):0, grandTotal: (s+t).toFixed(2) } }
-  
   const totals = calculateTotals(); const amountInWords = totals.grandTotal ? numberToWords(totals.grandTotal) : '';
-  
   const getTaxRateText = (type) => { const rates = new Set(formData.items?.map(i => parseFloat(i.gstRate)).filter(r => r > 0)); if (rates.size === 1) { const r = [...rates][0]; if (type === 'IGST') return `(${r}%)`; if (type === 'CGST' || type === 'SGST') return `(${r/2}%)`; } return ''; }
 
   const generatePdfBlob = async (copyType = '') => {
       const originalElement = invoiceRef.current
-      if (!originalElement) return null;
+      if (!originalElement) {
+          console.error('Invoice ref is null');
+          return null;
+      }
 
       const clone = originalElement.cloneNode(true)
       
@@ -208,39 +202,47 @@ export default function CreateInvoice() {
           }
       }
 
+      // Critical: Set exact dimensions matching A4 in pixels
       clone.style.width = '794px' 
-      clone.style.minHeight = '1122px'
+      clone.style.minHeight = '1123px'
       clone.style.height = 'auto'
       clone.style.overflow = 'visible'
       clone.style.transform = 'none'
       clone.style.margin = '0'
+      clone.style.padding = '0'
       clone.style.backgroundColor = 'white'
       clone.style.display = 'block'
+      clone.style.position = 'relative'
       clone.classList.remove('w-full', 'lg:w-7/12', 'flex', 'justify-center', 'shadow-2xl', 'p-8', 'hidden', 'lg:flex') 
       
       const container = document.createElement('div')
-      container.style.position = 'absolute'
+      container.style.position = 'fixed'
+      container.style.left = '-9999px'
       container.style.top = '0'
-      container.style.left = '0'
-      container.style.zIndex = '-9999' // Ensures it is behind everything but valid
-      container.style.width = '794px'
-      container.style.backgroundColor = 'white' // Fixes transparency issues in PDF
+      container.style.width = '794px' 
+      container.style.height = 'auto'
+      container.style.backgroundColor = 'white'
+      container.style.zIndex = '-9999'
+      
       container.appendChild(clone)
       document.body.appendChild(container)
 
+      // Wait for images to load
       const images = Array.from(container.querySelectorAll('img'));
       await Promise.all(images.map(img => {
           if (img.complete) return Promise.resolve();
           return new Promise(resolve => { 
               img.onload = resolve; 
-              img.onerror = resolve; 
+              img.onerror = resolve;
+              setTimeout(resolve, 2000); // Timeout fallback
           });
       }));
 
-      await new Promise(resolve => setTimeout(resolve, 800));
+      // Extra wait for rendering
+      await new Promise(resolve => setTimeout(resolve, 1200));
 
-      const buyerName = formData.buyer_name || 'Customer'
-      const invoiceNum = formData.invoice_no || 'DRAFT'
+      const buyerName = (formData.buyer_name || 'Customer').replace(/[^a-zA-Z0-9]/g, '_');
+      const invoiceNum = (formData.invoice_no || 'DRAFT').replace(/[^a-zA-Z0-9]/g, '_');
       const typeTag = copyType ? `_${copyType}` : '';
       const safeFileName = `${buyerName}_${invoiceNum}${typeTag}.pdf`
 
@@ -248,25 +250,37 @@ export default function CreateInvoice() {
         margin: 0,
         filename: safeFileName,
         image: { type: 'jpeg', quality: 0.98 },
-        enableLinks: true, 
+        enableLinks: false, 
         html2canvas: { 
             scale: 2, 
             useCORS: true, 
-            scrollY: 0, // Critical to fix blank PDF
-            scrollX: 0,
+            allowTaint: true,
+            logging: false,
+            scrollY: 0,
+            scrollX: 0, 
+            letterRendering: true, 
             width: 794,
+            height: 1123, 
             windowWidth: 794,
-            letterRendering: true
+            windowHeight: 1123,
+            backgroundColor: '#ffffff'
         },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        jsPDF: { 
+            unit: 'mm', 
+            format: 'a4', 
+            orientation: 'portrait',
+            compress: true 
+        }
       }
       
       try {
-        // Changed to from(container) to ensure formatting is captured
+        console.log('Starting PDF generation...');
         const pdfBlob = await html2pdf().set(opt).from(clone).output('blob')
+        console.log('PDF generated successfully, size:', pdfBlob.size);
         document.body.removeChild(container)
         return { blob: pdfBlob, filename: opt.filename }
       } catch (err) {
+        console.error('PDF generation error:', err);
         if(document.body.contains(container)) document.body.removeChild(container)
         throw err
       }
@@ -509,7 +523,7 @@ export default function CreateInvoice() {
                             onChange={(selected) => handleItemSelect(index, selected)}
                         />
                     </div>
-                    {/* --- FIXED: MANUAL HSN INPUT ADDED HERE WITH GRID LAYOUT --- */}
+                    {/* --- ADDED GRID LAYOUT WITH MANUAL HSN INPUT --- */}
                     <div className="grid grid-cols-12 gap-2 mt-2">
                         <div className="col-span-3">
                             <label className="text-xs text-gray-500">HSN Code</label>
@@ -772,13 +786,13 @@ export default function CreateInvoice() {
             </div>
         </div>
       </div>
+      </div>
       
       {/* BRANDING FOOTER PLACED AT THE VERY BOTTOM OF THE PAGE LAYOUT (FULL WIDTH) */}
       <div className="w-full mt-auto">
           <BrandingFooter />
       </div>
 
-    </div>
     </div>
   )
 }
