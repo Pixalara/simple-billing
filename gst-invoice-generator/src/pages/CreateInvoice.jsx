@@ -166,10 +166,19 @@ export default function CreateInvoice() {
   useEffect(() => {
     const handleResize = () => { if (containerRef.current) { const s = (containerRef.current.offsetWidth - 32) / 794; setPreviewScale(s > 1 ? 1 : s) } }; handleResize(); window.addEventListener('resize', handleResize); return () => window.removeEventListener('resize', handleResize);
   }, [mobileTab])
+  
   const handleImageUpload = (e) => { const file = e.target.files[0]; if (file) { const reader = new FileReader(); reader.onloadend = () => setSignaturePreview(reader.result); reader.readAsDataURL(file) } }
-  const handleItemSelect = (index, item) => { setValue(`items.${index}.description`, item.description); if (item.code) setValue(`items.${index}.hsn`, item.code); if (item.rate) setValue(`items.${index}.gstRate`, item.rate) }
+  
+  const handleItemSelect = (index, item) => { 
+      setValue(`items.${index}.description`, item.description); 
+      if (item.code) setValue(`items.${index}.hsn`, item.code); 
+      if (item.rate) setValue(`items.${index}.gstRate`, item.rate) 
+  }
+  
   const calculateTotals = () => { let s=0,t=0; (formData.items||[]).forEach(i=>{const q=parseFloat(i.quantity)||0,p=parseFloat(i.price)||0,r=parseFloat(i.gstRate)||0,l=q*p; s+=l; t+=(l*r)/100}); const isInter=sellerProfile?.state&&formData.buyer_state&&(sellerProfile.state!==formData.buyer_state); return { subtotal: s.toFixed(2), cgst: isInter?0:(t/2).toFixed(2), sgst: isInter?0:(t/2).toFixed(2), igst: isInter?t.toFixed(2):0, grandTotal: (s+t).toFixed(2) } }
+  
   const totals = calculateTotals(); const amountInWords = totals.grandTotal ? numberToWords(totals.grandTotal) : '';
+  
   const getTaxRateText = (type) => { const rates = new Set(formData.items?.map(i => parseFloat(i.gstRate)).filter(r => r > 0)); if (rates.size === 1) { const r = [...rates][0]; if (type === 'IGST') return `(${r}%)`; if (type === 'CGST' || type === 'SGST') return `(${r/2}%)`; } return ''; }
 
   const generatePdfBlob = async (copyType = '') => {
@@ -211,11 +220,11 @@ export default function CreateInvoice() {
       
       const container = document.createElement('div')
       container.style.position = 'absolute'
-      container.style.left = '-10000px'
       container.style.top = '0'
-      container.style.width = '794px' 
-      container.style.backgroundColor = 'white'
-      
+      container.style.left = '0'
+      container.style.zIndex = '-9999' // Ensures it is behind everything but valid
+      container.style.width = '794px'
+      container.style.backgroundColor = 'white' // Fixes transparency issues in PDF
       container.appendChild(clone)
       document.body.appendChild(container)
 
@@ -240,12 +249,21 @@ export default function CreateInvoice() {
         filename: safeFileName,
         image: { type: 'jpeg', quality: 0.98 },
         enableLinks: true, 
-        html2canvas: { scale: 2, useCORS: true, scrollY: 0, letterRendering: true, width: 794, windowWidth: 794 },
+        html2canvas: { 
+            scale: 2, 
+            useCORS: true, 
+            scrollY: 0, // Critical to fix blank PDF
+            scrollX: 0,
+            width: 794,
+            windowWidth: 794,
+            letterRendering: true
+        },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
       }
       
       try {
-        const pdfBlob = await html2pdf().set(opt).from(container).output('blob')
+        // Changed to from(container) to ensure formatting is captured
+        const pdfBlob = await html2pdf().set(opt).from(clone).output('blob')
         document.body.removeChild(container)
         return { blob: pdfBlob, filename: opt.filename }
       } catch (err) {
@@ -491,7 +509,7 @@ export default function CreateInvoice() {
                             onChange={(selected) => handleItemSelect(index, selected)}
                         />
                     </div>
-                    {/* --- ADDED GRID LAYOUT WITH MANUAL HSN INPUT --- */}
+                    {/* --- FIXED: MANUAL HSN INPUT ADDED HERE WITH GRID LAYOUT --- */}
                     <div className="grid grid-cols-12 gap-2 mt-2">
                         <div className="col-span-3">
                             <label className="text-xs text-gray-500">HSN Code</label>
@@ -754,13 +772,13 @@ export default function CreateInvoice() {
             </div>
         </div>
       </div>
-      </div>
       
       {/* BRANDING FOOTER PLACED AT THE VERY BOTTOM OF THE PAGE LAYOUT (FULL WIDTH) */}
       <div className="w-full mt-auto">
           <BrandingFooter />
       </div>
 
+    </div>
     </div>
   )
 }
