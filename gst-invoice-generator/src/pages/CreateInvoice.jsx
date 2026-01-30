@@ -282,10 +282,6 @@ export default function CreateInvoice() {
             }, 2000)
         }
 
-        if (!sellerProfile?.print_duplicates && !sellerProfile?.print_triplicates) {
-             // Already downloaded ORIGINAL
-        }
-
     } catch (e) {
         showPopup('Error', 'Failed to generate PDF.', 'error');
     }
@@ -768,7 +764,7 @@ export default function CreateInvoice() {
       <div className="w-full mt-auto">
           <BrandingFooter />
       </div>
-    </div>
+      </div>
     </div>
   )
 }
