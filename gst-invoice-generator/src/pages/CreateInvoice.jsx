@@ -218,7 +218,32 @@ export default function CreateInvoice() {
       clone.style.pageBreakInside = 'avoid'
       clone.classList.remove('w-full', 'lg:w-7/12', 'flex', 'justify-center', 'shadow-2xl', 'p-8', 'hidden', 'lg:flex') 
       
-      // Footer is already in the HTML, no need to add separately
+      // Add clickable footer to PDF
+      const pdfFooter = document.createElement('div');
+      pdfFooter.style.width = '100%';
+      pdfFooter.style.textAlign = 'center';
+      pdfFooter.style.padding = '4px 0';
+      pdfFooter.style.fontSize = '8px';
+      pdfFooter.style.color = '#9ca3af';
+      pdfFooter.style.position = 'absolute';
+      pdfFooter.style.bottom = '32px';
+      pdfFooter.style.left = '0';
+      pdfFooter.style.right = '0';
+      pdfFooter.style.zIndex = '10';
+      
+      const footerLink = document.createElement('a');
+      footerLink.href = 'https://pixalara.com';
+      footerLink.target = '_blank';
+      footerLink.rel = 'noopener noreferrer';
+      footerLink.style.color = '#4b5563';
+      footerLink.style.fontWeight = 'bold';
+      footerLink.style.textDecoration = 'none';
+      footerLink.textContent = 'pixalara.com';
+      
+      pdfFooter.innerHTML = 'Powered by ';
+      pdfFooter.appendChild(footerLink);
+      
+      clone.appendChild(pdfFooter);
       
       const container = document.createElement('div')
       container.style.position = 'fixed'
@@ -260,7 +285,7 @@ export default function CreateInvoice() {
         enableLinks: false,
         pagebreak: { mode: 'avoid-all' },
         html2canvas: { 
-            scale: 2, 
+            scale: 1.8, 
             useCORS: true, 
             allowTaint: true,
             logging: false,
@@ -659,7 +684,7 @@ export default function CreateInvoice() {
                     </div>
                 </div>
 
-                <div className="px-6 py-4 pb-12">
+                <div className="px-6 py-3 pb-6">
                     <div className="flex justify-between mb-6">
                         <div style={{ width: '60%' }}>
                             <h3 className="text-gray-500 text-[10px] uppercase font-bold mb-1">Bill To</h3>
@@ -763,7 +788,7 @@ export default function CreateInvoice() {
                     </div>
                     
                     {/* Footer / Bank Info & Signature */}
-                    <div className="flex justify-between items-end mt-10 pt-6 border-t border-gray-100">
+                    <div className="flex justify-between items-end mt-6 pt-4 border-t border-gray-100">
                         
                         {/* Clean Bank Details - Content Only */}
                         <div className="w-[55%]">
@@ -801,16 +826,16 @@ export default function CreateInvoice() {
                         </div>
                     </div>
                     
-                    <div className="mt-6 pt-3 border-t text-xs text-gray-600">
+                    <div className="mt-4 pt-2 border-t text-xs text-gray-600">
                         <h4 className="font-bold text-gray-800 mb-1">Terms & Conditions</h4>
                         <p className="whitespace-pre-wrap text-[10px]">{formData.terms}</p>
                     </div>
                 </div>
 
                 {/* Powered by pixalara.com footer */}
-                <div className="w-full text-center py-2 mt-4">
-                    <p className="text-[8px] text-gray-400">
-                        Powered by <span className="font-bold text-gray-600">pixalara.com</span>
+                <div className="w-full text-center py-1 mt-2">
+                    <p className="text-[8px] text-gray-400" style={{ fontSize: '8px' }}>
+                        Powered by <a href="https://pixalara.com" target="_blank" rel="noopener noreferrer" className="font-bold text-gray-600 hover:text-blue-600 no-underline" style={{ textDecoration: 'none', color: '#4b5563', fontWeight: 'bold' }}>pixalara.com</a>
                     </p>
                 </div>
 
