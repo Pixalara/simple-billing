@@ -202,18 +202,36 @@ export default function CreateInvoice() {
           }
       }
 
-      // Critical: Set exact dimensions matching A4 in pixels
+      // Critical: Set exact dimensions matching A4 in pixels - FIXED to prevent second page
       clone.style.width = '794px' 
-      clone.style.minHeight = '1123px'
+      clone.style.minHeight = 'auto'
+      clone.style.maxHeight = '1123px'
       clone.style.height = 'auto'
-      clone.style.overflow = 'visible'
+      clone.style.overflow = 'hidden'
       clone.style.transform = 'none'
       clone.style.margin = '0'
       clone.style.padding = '0'
       clone.style.backgroundColor = 'white'
       clone.style.display = 'block'
       clone.style.position = 'relative'
+      clone.style.pageBreakAfter = 'avoid'
+      clone.style.pageBreakInside = 'avoid'
       clone.classList.remove('w-full', 'lg:w-7/12', 'flex', 'justify-center', 'shadow-2xl', 'p-8', 'hidden', 'lg:flex') 
+      
+      // Add "Powered by pixalara.com" footer to the PDF
+      const pdfFooter = document.createElement('div');
+      pdfFooter.style.width = '100%';
+      pdfFooter.style.textAlign = 'center';
+      pdfFooter.style.padding = '6px 0 4px 0';
+      pdfFooter.style.fontSize = '8px';
+      pdfFooter.style.color = '#6b7280';
+      pdfFooter.style.fontFamily = 'Arial, sans-serif';
+      pdfFooter.style.position = 'absolute';
+      pdfFooter.style.bottom = '30px';
+      pdfFooter.style.left = '0';
+      pdfFooter.style.right = '0';
+      pdfFooter.innerHTML = 'Powered by <strong style="color: #374151;">pixalara.com</strong>';
+      clone.appendChild(pdfFooter);
       
       const container = document.createElement('div')
       container.style.position = 'fixed'
@@ -221,6 +239,8 @@ export default function CreateInvoice() {
       container.style.top = '0'
       container.style.width = '794px' 
       container.style.height = 'auto'
+      container.style.maxHeight = '1123px'
+      container.style.overflow = 'hidden'
       container.style.backgroundColor = 'white'
       container.style.zIndex = '-9999'
       
@@ -250,7 +270,8 @@ export default function CreateInvoice() {
         margin: 0,
         filename: safeFileName,
         image: { type: 'jpeg', quality: 0.98 },
-        enableLinks: false, 
+        enableLinks: false,
+        pagebreak: { mode: 'avoid-all' },
         html2canvas: { 
             scale: 2, 
             useCORS: true, 
@@ -263,13 +284,22 @@ export default function CreateInvoice() {
             height: 1123, 
             windowWidth: 794,
             windowHeight: 1123,
-            backgroundColor: '#ffffff'
+            backgroundColor: '#ffffff',
+            onclone: (clonedDoc) => {
+                // Ensure no page breaks in cloned document
+                const clonedInvoice = clonedDoc.getElementById('invoice-preview');
+                if (clonedInvoice) {
+                    clonedInvoice.style.pageBreakInside = 'avoid';
+                    clonedInvoice.style.pageBreakAfter = 'avoid';
+                }
+            }
         },
         jsPDF: { 
             unit: 'mm', 
             format: 'a4', 
             orientation: 'portrait',
-            compress: true 
+            compress: true,
+            hotfixes: ['px_scaling']
         }
       }
       
