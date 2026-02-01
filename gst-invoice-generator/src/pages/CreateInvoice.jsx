@@ -174,10 +174,7 @@ export default function CreateInvoice() {
 
   const generatePdfBlob = async (copyType = '') => {
       const originalElement = invoiceRef.current
-      if (!originalElement) {
-          console.error('Invoice ref is null');
-          return null;
-      }
+      if (!originalElement) return null;
 
       const clone = originalElement.cloneNode(true)
       
@@ -202,11 +199,11 @@ export default function CreateInvoice() {
           }
       }
 
-      // Critical: Force content to fit in single A4 page
+      // Force single A4 page dimensions and prevent overflow
       clone.style.width = '794px' 
-      clone.style.height = '1123px'  // Fixed height for A4
-      clone.style.minHeight = '1123px'
-      clone.style.maxHeight = '1123px'
+      clone.style.height = '1120px' // Slightly less than 1123px to prevent 2nd page
+      clone.style.minHeight = '1120px'
+      clone.style.maxHeight = '1120px'
       clone.style.overflow = 'hidden'
       clone.style.transform = 'none'
       clone.style.margin = '0'
@@ -214,67 +211,33 @@ export default function CreateInvoice() {
       clone.style.backgroundColor = 'white'
       clone.style.display = 'block'
       clone.style.position = 'relative'
-      clone.style.pageBreakAfter = 'avoid'
-      clone.style.pageBreakInside = 'avoid'
       clone.classList.remove('w-full', 'lg:w-7/12', 'flex', 'justify-center', 'shadow-2xl', 'p-8', 'hidden', 'lg:flex') 
-      
-      // Add clickable footer to PDF
-      const pdfFooter = document.createElement('div');
-      pdfFooter.style.width = '100%';
-      pdfFooter.style.textAlign = 'center';
-      pdfFooter.style.padding = '4px 0';
-      pdfFooter.style.fontSize = '8px';
-      pdfFooter.style.color = '#9ca3af';
-      pdfFooter.style.position = 'absolute';
-      pdfFooter.style.bottom = '32px';
-      pdfFooter.style.left = '0';
-      pdfFooter.style.right = '0';
-      pdfFooter.style.zIndex = '10';
-      
-      const footerLink = document.createElement('a');
-      footerLink.href = 'https://pixalara.com';
-      footerLink.target = '_blank';
-      footerLink.rel = 'noopener noreferrer';
-      footerLink.style.color = '#4b5563';
-      footerLink.style.fontWeight = 'bold';
-      footerLink.style.textDecoration = 'none';
-      footerLink.textContent = 'pixalara.com';
-      
-      pdfFooter.innerHTML = 'Powered by ';
-      pdfFooter.appendChild(footerLink);
-      
-      clone.appendChild(pdfFooter);
       
       const container = document.createElement('div')
       container.style.position = 'fixed'
       container.style.left = '-9999px'
       container.style.top = '0'
       container.style.width = '794px' 
-      container.style.height = '1123px'
-      container.style.maxHeight = '1123px'
-      container.style.overflow = 'hidden'
+      container.style.height = '1120px' // Match clone height
       container.style.backgroundColor = 'white'
       container.style.zIndex = '-9999'
       
       container.appendChild(clone)
       document.body.appendChild(container)
 
-      // Wait for images to load
       const images = Array.from(container.querySelectorAll('img'));
       await Promise.all(images.map(img => {
           if (img.complete) return Promise.resolve();
           return new Promise(resolve => { 
               img.onload = resolve; 
-              img.onerror = resolve;
-              setTimeout(resolve, 2000); // Timeout fallback
+              img.onerror = resolve; 
           });
       }));
 
-      // Extra wait for rendering
-      await new Promise(resolve => setTimeout(resolve, 1200));
+      await new Promise(resolve => setTimeout(resolve, 800));
 
-      const buyerName = (formData.buyer_name || 'Customer').replace(/[^a-zA-Z0-9]/g, '_');
-      const invoiceNum = (formData.invoice_no || 'DRAFT').replace(/[^a-zA-Z0-9]/g, '_');
+      const buyerName = formData.buyer_name || 'Customer'
+      const invoiceNum = formData.invoice_no || 'DRAFT'
       const typeTag = copyType ? `_${copyType}` : '';
       const safeFileName = `${buyerName}_${invoiceNum}${typeTag}.pdf`
 
@@ -282,55 +245,26 @@ export default function CreateInvoice() {
         margin: 0,
         filename: safeFileName,
         image: { type: 'jpeg', quality: 0.98 },
-        enableLinks: false,
-        pagebreak: { mode: 'avoid-all' },
+        enableLinks: false, 
         html2canvas: { 
-            scale: 1.8, 
+            scale: 2, 
             useCORS: true, 
-            allowTaint: true,
-            logging: false,
             scrollY: 0,
             scrollX: 0, 
             letterRendering: true, 
-            width: 794,
-            height: 1123,
+            width: 794, 
             windowWidth: 794,
-            windowHeight: 1123,
-            backgroundColor: '#ffffff',
-            removeContainer: true,
-            imageTimeout: 0,
-            onclone: (clonedDoc) => {
-                // Force exact A4 dimensions
-                const clonedInvoice = clonedDoc.getElementById('invoice-preview');
-                if (clonedInvoice) {
-                    clonedInvoice.style.width = '794px';
-                    clonedInvoice.style.height = '1123px';
-                    clonedInvoice.style.maxHeight = '1123px';
-                    clonedInvoice.style.overflow = 'hidden';
-                    clonedInvoice.style.pageBreakInside = 'avoid';
-                    clonedInvoice.style.pageBreakAfter = 'avoid';
-                }
-            }
+            height: 1120, // Force height to single page
+            windowHeight: 1120 
         },
-        jsPDF: { 
-            unit: 'mm', 
-            format: 'a4', 
-            orientation: 'portrait',
-            compress: true,
-            hotfixes: ['px_scaling'],
-            putOnlyUsedFonts: true,
-            floatPrecision: 16
-        }
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
       }
       
       try {
-        console.log('Starting PDF generation...');
-        const pdfBlob = await html2pdf().set(opt).from(clone).output('blob')
-        console.log('PDF generated successfully, size:', pdfBlob.size);
+        const pdfBlob = await html2pdf().set(opt).from(container).output('blob')
         document.body.removeChild(container)
         return { blob: pdfBlob, filename: opt.filename }
       } catch (err) {
-        console.error('PDF generation error:', err);
         if(document.body.contains(container)) document.body.removeChild(container)
         throw err
       }
@@ -573,7 +507,7 @@ export default function CreateInvoice() {
                             onChange={(selected) => handleItemSelect(index, selected)}
                         />
                     </div>
-                    {/* --- ADDED GRID LAYOUT WITH MANUAL HSN INPUT --- */}
+                    {/* --- FIXED: MANUAL HSN INPUT ADDED HERE WITH GRID LAYOUT --- */}
                     <div className="grid grid-cols-12 gap-2 mt-2">
                         <div className="col-span-3">
                             <label className="text-xs text-gray-500">HSN Code</label>
@@ -684,7 +618,7 @@ export default function CreateInvoice() {
                     </div>
                 </div>
 
-                <div className="px-6 py-3 pb-6">
+                <div className="px-6 py-4 pb-12">
                     <div className="flex justify-between mb-6">
                         <div style={{ width: '60%' }}>
                             <h3 className="text-gray-500 text-[10px] uppercase font-bold mb-1">Bill To</h3>
@@ -788,7 +722,7 @@ export default function CreateInvoice() {
                     </div>
                     
                     {/* Footer / Bank Info & Signature */}
-                    <div className="flex justify-between items-end mt-6 pt-4 border-t border-gray-100">
+                    <div className="flex justify-between items-end mt-10 pt-6 border-t border-gray-100">
                         
                         {/* Clean Bank Details - Content Only */}
                         <div className="w-[55%]">
@@ -826,16 +760,16 @@ export default function CreateInvoice() {
                         </div>
                     </div>
                     
-                    <div className="mt-4 pt-2 border-t text-xs text-gray-600">
+                    <div className="mt-6 pt-3 border-t text-xs text-gray-600">
                         <h4 className="font-bold text-gray-800 mb-1">Terms & Conditions</h4>
                         <p className="whitespace-pre-wrap text-[10px]">{formData.terms}</p>
                     </div>
                 </div>
 
-                {/* Powered by pixalara.com footer */}
-                <div className="w-full text-center py-1 mt-2">
-                    <p className="text-[8px] text-gray-400" style={{ fontSize: '8px' }}>
-                        Powered by <a href="https://pixalara.com" target="_blank" rel="noopener noreferrer" className="font-bold text-gray-600 hover:text-blue-600 no-underline" style={{ textDecoration: 'none', color: '#4b5563', fontWeight: 'bold' }}>pixalara.com</a>
+                {/* Powered by pixalara.com footer - Absolute Positioned */}
+                <div className="absolute bottom-8 w-full text-center">
+                    <p className="text-[8px] text-gray-400 font-medium">
+                        Powered by <a href="https://pixalara.com" target="_blank" rel="noreferrer" className="font-bold text-gray-600 hover:text-blue-600 no-underline">pixalara.com</a>
                     </p>
                 </div>
 
@@ -843,13 +777,13 @@ export default function CreateInvoice() {
             </div>
         </div>
       </div>
-      </div>
       
       {/* BRANDING FOOTER PLACED AT THE VERY BOTTOM OF THE PAGE LAYOUT (FULL WIDTH) */}
       <div className="w-full mt-auto">
           <BrandingFooter />
       </div>
 
+    </div>
     </div>
   )
 }
