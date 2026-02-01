@@ -202,11 +202,11 @@ export default function CreateInvoice() {
           }
       }
 
-      // Critical: Set exact dimensions matching A4 in pixels - FIXED to prevent second page
+      // Critical: Force content to fit in single A4 page
       clone.style.width = '794px' 
-      clone.style.minHeight = 'auto'
+      clone.style.height = '1123px'  // Fixed height for A4
+      clone.style.minHeight = '1123px'
       clone.style.maxHeight = '1123px'
-      clone.style.height = 'auto'
       clone.style.overflow = 'hidden'
       clone.style.transform = 'none'
       clone.style.margin = '0'
@@ -218,27 +218,14 @@ export default function CreateInvoice() {
       clone.style.pageBreakInside = 'avoid'
       clone.classList.remove('w-full', 'lg:w-7/12', 'flex', 'justify-center', 'shadow-2xl', 'p-8', 'hidden', 'lg:flex') 
       
-      // Add "Powered by pixalara.com" footer to the PDF
-      const pdfFooter = document.createElement('div');
-      pdfFooter.style.width = '100%';
-      pdfFooter.style.textAlign = 'center';
-      pdfFooter.style.padding = '6px 0 4px 0';
-      pdfFooter.style.fontSize = '8px';
-      pdfFooter.style.color = '#6b7280';
-      pdfFooter.style.fontFamily = 'Arial, sans-serif';
-      pdfFooter.style.position = 'absolute';
-      pdfFooter.style.bottom = '30px';
-      pdfFooter.style.left = '0';
-      pdfFooter.style.right = '0';
-      pdfFooter.innerHTML = 'Powered by <strong style="color: #374151;">pixalara.com</strong>';
-      clone.appendChild(pdfFooter);
+      // Footer is already in the HTML, no need to add separately
       
       const container = document.createElement('div')
       container.style.position = 'fixed'
       container.style.left = '-9999px'
       container.style.top = '0'
       container.style.width = '794px' 
-      container.style.height = 'auto'
+      container.style.height = '1123px'
       container.style.maxHeight = '1123px'
       container.style.overflow = 'hidden'
       container.style.backgroundColor = 'white'
@@ -281,14 +268,20 @@ export default function CreateInvoice() {
             scrollX: 0, 
             letterRendering: true, 
             width: 794,
-            height: 1123, 
+            height: 1123,
             windowWidth: 794,
             windowHeight: 1123,
             backgroundColor: '#ffffff',
+            removeContainer: true,
+            imageTimeout: 0,
             onclone: (clonedDoc) => {
-                // Ensure no page breaks in cloned document
+                // Force exact A4 dimensions
                 const clonedInvoice = clonedDoc.getElementById('invoice-preview');
                 if (clonedInvoice) {
+                    clonedInvoice.style.width = '794px';
+                    clonedInvoice.style.height = '1123px';
+                    clonedInvoice.style.maxHeight = '1123px';
+                    clonedInvoice.style.overflow = 'hidden';
                     clonedInvoice.style.pageBreakInside = 'avoid';
                     clonedInvoice.style.pageBreakAfter = 'avoid';
                 }
@@ -299,7 +292,9 @@ export default function CreateInvoice() {
             format: 'a4', 
             orientation: 'portrait',
             compress: true,
-            hotfixes: ['px_scaling']
+            hotfixes: ['px_scaling'],
+            putOnlyUsedFonts: true,
+            floatPrecision: 16
         }
       }
       
@@ -810,6 +805,13 @@ export default function CreateInvoice() {
                         <h4 className="font-bold text-gray-800 mb-1">Terms & Conditions</h4>
                         <p className="whitespace-pre-wrap text-[10px]">{formData.terms}</p>
                     </div>
+                </div>
+
+                {/* Powered by pixalara.com footer */}
+                <div className="w-full text-center py-2 mt-4">
+                    <p className="text-[8px] text-gray-400">
+                        Powered by <span className="font-bold text-gray-600">pixalara.com</span>
+                    </p>
                 </div>
 
                 <div className="h-6 w-full absolute bottom-0" style={{ backgroundColor: theme.hex }}></div>
