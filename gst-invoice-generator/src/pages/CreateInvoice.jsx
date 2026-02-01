@@ -174,7 +174,10 @@ export default function CreateInvoice() {
 
   const generatePdfBlob = async (copyType = '') => {
       const originalElement = invoiceRef.current
-      if (!originalElement) return null;
+      if (!originalElement) {
+          console.error('Invoice ref is null');
+          return null;
+      }
 
       const clone = originalElement.cloneNode(true)
       
@@ -199,12 +202,11 @@ export default function CreateInvoice() {
           }
       }
 
-      // Force single A4 page dimensions and prevent overflow
+      // Critical: Set exact dimensions matching A4 in pixels
       clone.style.width = '794px' 
-      clone.style.height = '1120px' // Slightly less than 1123px to prevent 2nd page
-      clone.style.minHeight = '1120px'
-      clone.style.maxHeight = '1120px'
-      clone.style.overflow = 'hidden'
+      clone.style.minHeight = '1123px'
+      clone.style.height = 'auto'
+      clone.style.overflow = 'visible'
       clone.style.transform = 'none'
       clone.style.margin = '0'
       clone.style.padding = '0'
@@ -218,26 +220,29 @@ export default function CreateInvoice() {
       container.style.left = '-9999px'
       container.style.top = '0'
       container.style.width = '794px' 
-      container.style.height = '1120px' // Match clone height
+      container.style.height = 'auto'
       container.style.backgroundColor = 'white'
       container.style.zIndex = '-9999'
       
       container.appendChild(clone)
       document.body.appendChild(container)
 
+      // Wait for images to load
       const images = Array.from(container.querySelectorAll('img'));
       await Promise.all(images.map(img => {
           if (img.complete) return Promise.resolve();
           return new Promise(resolve => { 
               img.onload = resolve; 
-              img.onerror = resolve; 
+              img.onerror = resolve;
+              setTimeout(resolve, 2000); // Timeout fallback
           });
       }));
 
-      await new Promise(resolve => setTimeout(resolve, 800));
+      // Extra wait for rendering
+      await new Promise(resolve => setTimeout(resolve, 1200));
 
-      const buyerName = formData.buyer_name || 'Customer'
-      const invoiceNum = formData.invoice_no || 'DRAFT'
+      const buyerName = (formData.buyer_name || 'Customer').replace(/[^a-zA-Z0-9]/g, '_');
+      const invoiceNum = (formData.invoice_no || 'DRAFT').replace(/[^a-zA-Z0-9]/g, '_');
       const typeTag = copyType ? `_${copyType}` : '';
       const safeFileName = `${buyerName}_${invoiceNum}${typeTag}.pdf`
 
@@ -249,22 +254,33 @@ export default function CreateInvoice() {
         html2canvas: { 
             scale: 2, 
             useCORS: true, 
+            allowTaint: true,
+            logging: false,
             scrollY: 0,
             scrollX: 0, 
             letterRendering: true, 
-            width: 794, 
+            width: 794,
+            height: 1123, 
             windowWidth: 794,
-            height: 1120, // Force height to single page
-            windowHeight: 1120 
+            windowHeight: 1123,
+            backgroundColor: '#ffffff'
         },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        jsPDF: { 
+            unit: 'mm', 
+            format: 'a4', 
+            orientation: 'portrait',
+            compress: true 
+        }
       }
       
       try {
-        const pdfBlob = await html2pdf().set(opt).from(container).output('blob')
+        console.log('Starting PDF generation...');
+        const pdfBlob = await html2pdf().set(opt).from(clone).output('blob')
+        console.log('PDF generated successfully, size:', pdfBlob.size);
         document.body.removeChild(container)
         return { blob: pdfBlob, filename: opt.filename }
       } catch (err) {
+        console.error('PDF generation error:', err);
         if(document.body.contains(container)) document.body.removeChild(container)
         throw err
       }
@@ -507,7 +523,7 @@ export default function CreateInvoice() {
                             onChange={(selected) => handleItemSelect(index, selected)}
                         />
                     </div>
-                    {/* --- FIXED: MANUAL HSN INPUT ADDED HERE WITH GRID LAYOUT --- */}
+                    {/* --- ADDED GRID LAYOUT WITH MANUAL HSN INPUT --- */}
                     <div className="grid grid-cols-12 gap-2 mt-2">
                         <div className="col-span-3">
                             <label className="text-xs text-gray-500">HSN Code</label>
@@ -766,16 +782,10 @@ export default function CreateInvoice() {
                     </div>
                 </div>
 
-                {/* Powered by pixalara.com footer - Absolute Positioned */}
-                <div className="absolute bottom-8 w-full text-center">
-                    <p className="text-[8px] text-gray-400 font-medium">
-                        Powered by <a href="https://pixalara.com" target="_blank" rel="noreferrer" className="font-bold text-gray-600 hover:text-blue-600 no-underline">pixalara.com</a>
-                    </p>
-                </div>
-
                 <div className="h-6 w-full absolute bottom-0" style={{ backgroundColor: theme.hex }}></div>
             </div>
         </div>
+      </div>
       </div>
       
       {/* BRANDING FOOTER PLACED AT THE VERY BOTTOM OF THE PAGE LAYOUT (FULL WIDTH) */}
@@ -783,7 +793,6 @@ export default function CreateInvoice() {
           <BrandingFooter />
       </div>
 
-    </div>
     </div>
   )
 }
