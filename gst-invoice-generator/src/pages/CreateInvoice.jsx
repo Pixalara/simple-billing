@@ -626,7 +626,7 @@ export default function CreateInvoice() {
                     id="invoice-preview" 
                     ref={invoiceRef} 
                     className="bg-white relative shrink-0" 
-                    style={{ width: '794px', minHeight: '1123px', margin: 0, padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}
+                    style={{ width: '794px', height: '1123px', margin: 0, padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}
                 >
                 
                 <div className="px-6 py-3 flex justify-between flex-shrink-0" style={{ backgroundColor: theme.hex, color: theme.text }}>
@@ -652,7 +652,7 @@ export default function CreateInvoice() {
                     </div>
                 </div>
 
-                <div className="px-6 py-3 flex-grow overflow-y-auto" style={{ display: 'flex', flexDirection: 'column' }}>
+                <div className="px-6 py-3 flex-grow" style={{ display: 'flex', flexDirection: 'column' }}>
                     <div className="flex justify-between mb-4">
                         <div style={{ width: '60%' }}>
                             <h3 className="text-gray-500 text-[10px] uppercase font-bold mb-1">Bill To</h3>
