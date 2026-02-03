@@ -166,7 +166,6 @@ export default function CreateInvoice() {
   useEffect(() => {
     const handleResize = () => { if (containerRef.current) { const s = (containerRef.current.offsetWidth - 32) / 794; setPreviewScale(s > 1 ? 1 : s) } }; handleResize(); window.addEventListener('resize', handleResize); return () => window.removeEventListener('resize', handleResize);
   }, [mobileTab])
-  
   const handleImageUpload = (e) => { const file = e.target.files[0]; if (file) { const reader = new FileReader(); reader.onloadend = () => setSignaturePreview(reader.result); reader.readAsDataURL(file) } }
   const handleItemSelect = (index, item) => { setValue(`items.${index}.description`, item.description); if (item.code) setValue(`items.${index}.hsn`, item.code); if (item.rate) setValue(`items.${index}.gstRate`, item.rate) }
   const calculateTotals = () => { let s=0,t=0; (formData.items||[]).forEach(i=>{const q=parseFloat(i.quantity)||0,p=parseFloat(i.price)||0,r=parseFloat(i.gstRate)||0,l=q*p; s+=l; t+=(l*r)/100}); const isInter=sellerProfile?.state&&formData.buyer_state&&(sellerProfile.state!==formData.buyer_state); return { subtotal: s.toFixed(2), cgst: isInter?0:(t/2).toFixed(2), sgst: isInter?0:(t/2).toFixed(2), igst: isInter?t.toFixed(2):0, grandTotal: (s+t).toFixed(2) } }
@@ -203,34 +202,31 @@ export default function CreateInvoice() {
           }
       }
 
-      // Critical: Set exact dimensions matching A4 in pixels
-      clone.style.width = '794px'
-      clone.style.height = '1123px'
-      clone.style.minHeight = '1123px'
-      clone.style.maxHeight = '1123px'
-      clone.style.overflow = 'hidden'
-      clone.style.transform = 'none'
+      // FIX: Set exact A4 dimensions in millimeters (210mm x 297mm)
+      // 1mm = 3.779527559 pixels, so: 210mm ≈ 794px, 297mm ≈ 1123px
+      clone.style.width = '210mm'
+      clone.style.height = '297mm'
       clone.style.margin = '0'
       clone.style.padding = '0'
+      clone.style.overflow = 'hidden'
       clone.style.backgroundColor = 'white'
       clone.style.display = 'block'
       clone.style.position = 'relative'
-      clone.classList.remove('w-full', 'lg:w-7/12', 'flex', 'justify-center', 'shadow-2xl', 'p-8', 'hidden', 'lg:flex', 'rounded-2xl', 'border')
+      clone.style.boxSizing = 'border-box'
       
-      // Ensure inner content fits within the page
-      const contentDivs = clone.querySelectorAll('[class*="px-"], [class*="py-"]')
-      contentDivs.forEach(div => {
-          div.style.boxSizing = 'border-box'
-      })
+      // Remove responsive classes that might cause issues
+      clone.classList.remove('w-full', 'lg:w-7/12', 'flex', 'justify-center', 'shadow-2xl', 'p-8', 'hidden', 'lg:flex', 'rounded-2xl', 'border')
       
       const container = document.createElement('div')
       container.style.position = 'fixed'
       container.style.left = '-9999px'
       container.style.top = '0'
-      container.style.width = '794px' 
-      container.style.height = 'auto'
+      container.style.width = '210mm'
+      container.style.height = '297mm'
       container.style.backgroundColor = 'white'
       container.style.zIndex = '-9999'
+      container.style.margin = '0'
+      container.style.padding = '0'
       
       container.appendChild(clone)
       document.body.appendChild(container)
@@ -247,7 +243,7 @@ export default function CreateInvoice() {
       }));
 
       // Extra wait for rendering
-      await new Promise(resolve => setTimeout(resolve, 1200));
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
       const buyerName = (formData.buyer_name || 'Customer').replace(/[^a-zA-Z0-9]/g, '_');
       const invoiceNum = (formData.invoice_no || 'DRAFT').replace(/[^a-zA-Z0-9]/g, '_');
@@ -266,16 +262,13 @@ export default function CreateInvoice() {
             logging: false,
             scrollY: 0,
             scrollX: 0, 
-            letterRendering: true, 
-            width: 794,
-            height: 1123, 
             windowWidth: 794,
             windowHeight: 1123,
             backgroundColor: '#ffffff'
         },
         jsPDF: { 
-            unit: 'px', 
-            format: [794, 1123], 
+            unit: 'mm', 
+            format: 'a4', 
             orientation: 'portrait',
             compress: true 
         }
@@ -311,6 +304,10 @@ export default function CreateInvoice() {
                 const res3 = await generatePdfBlob('TRIPLICATE')
                 downloadBlob(res3.blob, res3.filename)
             }, 2000)
+        }
+
+        if (!sellerProfile?.print_duplicates && !sellerProfile?.print_triplicates) {
+             // Already downloaded ORIGINAL
         }
 
     } catch (e) {
@@ -609,19 +606,10 @@ export default function CreateInvoice() {
                     id="invoice-preview" 
                     ref={invoiceRef} 
                     className="bg-white relative shrink-0" 
-                    style={{ 
-                        width: '794px', 
-                        height: '1123px',
-                        margin: 0, 
-                        padding: 0, 
-                        overflow: 'hidden',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        boxSizing: 'border-box'
-                    }}
+                    style={{ width: '210mm', height: '297mm', margin: 0, padding: 0, overflow: 'hidden', boxSizing: 'border-box' }}
                 >
                 
-                <div className="px-6 py-4 flex justify-between flex-shrink-0" style={{ backgroundColor: theme.hex, color: theme.text }}>
+                <div className="px-6 py-4 flex justify-between" style={{ backgroundColor: theme.hex, color: theme.text }}>
                     <div style={{ width: '50%' }}>
                         {sellerProfile?.logo_url && (
                             <img 
@@ -647,8 +635,8 @@ export default function CreateInvoice() {
                     </div>
                 </div>
 
-                <div className="px-6 py-3 flex-1 overflow-hidden flex flex-col" style={{ boxSizing: 'border-box' }}>
-                    <div className="flex justify-between mb-4">
+                <div className="px-6 py-4" style={{ height: 'calc(297mm - 60px)', overflowY: 'auto', boxSizing: 'border-box' }}>
+                    <div className="flex justify-between mb-6">
                         <div style={{ width: '60%' }}>
                             <h3 className="text-gray-500 text-[10px] uppercase font-bold mb-1">Bill To</h3>
                             <p className="text-base font-bold text-gray-800 leading-tight">{formData.buyer_name || 'Client Name'}</p>
@@ -671,7 +659,7 @@ export default function CreateInvoice() {
                         </div>
                     </div>
 
-                    <div style={{ width: '740px', display: 'block', margin: '0 auto 16px auto' }}>
+                    <div style={{ width: '740px', display: 'block', margin: '0 auto 24px auto' }}>
                         <table style={{ width: '740px', tableLayout: 'fixed', borderCollapse: 'collapse' }}>
                             <thead>
                                 <tr style={{ backgroundColor: theme.hex, color: theme.text }}>
@@ -719,9 +707,9 @@ export default function CreateInvoice() {
                         </table>
                     </div>
                     
-                    <div className="flex justify-end text-sm">
-                        <div className="w-5/12 space-y-1 border-b pb-2">
-                            <div className="flex justify-between text-gray-600"><span>Subtotal</span><span>₹{totals.subtotal}</span></div>
+                    <div className="flex justify-end">
+                        <div className="w-5/12 space-y-1 border-b pb-3">
+                            <div className="flex justify-between text-gray-600 text-sm"><span>Subtotal</span><span>₹{totals.subtotal}</span></div>
                             {parseFloat(totals.igst) > 0 ? (
                             <div className="flex justify-between text-gray-600 text-xs">
                                 <span>IGST {getTaxRateText('IGST')}</span>
@@ -739,26 +727,26 @@ export default function CreateInvoice() {
                                 </div>
                             </>
                             )}
-                            <div className="flex justify-between py-1 font-bold" style={{ color: theme.hex }}>
+                            <div className="flex justify-between py-2 text-xl font-bold" style={{ color: theme.hex }}>
                                 <span>Total</span><span>₹{totals.grandTotal}</span>
                             </div>
                         </div>
                     </div>
 
-                    <div className="mt-1 text-right text-xs">
-                        <p className="text-gray-500 font-semibold italic">Amount in Words:</p>
-                        <p className="font-bold text-gray-800 text-[10px]">{amountInWords}</p>
+                    <div className="mt-2 text-right">
+                        <p className="text-xs text-gray-500 font-semibold italic">Amount in Words:</p>
+                        <p className="text-xs font-bold text-gray-800">{amountInWords}</p>
                     </div>
                     
                     {/* Footer / Bank Info & Signature */}
-                    <div className="flex justify-between items-end mt-2 pt-2 border-t border-gray-100 flex-shrink-0">
+                    <div className="flex justify-between items-end mt-6 pt-4 border-t border-gray-100">
                         
                         {/* Clean Bank Details - Content Only */}
                         <div className="w-[55%]">
                             {sellerProfile?.bank_name && (
-                                <div className="pt-1">
-                                    <p className="text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-1 border-b border-gray-200 pb-0.5 w-fit pr-4">Bank Details</p>
-                                    <div className="grid grid-cols-[60px_1fr] gap-y-0.5 text-[9px] w-fit min-w-[180px]">
+                                <div className="pt-2">
+                                    <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2 border-b border-gray-200 pb-1 w-fit pr-8">Bank Details</p>
+                                    <div className="grid grid-cols-[80px_1fr] gap-y-1 text-xs w-fit min-w-[200px]">
                                         <span className="text-gray-500 font-medium">Bank:</span><span className="font-bold text-gray-800">{sellerProfile.bank_name}</span>
                                         
                                         <span className="text-gray-500 font-medium">A/c No:</span>
@@ -779,23 +767,23 @@ export default function CreateInvoice() {
                         </div>
 
                         <div className="w-[40%] text-right flex flex-col items-end">
-                            <div className="flex items-end gap-2 mb-1">
-                                {stampPreview && <img src={stampPreview} alt="Stamp" crossOrigin="anonymous" className="h-12 w-12 object-contain opacity-80 rotate-[-5deg]" />}
-                                {signaturePreview && <img src={signaturePreview} alt="Sign" crossOrigin="anonymous" className="h-10 object-contain" />}
+                            <div className="flex items-end gap-4 mb-2">
+                                {stampPreview && <img src={stampPreview} alt="Stamp" crossOrigin="anonymous" className="h-20 w-20 object-contain opacity-80 rotate-[-5deg]" />}
+                                {signaturePreview && <img src={signaturePreview} alt="Sign" crossOrigin="anonymous" className="h-14 mb-2 object-contain" />}
                             </div>
-                            <div className="border-t border-gray-300 w-24"></div> 
-                            <p className="text-[8px] font-bold uppercase mt-0.5 text-gray-600">Authorized Signatory</p>
-                            <p className="text-[8px] text-gray-400">{sellerProfile?.business_name}</p>
+                            <div className="border-t border-gray-300 w-32 mt-auto"></div> 
+                            <p className="text-[10px] font-bold uppercase mt-1 text-gray-600">Authorized Signatory</p>
+                            <p className="text-[10px] text-gray-400">{sellerProfile?.business_name}</p>
                         </div>
                     </div>
                     
-                    <div className="mt-2 pt-1 border-t text-[9px] text-gray-600 flex-shrink-0">
-                        <h4 className="font-bold text-gray-800 mb-0.5">Terms & Conditions</h4>
-                        <p className="whitespace-pre-wrap text-[8px] leading-tight">{formData.terms}</p>
+                    <div className="mt-4 pt-3 border-t text-xs text-gray-600">
+                        <h4 className="font-bold text-gray-800 mb-1">Terms & Conditions</h4>
+                        <p className="whitespace-pre-wrap text-[10px]">{formData.terms}</p>
                     </div>
                 </div>
 
-                <div className="h-6 w-full flex-shrink-0" style={{ backgroundColor: theme.hex }}></div>
+                <div className="h-6 w-full" style={{ backgroundColor: theme.hex }}></div>
             </div>
         </div>
       </div>
