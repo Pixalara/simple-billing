@@ -629,7 +629,7 @@ export default function CreateInvoice() {
                     style={{ width: '794px', minHeight: '1123px', margin: 0, padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}
                 >
                 
-                <div className="px-6 py-4 flex justify-between flex-shrink-0" style={{ backgroundColor: theme.hex, color: theme.text }}>
+                <div className="px-6 py-3 flex justify-between flex-shrink-0" style={{ backgroundColor: theme.hex, color: theme.text }}>
                     <div style={{ width: '50%' }}>
                         {sellerProfile?.logo_url && (
                             <img 
@@ -652,8 +652,8 @@ export default function CreateInvoice() {
                     </div>
                 </div>
 
-                <div className="px-6 py-4 flex-grow overflow-y-auto" style={{ display: 'flex', flexDirection: 'column' }}>
-                    <div className="flex justify-between mb-6">
+                <div className="px-6 py-3 flex-grow overflow-y-auto" style={{ display: 'flex', flexDirection: 'column' }}>
+                    <div className="flex justify-between mb-4">
                         <div style={{ width: '60%' }}>
                             <h3 className="text-gray-500 text-[10px] uppercase font-bold mb-1">Bill To</h3>
                             <p className="text-base font-bold text-gray-800 leading-tight">{formData.buyer_name || 'Client Name'}</p>
@@ -676,7 +676,7 @@ export default function CreateInvoice() {
                         </div>
                     </div>
 
-                    <div style={{ width: '100%', display: 'block', marginBottom: '12px', flex: '0 1 auto' }}>
+                    <div style={{ width: '100%', display: 'block', marginBottom: '8px', flex: '0 1 auto' }}>
                         <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse' }}>
                             <thead>
                                 <tr style={{ backgroundColor: theme.hex, color: theme.text }}>
@@ -749,18 +749,18 @@ export default function CreateInvoice() {
                         </div>
                     </div>
 
-                    <div className="mt-2 text-right mb-4">
+                    <div className="mt-1 text-right mb-2">
                         <p className="text-xs text-gray-500 font-semibold italic">Amount in Words:</p>
                         <p className="text-xs font-bold text-gray-800">{amountInWords}</p>
                     </div>
                     
                     {/* Footer / Bank Info & Signature */}
-                    <div className="flex justify-between items-end mt-4 pt-6 border-t border-gray-100 flex-shrink-0">
+                    <div className="flex justify-between items-end mt-2 pt-3 border-t border-gray-100 flex-shrink-0">
                         
                         {/* Clean Bank Details - Content Only */}
                         <div className="w-[55%]">
                             {sellerProfile?.bank_name && (
-                                <div className="pt-2">
+                                <div className="pt-1">
                                     <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2 border-b border-gray-200 pb-1 w-fit pr-8">Bank Details</p>
                                     <div className="grid grid-cols-[80px_1fr] gap-y-1 text-xs w-fit min-w-[200px]">
                                         <span className="text-gray-500 font-medium">Bank:</span><span className="font-bold text-gray-800">{sellerProfile.bank_name}</span>
@@ -784,8 +784,8 @@ export default function CreateInvoice() {
 
                         <div className="w-[40%] text-right flex flex-col items-end">
                             <div className="flex items-end gap-4 mb-2">
-                                {stampPreview && <img src={stampPreview} alt="Stamp" crossOrigin="anonymous" className="h-20 w-20 object-contain opacity-80 rotate-[-5deg]" />}
-                                {signaturePreview && <img src={signaturePreview} alt="Sign" crossOrigin="anonymous" className="h-14 mb-2 object-contain" />}
+                                {stampPreview && <img src={stampPreview} alt="Stamp" crossOrigin="anonymous" className="h-16 w-16 object-contain opacity-80 rotate-[-5deg]" />}
+                                {signaturePreview && <img src={signaturePreview} alt="Sign" crossOrigin="anonymous" className="h-12 mb-2 object-contain" />}
                             </div>
                             <div className="border-t border-gray-300 w-32"></div> 
                             <p className="text-[10px] font-bold uppercase mt-1 text-gray-600">Authorized Signatory</p>
@@ -793,12 +793,12 @@ export default function CreateInvoice() {
                         </div>
                     </div>
                     
-                    <div className="mt-4 pt-3 border-t text-xs text-gray-600 flex-shrink-0">
+                    <div className="mt-2 pt-2 border-t text-xs text-gray-600 flex-shrink-0">
                         <h4 className="font-bold text-gray-800 mb-1">Terms & Conditions</h4>
                         <p className="whitespace-pre-wrap text-[10px]">{formData.terms}</p>
                     </div>
                     
-                    <div className="h-6 w-full flex-shrink-0 mt-4" style={{ backgroundColor: theme.hex }}></div>
+                    <div className="h-6 w-full flex-shrink-0 mt-2" style={{ backgroundColor: theme.hex }}></div>
                 </div>
             </div>
         </div>
