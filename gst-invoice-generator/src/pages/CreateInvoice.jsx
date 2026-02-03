@@ -174,121 +174,121 @@ export default function CreateInvoice() {
   const getTaxRateText = (type) => { const rates = new Set(formData.items?.map(i => parseFloat(i.gstRate)).filter(r => r > 0)); if (rates.size === 1) { const r = [...rates][0]; if (type === 'IGST') return `(${r}%)`; if (type === 'CGST' || type === 'SGST') return `(${r/2}%)`; } return ''; }
 
   const generatePdfBlob = async (copyType = '') => {
-    const originalElement = invoiceRef.current
-    if (!originalElement) {
-        console.error('Invoice ref is null');
-        return null;
-    }
-
-    const clone = originalElement.cloneNode(true)
-    
-    if (copyType) {
-        const titleElement = clone.querySelector('h1'); 
-        if (titleElement) {
-            const copyLabel = document.createElement('p');
-            
-            if (copyType === 'ORIGINAL') copyLabel.innerText = 'ORIGINAL FOR RECIPIENT';
-            else if (copyType === 'DUPLICATE') copyLabel.innerText = 'DUPLICATE FOR TRANSPORTER';
-            else if (copyType === 'TRIPLICATE') copyLabel.innerText = 'TRIPLICATE FOR SUPPLIER';
-            else copyLabel.innerText = copyType;
-
-            copyLabel.style.fontSize = '12px';  
-            copyLabel.style.fontWeight = 'bold'; 
-            copyLabel.style.color = '#ffffff';   
-            copyLabel.style.marginTop = '4px';
-            copyLabel.style.letterSpacing = '1px';
-            copyLabel.style.opacity = '1';       
-            
-            titleElement.parentNode.appendChild(copyLabel);
-        }
-    }
-
-    // ✅ FIX: Set exact A4 dimensions in mm (210mm x 297mm)
-    clone.style.width = '210mm';
-    clone.style.minWidth = '210mm';
-    clone.style.maxWidth = '210mm';
-    clone.style.height = '297mm';
-    clone.style.minHeight = '297mm';
-    clone.style.maxHeight = '297mm';
-    clone.style.overflow = 'hidden';
-    clone.style.transform = 'none';
-    clone.style.margin = '0';
-    clone.style.padding = '0';
-    clone.style.backgroundColor = 'white';
-    clone.style.display = 'block';
-    clone.style.position = 'relative';
-    clone.className = ''; // Remove all tailwind classes
-      
-    const container = document.createElement('div')
-    container.style.position = 'fixed'
-    container.style.left = '-9999px'
-    container.style.top = '0'
-    container.style.width = '210mm' 
-    container.style.height = '297mm'
-    container.style.backgroundColor = 'white'
-    container.style.zIndex = '-9999'
-    
-    container.appendChild(clone)
-    document.body.appendChild(container)
-
-    // Wait for images to load
-    const images = Array.from(container.querySelectorAll('img'));
-    await Promise.all(images.map(img => {
-        if (img.complete) return Promise.resolve();
-        return new Promise(resolve => { 
-            img.onload = resolve; 
-            img.onerror = resolve;
-            setTimeout(resolve, 2000); // Timeout fallback
-        });
-    }));
-
-    // Extra wait for rendering
-    await new Promise(resolve => setTimeout(resolve, 1200));
-
-    const buyerName = (formData.buyer_name || 'Customer').replace(/[^a-zA-Z0-9]/g, '_');
-    const invoiceNum = (formData.invoice_no || 'DRAFT').replace(/[^a-zA-Z0-9]/g, '_');
-    const typeTag = copyType ? `_${copyType}` : '';
-    const safeFileName = `${buyerName}_${invoiceNum}${typeTag}.pdf`
-
-    const opt = {
-      margin: 0,
-      filename: safeFileName,
-      image: { type: 'jpeg', quality: 0.98 },
-      enableLinks: false, 
-      html2canvas: { 
-          scale: 2, 
-          useCORS: true, 
-          allowTaint: true,
-          logging: false,
-          scrollY: 0,
-          scrollX: 0, 
-          letterRendering: true, 
-          width: 794,     // ✅ 210mm = 794px at 3.78px/mm
-          height: 1123,   // ✅ 297mm = 1123px at 3.78px/mm
-          windowWidth: 794,
-          windowHeight: 1123,
-          backgroundColor: '#ffffff'
-      },
-      jsPDF: { 
-          unit: 'mm',      // ✅ Use millimeters
-          format: 'a4',    // ✅ A4 format
-          orientation: 'portrait',
-          compress: true,
-          putOnlyUsedFonts: true
+      const originalElement = invoiceRef.current
+      if (!originalElement) {
+          console.error('Invoice ref is null');
+          return null;
       }
-    }
-    
-    try {
-      console.log('Starting PDF generation...');
-      const pdfBlob = await html2pdf().set(opt).from(clone).output('blob')
-      console.log('PDF generated successfully, size:', pdfBlob.size);
-      document.body.removeChild(container)
-      return { blob: pdfBlob, filename: opt.filename }
-    } catch (err) {
-      console.error('PDF generation error:', err);
-      if(document.body.contains(container)) document.body.removeChild(container)
-      throw err
-    }
+
+      const clone = originalElement.cloneNode(true)
+      
+      if (copyType) {
+          const titleElement = clone.querySelector('h1'); 
+          if (titleElement) {
+              const copyLabel = document.createElement('p');
+              
+              if (copyType === 'ORIGINAL') copyLabel.innerText = 'ORIGINAL FOR RECIPIENT';
+              else if (copyType === 'DUPLICATE') copyLabel.innerText = 'DUPLICATE FOR TRANSPORTER';
+              else if (copyType === 'TRIPLICATE') copyLabel.innerText = 'TRIPLICATE FOR SUPPLIER';
+              else copyLabel.innerText = copyType;
+
+              copyLabel.style.fontSize = '12px';  
+              copyLabel.style.fontWeight = 'bold'; 
+              copyLabel.style.color = '#ffffff';   
+              copyLabel.style.marginTop = '4px';
+              copyLabel.style.letterSpacing = '1px';
+              copyLabel.style.opacity = '1';       
+              
+              titleElement.parentNode.appendChild(copyLabel);
+          }
+      }
+
+      // FIX: Exact A4 dimensions without extra content
+      clone.style.width = '210mm'
+      clone.style.height = '297mm'
+      clone.style.minHeight = '297mm'
+      clone.style.maxHeight = '297mm'
+      clone.style.overflow = 'hidden'
+      clone.style.transform = 'none'
+      clone.style.margin = '0'
+      clone.style.padding = '0'
+      clone.style.backgroundColor = 'white'
+      clone.style.display = 'block'
+      clone.style.position = 'relative'
+      clone.style.boxSizing = 'border-box'
+      clone.classList.remove('w-full', 'lg:w-7/12', 'flex', 'justify-center', 'shadow-2xl', 'p-8', 'hidden', 'lg:flex', 'rounded-2xl', 'border')
+      
+      const container = document.createElement('div')
+      container.style.position = 'fixed'
+      container.style.left = '-9999px'
+      container.style.top = '0'
+      container.style.width = '210mm' 
+      container.style.height = '297mm'
+      container.style.backgroundColor = 'white'
+      container.style.zIndex = '-9999'
+      container.style.boxSizing = 'border-box'
+      
+      container.appendChild(clone)
+      document.body.appendChild(container)
+
+      // Wait for images to load
+      const images = Array.from(container.querySelectorAll('img'));
+      await Promise.all(images.map(img => {
+          if (img.complete) return Promise.resolve();
+          return new Promise(resolve => { 
+              img.onload = resolve; 
+              img.onerror = resolve;
+              setTimeout(resolve, 2000);
+          });
+      }));
+
+      // Extra wait for rendering
+      await new Promise(resolve => setTimeout(resolve, 1200));
+
+      const buyerName = (formData.buyer_name || 'Customer').replace(/[^a-zA-Z0-9]/g, '_');
+      const invoiceNum = (formData.invoice_no || 'DRAFT').replace(/[^a-zA-Z0-9]/g, '_');
+      const typeTag = copyType ? `_${copyType}` : '';
+      const safeFileName = `${buyerName}_${invoiceNum}${typeTag}.pdf`
+
+      const opt = {
+        margin: 0,
+        filename: safeFileName,
+        image: { type: 'jpeg', quality: 0.98 },
+        enableLinks: false, 
+        html2canvas: { 
+            scale: 2, 
+            useCORS: true, 
+            allowTaint: true,
+            logging: false,
+            scrollY: 0,
+            scrollX: 0, 
+            letterRendering: true, 
+            width: 794,
+            height: 1123,
+            windowWidth: 794,
+            windowHeight: 1123,
+            backgroundColor: '#ffffff'
+        },
+        jsPDF: { 
+            unit: 'mm', 
+            format: 'a4', 
+            orientation: 'portrait',
+            compress: true,
+            hotfixes: ['px_scaling']
+        }
+      }
+      
+      try {
+        console.log('Starting PDF generation...');
+        const pdfBlob = await html2pdf().set(opt).from(clone).output('blob')
+        console.log('PDF generated successfully, size:', pdfBlob.size);
+        document.body.removeChild(container)
+        return { blob: pdfBlob, filename: opt.filename }
+      } catch (err) {
+        console.error('PDF generation error:', err);
+        if(document.body.contains(container)) document.body.removeChild(container)
+        throw err
+      }
   }
 
   const handleDownloadPDF = async () => {
@@ -610,10 +610,10 @@ export default function CreateInvoice() {
                     id="invoice-preview" 
                     ref={invoiceRef} 
                     className="bg-white relative shrink-0" 
-                    style={{ width: '210mm', height: '297mm', margin: 0, padding: 0, overflow: 'hidden' }}
+                    style={{ width: '210mm', height: '297mm', margin: 0, padding: 0, overflow: 'hidden', boxSizing: 'border-box', display: 'flex', flexDirection: 'column' }}
                 >
                 
-                <div className="px-6 py-4 flex justify-between" style={{ backgroundColor: theme.hex, color: theme.text }}>
+                <div className="px-6 py-4 flex justify-between flex-shrink-0" style={{ backgroundColor: theme.hex, color: theme.text }}>
                     <div style={{ width: '50%' }}>
                         {sellerProfile?.logo_url && (
                             <img 
@@ -639,8 +639,8 @@ export default function CreateInvoice() {
                     </div>
                 </div>
 
-                <div className="px-6 py-4 pb-12">
-                    <div className="flex justify-between mb-6">
+                <div className="px-6 py-4 flex-1 overflow-hidden flex flex-col" style={{ boxSizing: 'border-box' }}>
+                    <div className="flex justify-between mb-4 flex-shrink-0">
                         <div style={{ width: '60%' }}>
                             <h3 className="text-gray-500 text-[10px] uppercase font-bold mb-1">Bill To</h3>
                             <p className="text-base font-bold text-gray-800 leading-tight">{formData.buyer_name || 'Client Name'}</p>
@@ -663,12 +663,12 @@ export default function CreateInvoice() {
                         </div>
                     </div>
 
-                    <div style={{ width: '740px', display: 'block', margin: '0 auto 24px auto' }}>
-                        <table style={{ width: '740px', tableLayout: 'fixed', borderCollapse: 'collapse' }}>
+                    <div style={{ width: '100%', display: 'block', marginBottom: '12px', flex: '1', overflowY: 'auto', boxSizing: 'border-box' }}>
+                        <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse' }}>
                             <thead>
                                 <tr style={{ backgroundColor: theme.hex, color: theme.text }}>
                                     <th style={{ 
-                                        width: '300px', 
+                                        width: '38%', 
                                         height: '35px', 
                                         maxHeight: '35px',
                                         overflow: 'hidden',
@@ -678,16 +678,16 @@ export default function CreateInvoice() {
                                     }}>
                                         <div style={{ display: 'flex', alignItems: 'center', height: '100%', paddingLeft: '12px', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }}>ITEM</div>
                                     </th>
-                                    <th style={{ width: '110px', height: '35px', maxHeight: '35px', overflow: 'hidden', verticalAlign: 'middle', backgroundColor: theme.hex, color: theme.text }}>
+                                    <th style={{ width: '14%', height: '35px', maxHeight: '35px', overflow: 'hidden', verticalAlign: 'middle', backgroundColor: theme.hex, color: theme.text }}>
                                         <div style={{ display: 'flex', alignItems: 'center', height: '100%', paddingLeft: '8px', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }}>HSN</div>
                                     </th>
-                                    <th style={{ width: '70px', height: '35px', maxHeight: '35px', overflow: 'hidden', verticalAlign: 'middle', backgroundColor: theme.hex, color: theme.text }}>
+                                    <th style={{ width: '9%', height: '35px', maxHeight: '35px', overflow: 'hidden', verticalAlign: 'middle', backgroundColor: theme.hex, color: theme.text }}>
                                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }}>QTY</div>
                                     </th>
-                                    <th style={{ width: '120px', height: '35px', maxHeight: '35px', overflow: 'hidden', verticalAlign: 'middle', backgroundColor: theme.hex, color: theme.text }}>
+                                    <th style={{ width: '15%', height: '35px', maxHeight: '35px', overflow: 'hidden', verticalAlign: 'middle', backgroundColor: theme.hex, color: theme.text }}>
                                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', height: '100%', paddingRight: '12px', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }}>PRICE</div>
                                     </th>
-                                    <th style={{ width: '140px', height: '35px', maxHeight: '35px', overflow: 'hidden', verticalAlign: 'middle', backgroundColor: theme.hex, color: theme.text }}>
+                                    <th style={{ width: '18%', height: '35px', maxHeight: '35px', overflow: 'hidden', verticalAlign: 'middle', backgroundColor: theme.hex, color: theme.text }}>
                                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', height: '100%', paddingRight: '12px', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }}>TOTAL</div>
                                     </th>
                                 </tr>
@@ -697,13 +697,13 @@ export default function CreateInvoice() {
                                     const amount = ((item.quantity||0) * (item.price||0));
                                     return (
                                         <tr key={i} style={{ borderBottom: '1px solid #e5e7eb' }}>
-                                            <td style={{ width: '300px', padding: '8px 0 8px 12px', verticalAlign: 'top' }}>
-                                                <p style={{ fontWeight: 600, fontSize: '13px', margin: 0, color: '#1f2937' }}>{item.description}</p>
+                                            <td style={{ width: '38%', padding: '6px 0 6px 12px', verticalAlign: 'top' }}>
+                                                <p style={{ fontWeight: 600, fontSize: '12px', margin: 0, color: '#1f2937' }}>{item.description}</p>
                                             </td>
-                                            <td style={{ width: '110px', padding: '8px 0 8px 12px', verticalAlign: 'top', fontSize: '12px', color: '#4b5563' }}>{item.hsn}</td>
-                                            <td style={{ width: '70px', padding: '8px 0', textAlign: 'center', verticalAlign: 'top', fontSize: '13px', color: '#1f2937' }}>{item.quantity}</td>
-                                            <td style={{ width: '120px', padding: '8px 12px 8px 0', textAlign: 'right', verticalAlign: 'top', fontSize: '13px', color: '#1f2937' }}>₹{item.price}</td>
-                                            <td style={{ width: '140px', padding: '8px 12px 8px 0', textAlign: 'right', verticalAlign: 'top', fontWeight: 'bold', fontSize: '13px', color: '#1f2937' }}>₹{(amount).toFixed(2)}</td>
+                                            <td style={{ width: '14%', padding: '6px 0 6px 12px', verticalAlign: 'top', fontSize: '11px', color: '#4b5563' }}>{item.hsn}</td>
+                                            <td style={{ width: '9%', padding: '6px 0', textAlign: 'center', verticalAlign: 'top', fontSize: '12px', color: '#1f2937' }}>{item.quantity}</td>
+                                            <td style={{ width: '15%', padding: '6px 12px 6px 0', textAlign: 'right', verticalAlign: 'top', fontSize: '12px', color: '#1f2937' }}>₹{item.price}</td>
+                                            <td style={{ width: '18%', padding: '6px 12px 6px 0', textAlign: 'right', verticalAlign: 'top', fontWeight: 'bold', fontSize: '12px', color: '#1f2937' }}>₹{(amount).toFixed(2)}</td>
                                         </tr>
                                     )
                                 })}
@@ -711,7 +711,7 @@ export default function CreateInvoice() {
                         </table>
                     </div>
                     
-                    <div className="flex justify-end">
+                    <div className="flex justify-end flex-shrink-0">
                         <div className="w-5/12 space-y-1 border-b pb-3">
                             <div className="flex justify-between text-gray-600 text-sm"><span>Subtotal</span><span>₹{totals.subtotal}</span></div>
                             {parseFloat(totals.igst) > 0 ? (
@@ -737,20 +737,20 @@ export default function CreateInvoice() {
                         </div>
                     </div>
 
-                    <div className="mt-2 text-right">
+                    <div className="mt-1 text-right flex-shrink-0">
                         <p className="text-xs text-gray-500 font-semibold italic">Amount in Words:</p>
                         <p className="text-xs font-bold text-gray-800">{amountInWords}</p>
                     </div>
                     
                     {/* Footer / Bank Info & Signature */}
-                    <div className="flex justify-between items-end mt-10 pt-6 border-t border-gray-100">
+                    <div className="flex justify-between items-end mt-2 pt-2 border-t border-gray-100 flex-shrink-0">
                         
                         {/* Clean Bank Details - Content Only */}
                         <div className="w-[55%]">
                             {sellerProfile?.bank_name && (
-                                <div className="pt-2">
-                                    <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2 border-b border-gray-200 pb-1 w-fit pr-8">Bank Details</p>
-                                    <div className="grid grid-cols-[80px_1fr] gap-y-1 text-xs w-fit min-w-[200px]">
+                                <div className="pt-1">
+                                    <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1 border-b border-gray-200 pb-0.5 w-fit pr-8">Bank Details</p>
+                                    <div className="grid grid-cols-[70px_1fr] gap-y-0.5 text-xs w-fit min-w-[180px]">
                                         <span className="text-gray-500 font-medium">Bank:</span><span className="font-bold text-gray-800">{sellerProfile.bank_name}</span>
                                         
                                         <span className="text-gray-500 font-medium">A/c No:</span>
@@ -771,23 +771,23 @@ export default function CreateInvoice() {
                         </div>
 
                         <div className="w-[40%] text-right flex flex-col items-end">
-                            <div className="flex items-end gap-4 mb-2">
-                                {stampPreview && <img src={stampPreview} alt="Stamp" crossOrigin="anonymous" className="h-20 w-20 object-contain opacity-80 rotate-[-5deg]" />}
-                                {signaturePreview && <img src={signaturePreview} alt="Sign" crossOrigin="anonymous" className="h-14 mb-2 object-contain" />}
+                            <div className="flex items-end gap-2 mb-1">
+                                {stampPreview && <img src={stampPreview} alt="Stamp" crossOrigin="anonymous" className="h-16 w-16 object-contain opacity-80 rotate-[-5deg]" />}
+                                {signaturePreview && <img src={signaturePreview} alt="Sign" crossOrigin="anonymous" className="h-12 mb-1 object-contain" />}
                             </div>
-                            <div className="border-t border-gray-300 w-32 mt-auto"></div> 
-                            <p className="text-[10px] font-bold uppercase mt-1 text-gray-600">Authorized Signatory</p>
-                            <p className="text-[10px] text-gray-400">{sellerProfile?.business_name}</p>
+                            <div className="border-t border-gray-300 w-28 mt-auto"></div> 
+                            <p className="text-[9px] font-bold uppercase mt-0.5 text-gray-600">Authorized Signatory</p>
+                            <p className="text-[9px] text-gray-400">{sellerProfile?.business_name}</p>
                         </div>
                     </div>
                     
-                    <div className="mt-6 pt-3 border-t text-xs text-gray-600">
-                        <h4 className="font-bold text-gray-800 mb-1">Terms & Conditions</h4>
-                        <p className="whitespace-pre-wrap text-[10px]">{formData.terms}</p>
+                    <div className="mt-2 pt-2 border-t text-xs text-gray-600 flex-shrink-0">
+                        <h4 className="font-bold text-gray-800 mb-0.5 text-[10px]">Terms & Conditions</h4>
+                        <p className="whitespace-pre-wrap text-[9px] leading-tight">{formData.terms}</p>
                     </div>
                 </div>
 
-                <div className="h-6 w-full absolute bottom-0" style={{ backgroundColor: theme.hex }}></div>
+                <div className="h-4 w-full flex-shrink-0" style={{ backgroundColor: theme.hex }}></div>
             </div>
         </div>
       </div>
