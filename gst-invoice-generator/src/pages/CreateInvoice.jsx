@@ -797,9 +797,9 @@ export default function CreateInvoice() {
                         <h4 className="font-bold text-gray-800 mb-1">Terms & Conditions</h4>
                         <p className="whitespace-pre-wrap text-[10px]">{formData.terms}</p>
                     </div>
-                    
-                    <div className="h-6 w-full flex-shrink-0 mt-2" style={{ backgroundColor: theme.hex }}></div>
                 </div>
+                
+                <div className="h-6 w-full flex-shrink-0 mt-auto" style={{ backgroundColor: theme.hex }}></div>
             </div>
         </div>
       </div>
