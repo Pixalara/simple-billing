@@ -166,6 +166,7 @@ export default function CreateInvoice() {
   useEffect(() => {
     const handleResize = () => { if (containerRef.current) { const s = (containerRef.current.offsetWidth - 32) / 794; setPreviewScale(s > 1 ? 1 : s) } }; handleResize(); window.addEventListener('resize', handleResize); return () => window.removeEventListener('resize', handleResize);
   }, [mobileTab])
+  
   const handleImageUpload = (e) => { const file = e.target.files[0]; if (file) { const reader = new FileReader(); reader.onloadend = () => setSignaturePreview(reader.result); reader.readAsDataURL(file) } }
   const handleItemSelect = (index, item) => { setValue(`items.${index}.description`, item.description); if (item.code) setValue(`items.${index}.hsn`, item.code); if (item.rate) setValue(`items.${index}.gstRate`, item.rate) }
   const calculateTotals = () => { let s=0,t=0; (formData.items||[]).forEach(i=>{const q=parseFloat(i.quantity)||0,p=parseFloat(i.price)||0,r=parseFloat(i.gstRate)||0,l=q*p; s+=l; t+=(l*r)/100}); const isInter=sellerProfile?.state&&formData.buyer_state&&(sellerProfile.state!==formData.buyer_state); return { subtotal: s.toFixed(2), cgst: isInter?0:(t/2).toFixed(2), sgst: isInter?0:(t/2).toFixed(2), igst: isInter?t.toFixed(2):0, grandTotal: (s+t).toFixed(2) } }
@@ -173,118 +174,121 @@ export default function CreateInvoice() {
   const getTaxRateText = (type) => { const rates = new Set(formData.items?.map(i => parseFloat(i.gstRate)).filter(r => r > 0)); if (rates.size === 1) { const r = [...rates][0]; if (type === 'IGST') return `(${r}%)`; if (type === 'CGST' || type === 'SGST') return `(${r/2}%)`; } return ''; }
 
   const generatePdfBlob = async (copyType = '') => {
-      const originalElement = invoiceRef.current
-      if (!originalElement) {
-          console.error('Invoice ref is null');
-          return null;
-      }
+    const originalElement = invoiceRef.current
+    if (!originalElement) {
+        console.error('Invoice ref is null');
+        return null;
+    }
 
-      const clone = originalElement.cloneNode(true)
-      
-      if (copyType) {
-          const titleElement = clone.querySelector('h1'); 
-          if (titleElement) {
-              const copyLabel = document.createElement('p');
-              
-              if (copyType === 'ORIGINAL') copyLabel.innerText = 'ORIGINAL FOR RECIPIENT';
-              else if (copyType === 'DUPLICATE') copyLabel.innerText = 'DUPLICATE FOR TRANSPORTER';
-              else if (copyType === 'TRIPLICATE') copyLabel.innerText = 'TRIPLICATE FOR SUPPLIER';
-              else copyLabel.innerText = copyType;
+    const clone = originalElement.cloneNode(true)
+    
+    if (copyType) {
+        const titleElement = clone.querySelector('h1'); 
+        if (titleElement) {
+            const copyLabel = document.createElement('p');
+            
+            if (copyType === 'ORIGINAL') copyLabel.innerText = 'ORIGINAL FOR RECIPIENT';
+            else if (copyType === 'DUPLICATE') copyLabel.innerText = 'DUPLICATE FOR TRANSPORTER';
+            else if (copyType === 'TRIPLICATE') copyLabel.innerText = 'TRIPLICATE FOR SUPPLIER';
+            else copyLabel.innerText = copyType;
 
-              copyLabel.style.fontSize = '12px';  
-              copyLabel.style.fontWeight = 'bold'; 
-              copyLabel.style.color = '#ffffff';   
-              copyLabel.style.marginTop = '4px';
-              copyLabel.style.letterSpacing = '1px';
-              copyLabel.style.opacity = '1';       
-              
-              titleElement.parentNode.appendChild(copyLabel);
-          }
-      }
-
-      // FIX: Set exact A4 dimensions in millimeters (210mm x 297mm)
-      // 1mm = 3.779527559 pixels, so: 210mm ≈ 794px, 297mm ≈ 1123px
-      clone.style.width = '210mm'
-      clone.style.height = '297mm'
-      clone.style.margin = '0'
-      clone.style.padding = '0'
-      clone.style.overflow = 'hidden'
-      clone.style.backgroundColor = 'white'
-      clone.style.display = 'block'
-      clone.style.position = 'relative'
-      clone.style.boxSizing = 'border-box'
-      
-      // Remove responsive classes that might cause issues
-      clone.classList.remove('w-full', 'lg:w-7/12', 'flex', 'justify-center', 'shadow-2xl', 'p-8', 'hidden', 'lg:flex', 'rounded-2xl', 'border')
-      
-      const container = document.createElement('div')
-      container.style.position = 'fixed'
-      container.style.left = '-9999px'
-      container.style.top = '0'
-      container.style.width = '210mm'
-      container.style.height = '297mm'
-      container.style.backgroundColor = 'white'
-      container.style.zIndex = '-9999'
-      container.style.margin = '0'
-      container.style.padding = '0'
-      
-      container.appendChild(clone)
-      document.body.appendChild(container)
-
-      // Wait for images to load
-      const images = Array.from(container.querySelectorAll('img'));
-      await Promise.all(images.map(img => {
-          if (img.complete) return Promise.resolve();
-          return new Promise(resolve => { 
-              img.onload = resolve; 
-              img.onerror = resolve;
-              setTimeout(resolve, 2000);
-          });
-      }));
-
-      // Extra wait for rendering
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      const buyerName = (formData.buyer_name || 'Customer').replace(/[^a-zA-Z0-9]/g, '_');
-      const invoiceNum = (formData.invoice_no || 'DRAFT').replace(/[^a-zA-Z0-9]/g, '_');
-      const typeTag = copyType ? `_${copyType}` : '';
-      const safeFileName = `${buyerName}_${invoiceNum}${typeTag}.pdf`
-
-      const opt = {
-        margin: 0,
-        filename: safeFileName,
-        image: { type: 'jpeg', quality: 0.98 },
-        enableLinks: false, 
-        html2canvas: { 
-            scale: 2, 
-            useCORS: true, 
-            allowTaint: true,
-            logging: false,
-            scrollY: 0,
-            scrollX: 0, 
-            windowWidth: 794,
-            windowHeight: 1123,
-            backgroundColor: '#ffffff'
-        },
-        jsPDF: { 
-            unit: 'mm', 
-            format: 'a4', 
-            orientation: 'portrait',
-            compress: true 
+            copyLabel.style.fontSize = '12px';  
+            copyLabel.style.fontWeight = 'bold'; 
+            copyLabel.style.color = '#ffffff';   
+            copyLabel.style.marginTop = '4px';
+            copyLabel.style.letterSpacing = '1px';
+            copyLabel.style.opacity = '1';       
+            
+            titleElement.parentNode.appendChild(copyLabel);
         }
-      }
+    }
+
+    // ✅ FIX: Set exact A4 dimensions in mm (210mm x 297mm)
+    clone.style.width = '210mm';
+    clone.style.minWidth = '210mm';
+    clone.style.maxWidth = '210mm';
+    clone.style.height = '297mm';
+    clone.style.minHeight = '297mm';
+    clone.style.maxHeight = '297mm';
+    clone.style.overflow = 'hidden';
+    clone.style.transform = 'none';
+    clone.style.margin = '0';
+    clone.style.padding = '0';
+    clone.style.backgroundColor = 'white';
+    clone.style.display = 'block';
+    clone.style.position = 'relative';
+    clone.className = ''; // Remove all tailwind classes
       
-      try {
-        console.log('Starting PDF generation...');
-        const pdfBlob = await html2pdf().set(opt).from(clone).output('blob')
-        console.log('PDF generated successfully, size:', pdfBlob.size);
-        document.body.removeChild(container)
-        return { blob: pdfBlob, filename: opt.filename }
-      } catch (err) {
-        console.error('PDF generation error:', err);
-        if(document.body.contains(container)) document.body.removeChild(container)
-        throw err
+    const container = document.createElement('div')
+    container.style.position = 'fixed'
+    container.style.left = '-9999px'
+    container.style.top = '0'
+    container.style.width = '210mm' 
+    container.style.height = '297mm'
+    container.style.backgroundColor = 'white'
+    container.style.zIndex = '-9999'
+    
+    container.appendChild(clone)
+    document.body.appendChild(container)
+
+    // Wait for images to load
+    const images = Array.from(container.querySelectorAll('img'));
+    await Promise.all(images.map(img => {
+        if (img.complete) return Promise.resolve();
+        return new Promise(resolve => { 
+            img.onload = resolve; 
+            img.onerror = resolve;
+            setTimeout(resolve, 2000); // Timeout fallback
+        });
+    }));
+
+    // Extra wait for rendering
+    await new Promise(resolve => setTimeout(resolve, 1200));
+
+    const buyerName = (formData.buyer_name || 'Customer').replace(/[^a-zA-Z0-9]/g, '_');
+    const invoiceNum = (formData.invoice_no || 'DRAFT').replace(/[^a-zA-Z0-9]/g, '_');
+    const typeTag = copyType ? `_${copyType}` : '';
+    const safeFileName = `${buyerName}_${invoiceNum}${typeTag}.pdf`
+
+    const opt = {
+      margin: 0,
+      filename: safeFileName,
+      image: { type: 'jpeg', quality: 0.98 },
+      enableLinks: false, 
+      html2canvas: { 
+          scale: 2, 
+          useCORS: true, 
+          allowTaint: true,
+          logging: false,
+          scrollY: 0,
+          scrollX: 0, 
+          letterRendering: true, 
+          width: 794,     // ✅ 210mm = 794px at 3.78px/mm
+          height: 1123,   // ✅ 297mm = 1123px at 3.78px/mm
+          windowWidth: 794,
+          windowHeight: 1123,
+          backgroundColor: '#ffffff'
+      },
+      jsPDF: { 
+          unit: 'mm',      // ✅ Use millimeters
+          format: 'a4',    // ✅ A4 format
+          orientation: 'portrait',
+          compress: true,
+          putOnlyUsedFonts: true
       }
+    }
+    
+    try {
+      console.log('Starting PDF generation...');
+      const pdfBlob = await html2pdf().set(opt).from(clone).output('blob')
+      console.log('PDF generated successfully, size:', pdfBlob.size);
+      document.body.removeChild(container)
+      return { blob: pdfBlob, filename: opt.filename }
+    } catch (err) {
+      console.error('PDF generation error:', err);
+      if(document.body.contains(container)) document.body.removeChild(container)
+      throw err
+    }
   }
 
   const handleDownloadPDF = async () => {
@@ -606,7 +610,7 @@ export default function CreateInvoice() {
                     id="invoice-preview" 
                     ref={invoiceRef} 
                     className="bg-white relative shrink-0" 
-                    style={{ width: '210mm', height: '297mm', margin: 0, padding: 0, overflow: 'hidden', boxSizing: 'border-box' }}
+                    style={{ width: '210mm', height: '297mm', margin: 0, padding: 0, overflow: 'hidden' }}
                 >
                 
                 <div className="px-6 py-4 flex justify-between" style={{ backgroundColor: theme.hex, color: theme.text }}>
@@ -635,7 +639,7 @@ export default function CreateInvoice() {
                     </div>
                 </div>
 
-                <div className="px-6 py-4" style={{ height: 'calc(297mm - 60px)', overflowY: 'auto', boxSizing: 'border-box' }}>
+                <div className="px-6 py-4 pb-12">
                     <div className="flex justify-between mb-6">
                         <div style={{ width: '60%' }}>
                             <h3 className="text-gray-500 text-[10px] uppercase font-bold mb-1">Bill To</h3>
@@ -739,7 +743,7 @@ export default function CreateInvoice() {
                     </div>
                     
                     {/* Footer / Bank Info & Signature */}
-                    <div className="flex justify-between items-end mt-6 pt-4 border-t border-gray-100">
+                    <div className="flex justify-between items-end mt-10 pt-6 border-t border-gray-100">
                         
                         {/* Clean Bank Details - Content Only */}
                         <div className="w-[55%]">
@@ -777,13 +781,13 @@ export default function CreateInvoice() {
                         </div>
                     </div>
                     
-                    <div className="mt-4 pt-3 border-t text-xs text-gray-600">
+                    <div className="mt-6 pt-3 border-t text-xs text-gray-600">
                         <h4 className="font-bold text-gray-800 mb-1">Terms & Conditions</h4>
                         <p className="whitespace-pre-wrap text-[10px]">{formData.terms}</p>
                     </div>
                 </div>
 
-                <div className="h-6 w-full" style={{ backgroundColor: theme.hex }}></div>
+                <div className="h-6 w-full absolute bottom-0" style={{ backgroundColor: theme.hex }}></div>
             </div>
         </div>
       </div>
