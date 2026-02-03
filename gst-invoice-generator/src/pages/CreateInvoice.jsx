@@ -85,7 +85,7 @@ export default function CreateInvoice() {
   const [sharing, setSharing] = useState(false)
   const [sellerProfile, setSellerProfile] = useState(null)
   const [theme, setTheme] = useState(THEMES[0])
-  const [signaturePreview, setSignaturePreview] = useState(null)
+  const [signaturePreview, setSignature ] = useState(null)
   const [stampPreview, setStampPreview] = useState(null) 
   const [manualInvoiceEnabled, setManualInvoiceEnabled] = useState(false) 
   const [existingInvoiceNo, setExistingInvoiceNo] = useState(null)
@@ -203,17 +203,18 @@ export default function CreateInvoice() {
       }
 
       // Critical: Set exact dimensions matching A4 in pixels
-      clone.style.width = '794px' 
-      clone.style.minHeight = '1123px'
-      clone.style.height = 'auto'
-      clone.style.overflow = 'visible'
-      clone.style.transform = 'none'
-      clone.style.margin = '0'
-      clone.style.padding = '0'
-      clone.style.backgroundColor = 'white'
-      clone.style.display = 'block'
-      clone.style.position = 'relative'
-      clone.classList.remove('w-full', 'lg:w-7/12', 'flex', 'justify-center', 'shadow-2xl', 'p-8', 'hidden', 'lg:flex') 
+     clone.style.width = '794px'
+     clone.style.height = '1123px'
+     clone.style.minHeight = '1123px'
+     clone.style.maxHeight = '1123px'
+     clone.style.overflow = 'hidden'
+     clone.style.transform = 'none'
+     clone.style.margin = '0'
+     clone.style.padding = '0'
+     clone.style.backgroundColor = 'white'
+     clone.style.display = 'block'
+     clone.style.position = 'relative'
+     clone.classList.remove('w-full', 'lg:w-7/12', 'flex', 'justify-center', 'shadow-2xl', 'p-8', 'hidden', 'lg:flex', 'rounded-2xl', 'border')
       
       const container = document.createElement('div')
       container.style.position = 'fixed'
@@ -266,11 +267,11 @@ export default function CreateInvoice() {
             backgroundColor: '#ffffff'
         },
         jsPDF: { 
-            unit: 'mm', 
-            format: 'a4', 
-            orientation: 'portrait',
-            compress: true 
-        }
+        unit: 'px', 
+        format: [794, 1123], 
+        orientation: 'portrait',
+        compress: true 
+      }
       }
       
       try {
@@ -604,8 +605,8 @@ export default function CreateInvoice() {
                 <div 
                     id="invoice-preview" 
                     ref={invoiceRef} 
-                    className="bg-white shadow-2xl relative shrink-0" 
-                    style={{ width: '210mm', minHeight: '297mm', padding: '0' }}
+                    className="bg-white relative shrink-0" 
+                    style={{ width: '794px', height: '1123px', margin: 0, padding: 0, overflow: 'hidden' }}
                 >
                 
                 <div className="px-6 py-4 flex justify-between" style={{ backgroundColor: theme.hex, color: theme.text }}>
