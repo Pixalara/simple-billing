@@ -1,12 +1,10 @@
 import { useState, useEffect, useRef } from 'react'
-import { useForm, useFieldArray, useWatch } from 'react-hook-form'
+import { useForm, useFieldArray } from 'react-hook-form'
 import { supabase } from '../supabaseClient'
 import { useNavigate, useParams } from 'react-router-dom'
 import { INDIAN_STATES, HSN_CODES } from '../constants'
 import SearchableSelect from '../components/SearchableSelect'
 import html2pdf from 'html2pdf.js'
-
-// Import Footer Component
 import BrandingFooter from '../components/BrandingFooter'
 
 // --- PREMIUM POPUP COMPONENT ---
@@ -48,14 +46,11 @@ const THEMES = [
 const numberToWords = (num) => {
     const a = ['', 'One ', 'Two ', 'Three ', 'Four ', 'Five ', 'Six ', 'Seven ', 'Eight ', 'Nine ', 'Ten ', 'Eleven ', 'Twelve ', 'Thirteen ', 'Fourteen ', 'Fifteen ', 'Sixteen ', 'Seventeen ', 'Eighteen ', 'Nineteen '];
     const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
-    const regex = /^(\d{2})(\d{2})(\d{2})(\d{1})(\d{2})$/;
-    const getLT20 = (n) => a[Number(n)];
-    const get20Plus = (n) => b[n[0]] + ' ' + a[n[1]];
     const convert = (num) => {
         if (num === 0) return '';
-        if (num < 20) return getLT20(num);
-        if (num < 100) return get20Plus(String(num));
-        if (num < 1000) return getLT20(String(num)[0]) + 'Hundred ' + convert(num % 100);
+        if (num < 20) return a[Number(num)];
+        if (num < 100) return b[Math.floor(num/10)] + ' ' + a[num % 10];
+        if (num < 1000) return a[Math.floor(num/100)] + 'Hundred ' + convert(num % 100);
         if (num < 100000) return convert(Math.floor(num / 1000)) + 'Thousand ' + convert(num % 1000);
         if (num < 10000000) return convert(Math.floor(num / 100000)) + 'Lakh ' + convert(num % 100000);
         return convert(Math.floor(num / 10000000)) + 'Crore ' + convert(num % 10000000);
@@ -164,14 +159,64 @@ export default function CreateInvoice() {
   }, [id, navigate, reset, setValue])
 
   useEffect(() => {
-    const handleResize = () => { if (containerRef.current) { const s = (containerRef.current.offsetWidth - 32) / 794; setPreviewScale(s > 1 ? 1 : s) } }; handleResize(); window.addEventListener('resize', handleResize); return () => window.removeEventListener('resize', handleResize);
+    const handleResize = () => { 
+      if (containerRef.current) { 
+        const s = (containerRef.current.offsetWidth - 32) / 794; 
+        setPreviewScale(s > 1 ? 1 : s) 
+      } 
+    }; 
+    handleResize(); 
+    window.addEventListener('resize', handleResize); 
+    return () => window.removeEventListener('resize', handleResize);
   }, [mobileTab])
   
-  const handleImageUpload = (e) => { const file = e.target.files[0]; if (file) { const reader = new FileReader(); reader.onloadend = () => setSignaturePreview(reader.result); reader.readAsDataURL(file) } }
-  const handleItemSelect = (index, item) => { setValue(`items.${index}.description`, item.description); if (item.code) setValue(`items.${index}.hsn`, item.code); if (item.rate) setValue(`items.${index}.gstRate`, item.rate) }
-  const calculateTotals = () => { let s=0,t=0; (formData.items||[]).forEach(i=>{const q=parseFloat(i.quantity)||0,p=parseFloat(i.price)||0,r=parseFloat(i.gstRate)||0,l=q*p; s+=l; t+=(l*r)/100}); const isInter=sellerProfile?.state&&formData.buyer_state&&(sellerProfile.state!==formData.buyer_state); return { subtotal: s.toFixed(2), cgst: isInter?0:(t/2).toFixed(2), sgst: isInter?0:(t/2).toFixed(2), igst: isInter?t.toFixed(2):0, grandTotal: (s+t).toFixed(2) } }
-  const totals = calculateTotals(); const amountInWords = totals.grandTotal ? numberToWords(totals.grandTotal) : '';
-  const getTaxRateText = (type) => { const rates = new Set(formData.items?.map(i => parseFloat(i.gstRate)).filter(r => r > 0)); if (rates.size === 1) { const r = [...rates][0]; if (type === 'IGST') return `(${r}%)`; if (type === 'CGST' || type === 'SGST') return `(${r/2}%)`; } return ''; }
+  const handleImageUpload = (e) => { 
+    const file = e.target.files[0]; 
+    if (file) { 
+      const reader = new FileReader(); 
+      reader.onloadend = () => setSignaturePreview(reader.result); 
+      reader.readAsDataURL(file) 
+    } 
+  }
+  
+  const handleItemSelect = (index, item) => { 
+    setValue(`items.${index}.description`, item.description); 
+    if (item.code) setValue(`items.${index}.hsn`, item.code); 
+    if (item.rate) setValue(`items.${index}.gstRate`, item.rate) 
+  }
+  
+  const calculateTotals = () => { 
+    let s=0,t=0; 
+    (formData.items||[]).forEach(i=>{
+      const q=parseFloat(i.quantity)||0,
+            p=parseFloat(i.price)||0,
+            r=parseFloat(i.gstRate)||0,
+            l=q*p; 
+      s+=l; 
+      t+=(l*r)/100
+    }); 
+    const isInter=sellerProfile?.state&&formData.buyer_state&&(sellerProfile.state!==formData.buyer_state); 
+    return { 
+      subtotal: s.toFixed(2), 
+      cgst: isInter?0:(t/2).toFixed(2), 
+      sgst: isInter?0:(t/2).toFixed(2), 
+      igst: isInter?t.toFixed(2):0, 
+      grandTotal: (s+t).toFixed(2) 
+    } 
+  }
+  
+  const totals = calculateTotals(); 
+  const amountInWords = totals.grandTotal ? numberToWords(totals.grandTotal) : '';
+  
+  const getTaxRateText = (type) => { 
+    const rates = new Set(formData.items?.map(i => parseFloat(i.gstRate)).filter(r => r > 0)); 
+    if (rates.size === 1) { 
+      const r = [...rates][0]; 
+      if (type === 'IGST') return `(${r}%)`; 
+      if (type === 'CGST' || type === 'SGST') return `(${r/2}%)`; 
+    } 
+    return ''; 
+  }
 
   const generatePdfBlob = async (copyType = '') => {
       const originalElement = invoiceRef.current
@@ -203,7 +248,7 @@ export default function CreateInvoice() {
           }
       }
 
-      // Set A4 page dimensions (210mm x 297mm = 794px x 1123px at 96dpi)
+      // Set exact A4 dimensions
       clone.style.width = '794px'
       clone.style.height = '1123px'
       clone.style.minHeight = '1123px'
@@ -213,10 +258,12 @@ export default function CreateInvoice() {
       clone.style.margin = '0'
       clone.style.padding = '0'
       clone.style.backgroundColor = 'white'
-      clone.style.display = 'block'
+      clone.style.display = 'flex'
+      clone.style.flexDirection = 'column'
       clone.style.position = 'relative'
-      clone.style.boxSizing = 'border-box'
-      clone.classList.remove('w-full', 'lg:w-7/12', 'flex', 'justify-center', 'shadow-2xl', 'p-8', 'hidden', 'lg:flex', 'rounded-2xl', 'border')
+      clone.style.boxShadow = 'none'
+      clone.style.border = 'none'
+      clone.classList.remove('w-full', 'lg:w-7/12', 'flex', 'justify-center', 'shadow-2xl', 'p-8', 'hidden', 'lg:flex', 'rounded-2xl')
       
       const container = document.createElement('div')
       container.style.position = 'fixed'
@@ -255,6 +302,7 @@ export default function CreateInvoice() {
         filename: safeFileName,
         image: { type: 'jpeg', quality: 0.98 },
         enableLinks: false, 
+        pagebreak: { mode: 'avoid-all' },
         html2canvas: { 
             scale: 2, 
             useCORS: true, 
@@ -264,6 +312,8 @@ export default function CreateInvoice() {
             scrollX: 0,
             windowHeight: 1123,
             windowWidth: 794,
+            height: 1123,
+            width: 794,
             letterRendering: true,
             backgroundColor: '#ffffff'
         },
@@ -272,9 +322,8 @@ export default function CreateInvoice() {
             format: [794, 1123], 
             orientation: 'portrait',
             compress: true,
-            hotfixes: ['px_scaling']
-        },
-        pagebreak: { mode: 'avoid-all' }
+            precision: 10
+        }
       }
       
       try {
@@ -406,7 +455,6 @@ export default function CreateInvoice() {
   return (
     <div className="min-h-screen bg-gray-100 p-0 md:p-4 lg:p-8 flex flex-col">
       
-      {/* --- RENDER POPUP --- */}
       <Popup 
         isOpen={popup.isOpen}
         onClose={closePopup}
@@ -456,7 +504,6 @@ export default function CreateInvoice() {
         }
       `}</style>
       
-      {/* --- MOBILE TABS --- */}
       <div className="lg:hidden sticky top-0 z-20 bg-white border-b flex text-sm font-bold shadow-sm">
         <button onClick={() => setMobileTab('edit')} className={`flex-1 py-3 text-center ${mobileTab === 'edit' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500'}`}>✎ Editor</button>
         <button onClick={() => setMobileTab('preview')} className={`flex-1 py-3 text-center ${mobileTab === 'preview' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500'}`}>👁 Preview</button>
@@ -620,16 +667,18 @@ export default function CreateInvoice() {
                 <div 
                     id="invoice-preview" 
                     ref={invoiceRef} 
-                    className="bg-white relative shrink-0" 
+                    className="bg-white relative shrink-0 shadow-xl" 
                     style={{ 
-                        width: '794px', 
-                        height: '1123px', 
-                        margin: 0, 
-                        padding: 0, 
-                        overflow: 'hidden', 
-                        display: 'flex', 
-                        flexDirection: 'column',
-                        boxSizing: 'border-box'
+                      width: '794px', 
+                      height: '1123px', 
+                      minHeight: '1123px',
+                      maxHeight: '1123px',
+                      margin: 0, 
+                      padding: 0, 
+                      overflow: 'hidden', 
+                      display: 'flex', 
+                      flexDirection: 'column',
+                      position: 'relative'
                     }}
                 >
                 
@@ -657,11 +706,9 @@ export default function CreateInvoice() {
                     </div>
                 </div>
 
-                {/* Main Content Area - Flexible */}
-                <div className="px-6 py-3 flex-grow" style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-                    
-                    {/* Bill To Section */}
-                    <div className="flex justify-between mb-3 flex-shrink-0">
+                {/* Content Area - flex-grow to push footer down */}
+                <div className="px-6 py-3 flex-grow" style={{ display: 'flex', flexDirection: 'column', paddingBottom: '100px' }}>
+                    <div className="flex justify-between mb-4">
                         <div style={{ width: '60%' }}>
                             <h3 className="text-gray-500 text-[10px] uppercase font-bold mb-1">Bill To</h3>
                             <p className="text-base font-bold text-gray-800 leading-tight">{formData.buyer_name || 'Client Name'}</p>
@@ -673,6 +720,7 @@ export default function CreateInvoice() {
                             <div className="grid grid-cols-[auto_auto] gap-x-3 justify-end items-baseline">
                                 <span className="text-gray-500 text-xs text-right">Date:</span>
                                 <span className="font-semibold text-sm text-right">{formatDate(formData.invoiceDate)}</span>
+                                
                                 {formData.dueDate && (
                                     <>
                                         <span className="text-gray-500 text-xs text-right">Due Date:</span>
@@ -684,15 +732,25 @@ export default function CreateInvoice() {
                     </div>
 
                     {/* Items Table */}
-                    <div style={{ width: '100%', marginBottom: '6px', flex: '0 1 auto' }}>
+                    <div style={{ width: '100%', display: 'block', marginBottom: '8px', flex: '0 1 auto' }}>
                         <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse' }}>
                             <thead>
                                 <tr style={{ backgroundColor: theme.hex, color: theme.text }}>
-                                    <th style={{ width: '38%', height: '32px', padding: '0 12px', textAlign: 'left', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }}>ITEM</th>
-                                    <th style={{ width: '13%', height: '32px', padding: '0 8px', textAlign: 'left', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }}>HSN</th>
-                                    <th style={{ width: '10%', height: '32px', padding: '0', textAlign: 'center', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }}>QTY</th>
-                                    <th style={{ width: '15%', height: '32px', padding: '0 12px 0 0', textAlign: 'right', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }}>PRICE</th>
-                                    <th style={{ width: '24%', height: '32px', padding: '0 12px 0 0', textAlign: 'right', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }}>TOTAL</th>
+                                    <th style={{ width: '38%', height: '35px', overflow: 'hidden', verticalAlign: 'middle', backgroundColor: theme.hex, color: theme.text }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', height: '100%', paddingLeft: '12px', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }}>ITEM</div>
+                                    </th>
+                                    <th style={{ width: '13%', height: '35px', overflow: 'hidden', verticalAlign: 'middle', backgroundColor: theme.hex, color: theme.text }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', height: '100%', paddingLeft: '8px', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }}>HSN</div>
+                                    </th>
+                                    <th style={{ width: '10%', height: '35px', overflow: 'hidden', verticalAlign: 'middle', backgroundColor: theme.hex, color: theme.text }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }}>QTY</div>
+                                    </th>
+                                    <th style={{ width: '15%', height: '35px', overflow: 'hidden', verticalAlign: 'middle', backgroundColor: theme.hex, color: theme.text }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', height: '100%', paddingRight: '12px', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }}>PRICE</div>
+                                    </th>
+                                    <th style={{ width: '24%', height: '35px', overflow: 'hidden', verticalAlign: 'middle', backgroundColor: theme.hex, color: theme.text }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', height: '100%', paddingRight: '12px', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }}>TOTAL</div>
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -700,11 +758,13 @@ export default function CreateInvoice() {
                                     const amount = ((item.quantity||0) * (item.price||0));
                                     return (
                                         <tr key={i} style={{ borderBottom: '1px solid #e5e7eb' }}>
-                                            <td style={{ padding: '6px 0 6px 12px', verticalAlign: 'top', fontWeight: 600, fontSize: '12px', color: '#1f2937' }}>{item.description}</td>
-                                            <td style={{ padding: '6px 0 6px 8px', verticalAlign: 'top', fontSize: '11px', color: '#4b5563' }}>{item.hsn}</td>
-                                            <td style={{ padding: '6px 0', textAlign: 'center', verticalAlign: 'top', fontSize: '12px', color: '#1f2937' }}>{item.quantity}</td>
-                                            <td style={{ padding: '6px 12px 6px 0', textAlign: 'right', verticalAlign: 'top', fontSize: '12px', color: '#1f2937' }}>₹{item.price}</td>
-                                            <td style={{ padding: '6px 12px 6px 0', textAlign: 'right', verticalAlign: 'top', fontWeight: 'bold', fontSize: '12px', color: '#1f2937' }}>₹{(amount).toFixed(2)}</td>
+                                            <td style={{ width: '38%', padding: '8px 0 8px 12px', verticalAlign: 'top' }}>
+                                                <p style={{ fontWeight: 600, fontSize: '13px', margin: 0, color: '#1f2937' }}>{item.description}</p>
+                                            </td>
+                                            <td style={{ width: '13%', padding: '8px 0 8px 12px', verticalAlign: 'top', fontSize: '12px', color: '#4b5563' }}>{item.hsn}</td>
+                                            <td style={{ width: '10%', padding: '8px 0', textAlign: 'center', verticalAlign: 'top', fontSize: '13px', color: '#1f2937' }}>{item.quantity}</td>
+                                            <td style={{ width: '15%', padding: '8px 12px 8px 0', textAlign: 'right', verticalAlign: 'top', fontSize: '13px', color: '#1f2937' }}>₹{item.price}</td>
+                                            <td style={{ width: '24%', padding: '8px 12px 8px 0', textAlign: 'right', verticalAlign: 'top', fontWeight: 'bold', fontSize: '13px', color: '#1f2937' }}>₹{(amount).toFixed(2)}</td>
                                         </tr>
                                     )
                                 })}
@@ -713,48 +773,53 @@ export default function CreateInvoice() {
                     </div>
                     
                     {/* Totals */}
-                    <div className="flex justify-end mb-2 flex-shrink-0">
-                        <div className="w-5/12 space-y-0.5 border-b pb-2">
-                            <div className="flex justify-between text-gray-600" style={{ fontSize: '13px' }}><span>Subtotal</span><span>₹{totals.subtotal}</span></div>
+                    <div className="flex justify-end mb-4">
+                        <div className="w-5/12 space-y-1 border-b pb-3">
+                            <div className="flex justify-between text-gray-600 text-sm"><span>Subtotal</span><span>₹{totals.subtotal}</span></div>
                             {parseFloat(totals.igst) > 0 ? (
-                            <div className="flex justify-between text-gray-600" style={{ fontSize: '11px' }}>
+                            <div className="flex justify-between text-gray-600 text-xs">
                                 <span>IGST {getTaxRateText('IGST')}</span>
                                 <span>₹{totals.igst}</span>
                             </div>
                             ) : (
                             <>
-                                <div className="flex justify-between text-gray-600" style={{ fontSize: '11px' }}>
+                                <div className="flex justify-between text-gray-600 text-xs">
                                     <span>CGST {getTaxRateText('CGST')}</span>
                                     <span>₹{totals.cgst}</span>
                                 </div>
-                                <div className="flex justify-between text-gray-600" style={{ fontSize: '11px' }}>
+                                <div className="flex justify-between text-gray-600 text-xs">
                                     <span>SGST {getTaxRateText('SGST')}</span>
                                     <span>₹{totals.sgst}</span>
                                 </div>
                             </>
                             )}
-                            <div className="flex justify-between py-1.5 font-bold" style={{ fontSize: '18px', color: theme.hex }}>
+                            <div className="flex justify-between py-2 text-xl font-bold" style={{ color: theme.hex }}>
                                 <span>Total</span><span>₹{totals.grandTotal}</span>
                             </div>
                         </div>
                     </div>
 
-                    {/* Amount in Words */}
-                    <div className="text-right mb-2 flex-shrink-0" style={{ fontSize: '11px' }}>
-                        <p className="text-gray-500 font-semibold italic">Amount in Words:</p>
-                        <p className="font-bold text-gray-800">{amountInWords}</p>
+                    <div className="mt-1 text-right mb-2">
+                        <p className="text-xs text-gray-500 font-semibold italic">Amount in Words:</p>
+                        <p className="text-xs font-bold text-gray-800">{amountInWords}</p>
                     </div>
                     
-                    {/* Bank & Signature Section */}
-                    <div className="flex justify-between items-end pt-2 border-t border-gray-100 flex-shrink-0" style={{ marginTop: 'auto' }}>
+                    {/* Footer / Bank Info & Signature */}
+                    <div className="flex justify-between items-end mt-2 pt-3 border-t border-gray-100 flex-shrink-0">
+                        
                         <div className="w-[55%]">
                             {sellerProfile?.bank_name && (
-                                <div>
-                                    <p className="text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-1 border-b border-gray-200 pb-0.5 w-fit pr-6">Bank Details</p>
-                                    <div className="grid grid-cols-[70px_1fr] gap-y-0.5 text-[10px] w-fit">
+                                <div className="pt-1">
+                                    <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2 border-b border-gray-200 pb-1 w-fit pr-8">Bank Details</p>
+                                    <div className="grid grid-cols-[80px_1fr] gap-y-1 text-xs w-fit min-w-[200px]">
                                         <span className="text-gray-500 font-medium">Bank:</span><span className="font-bold text-gray-800">{sellerProfile.bank_name}</span>
-                                        <span className="text-gray-500 font-medium">A/c No:</span><span className="font-bold text-gray-800">{sellerProfile.account_number}</span>
-                                        <span className="text-gray-500 font-medium">IFSC:</span><span className="font-bold text-gray-800">{sellerProfile.ifsc_code}</span>
+                                        
+                                        <span className="text-gray-500 font-medium">A/c No:</span>
+                                        <span className="font-bold text-gray-800">{sellerProfile.account_number}</span>
+                                        
+                                        <span className="text-gray-500 font-medium">IFSC:</span>
+                                        <span className="font-bold text-gray-800">{sellerProfile.ifsc_code}</span>
+                                        
                                         {sellerProfile.branch_name && (
                                             <>
                                                 <span className="text-gray-500 font-medium">Branch:</span>
@@ -767,40 +832,40 @@ export default function CreateInvoice() {
                         </div>
 
                         <div className="w-[40%] text-right flex flex-col items-end">
-                            <div className="flex items-end gap-3 mb-1">
-                                {stampPreview && <img src={stampPreview} alt="Stamp" crossOrigin="anonymous" className="h-14 w-14 object-contain opacity-80 rotate-[-5deg]" />}
-                                {signaturePreview && <img src={signaturePreview} alt="Sign" crossOrigin="anonymous" className="h-10 object-contain" />}
+                            <div className="flex items-end gap-4 mb-2">
+                                {stampPreview && <img src={stampPreview} alt="Stamp" crossOrigin="anonymous" className="h-16 w-16 object-contain opacity-80 rotate-[-5deg]" />}
+                                {signaturePreview && <img src={signaturePreview} alt="Sign" crossOrigin="anonymous" className="h-12 mb-2 object-contain" />}
                             </div>
-                            <div className="border-t border-gray-300 w-28"></div> 
-                            <p className="text-[9px] font-bold uppercase mt-0.5 text-gray-600">Authorized Signatory</p>
-                            <p className="text-[9px] text-gray-400">{sellerProfile?.business_name}</p>
+                            <div className="border-t border-gray-300 w-32"></div> 
+                            <p className="text-[10px] font-bold uppercase mt-1 text-gray-600">Authorized Signatory</p>
+                            <p className="text-[10px] text-gray-400">{sellerProfile?.business_name}</p>
                         </div>
                     </div>
                     
-                    {/* Terms */}
-                    <div className="pt-2 border-t text-gray-600 flex-shrink-0" style={{ fontSize: '10px' }}>
-                        <h4 className="font-bold text-gray-800 mb-0.5">Terms & Conditions</h4>
-                        <p className="whitespace-pre-wrap leading-tight">{formData.terms}</p>
+                    {/* Terms & Conditions */}
+                    <div className="mt-2 pt-2 border-t text-xs text-gray-600 flex-shrink-0">
+                        <h4 className="font-bold text-gray-800 mb-1">Terms & Conditions</h4>
+                        <p className="whitespace-pre-wrap text-[10px]">{formData.terms}</p>
                     </div>
                 </div>
                 
-                {/* Footer Section - Fixed at Bottom */}
-                <div className="flex-shrink-0" style={{ marginTop: 'auto' }}>
-                    {/* Powered by Pixalara */}
-                    <div className="text-center py-1" style={{ backgroundColor: 'white' }}>
-                        <p className="text-[9px] text-gray-400 font-medium">
-                            Powered by <a href="https://pixalara.com" target="_blank" rel="noreferrer" className="font-bold text-gray-600 hover:text-gray-800">pixalara.com</a>
-                        </p>
-                    </div>
-                    {/* Blue Bar */}
-                    <div style={{ height: '20px', width: '100%', backgroundColor: theme.hex }}></div>
-                </div>
+                {/* Bottom Blue Bar - ABSOLUTE POSITIONED AT BOTTOM */}
+                <div 
+                  className="w-full flex-shrink-0" 
+                  style={{ 
+                    height: '24px',
+                    backgroundColor: theme.hex, 
+                    position: 'absolute', 
+                    bottom: 0, 
+                    left: 0, 
+                    right: 0 
+                  }}
+                ></div>
             </div>
         </div>
       </div>
       </div>
       
-      {/* BRANDING FOOTER PLACED AT THE VERY BOTTOM OF THE PAGE LAYOUT (FULL WIDTH) */}
       <div className="w-full mt-auto">
           <BrandingFooter />
       </div>
