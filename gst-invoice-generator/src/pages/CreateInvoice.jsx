@@ -90,6 +90,7 @@ export default function CreateInvoice() {
   const [signaturePreview, setSignaturePreview] = useState(null)
   const [stampPreview, setStampPreview] = useState(null) 
   const [gstinError, setGstinError] = useState('')
+  const [manualInvoiceEnabled, setManualInvoiceEnabled] = useState(false)
 
   const [popup, setPopup] = useState({ isOpen: false, title: '', message: '', type: 'success', actionLabel: 'OK', onAction: null, cancelLabel: null })
   
@@ -122,6 +123,7 @@ export default function CreateInvoice() {
       const { data: profile } = await supabase.from('users').select('*').eq('id', user.id).single()
       if (profile) {
           setSellerProfile(profile)
+          setManualInvoiceEnabled(profile.enable_manual_invoice_no || false)
           if (profile.signature_url) setSignaturePreview(profile.signature_url)
           if (profile.stamp_url) setStampPreview(profile.stamp_url)
       }
@@ -137,8 +139,8 @@ export default function CreateInvoice() {
             if (foundTheme) setTheme(foundTheme)
           }
         }
-      } else {
-        // NEW INVOICE - ALWAYS AUTO-GENERATE (IGNORE MANUAL SETTING)
+      } else if (!profile?.enable_manual_invoice_no) {
+        // NEW INVOICE - AUTO-GENERATE ONLY IF MANUAL MODE IS DISABLED
         try {
             const date = new Date();
             const day = String(date.getDate()).padStart(2, '0');
@@ -199,6 +201,12 @@ export default function CreateInvoice() {
     } else {
       setGstinError('');
     }
+  }
+
+  // Handle Manual Invoice Number with Auto-capitalization
+  const handleInvoiceNoChange = (e) => {
+    const value = e.target.value.toUpperCase();
+    setValue('invoice_no', value);
   }
   
   // Helper to get GSTIN input border class
@@ -566,14 +574,15 @@ export default function CreateInvoice() {
             <div className="grid grid-cols-2 gap-3">
                 <div>
                 <label className="text-xs text-gray-500 flex items-center gap-1">
-                    Invoice No 
-                    <svg className="w-3 h-3 text-gray-400" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" /></svg>
+                    Invoice No {manualInvoiceEnabled && <span className="text-red-500">*</span>}
+                    {!manualInvoiceEnabled && <svg className="w-3 h-3 text-gray-400" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" /></svg>}
                 </label>
                 <input 
-                    {...register('invoice_no')} 
-                    className="w-full p-2 border rounded text-sm bg-gray-100 text-gray-500 cursor-not-allowed"
-                    readOnly
-                    title="Invoice numbers are auto-generated and locked"
+                    {...register('invoice_no', { required: manualInvoiceEnabled })} 
+                    className={`w-full p-2 border rounded text-sm ${manualInvoiceEnabled ? 'bg-white' : 'bg-gray-100 text-gray-500 cursor-not-allowed'}`}
+                    readOnly={!manualInvoiceEnabled}
+                    onChange={manualInvoiceEnabled ? handleInvoiceNoChange : undefined}
+                    title={manualInvoiceEnabled ? 'Enter invoice number (auto-capitalized)' : 'Invoice numbers are auto-generated and locked'}
                 />
                 </div>
                 <div>

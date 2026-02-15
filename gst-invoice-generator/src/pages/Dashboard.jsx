@@ -157,6 +157,7 @@ export default function Dashboard() {
       
       setValue('print_duplicates', data.print_duplicates)
       setValue('print_triplicates', data.print_triplicates)
+      setValue('enable_manual_invoice_no', data.enable_manual_invoice_no)
 
       if (data.logo_url) setSavedLogo(data.logo_url)
       if (data.signature_url) setSavedSignature(data.signature_url)
@@ -580,6 +581,10 @@ export default function Dashboard() {
                         <div className="flex items-center gap-2">
                             <input type="checkbox" {...register('print_triplicates')} disabled={!isEditingProfile} id="print_trip" className="w-4 h-4 text-blue-600 rounded cursor-pointer" />
                             <label htmlFor="print_trip" className="text-xs font-bold text-gray-700 cursor-pointer">Generate Triplicate Copy?</label>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <input type="checkbox" {...register('enable_manual_invoice_no')} disabled={!isEditingProfile} id="manual_inv" className="w-4 h-4 text-blue-600 rounded cursor-pointer" />
+                            <label htmlFor="manual_inv" className="text-xs font-bold text-gray-700 cursor-pointer">Enable Manual Invoice Number Entry?</label>
                         </div>
                     </div>
 
