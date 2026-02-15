@@ -201,6 +201,13 @@ export default function CreateInvoice() {
     }
   }
   
+  // Helper to get GSTIN input border class
+  const getGstinBorderClass = () => {
+    if (gstinError) return 'border-red-500';
+    if (formData.buyer_gstin?.length === 15 && validateGSTIN(formData.buyer_gstin)) return 'border-green-500';
+    return '';
+  }
+  
   const calculateTotals = () => { 
     let s=0,t=0; 
     (formData.items||[]).forEach(i=>{
@@ -598,7 +605,7 @@ export default function CreateInvoice() {
                   <input 
                       {...register('buyer_gstin')} 
                       placeholder="GSTIN (Optional - 15 characters)" 
-                      className={`w-full p-2 border rounded text-sm ${gstinError ? 'border-red-500' : formData.buyer_gstin?.length === 15 && validateGSTIN(formData.buyer_gstin) ? 'border-green-500' : ''}`}
+                      className={`w-full p-2 border rounded text-sm ${getGstinBorderClass()}`}
                       onChange={handleGstinChange}
                       maxLength={15}
                   />
