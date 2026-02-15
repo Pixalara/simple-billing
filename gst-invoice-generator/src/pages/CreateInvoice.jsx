@@ -374,7 +374,7 @@ export default function CreateInvoice() {
             }, 2000)
         }
 
-    } catch (e) {
+    } catch {
         showPopup('Error', 'Failed to generate PDF.', 'error');
     }
   }
@@ -398,7 +398,7 @@ export default function CreateInvoice() {
              }, 2000)
         }
 
-    } catch (e) {
+    } catch {
         showPopup('Error', 'Failed to generate PDF for email.', 'error');
         return
     }
@@ -432,7 +432,7 @@ export default function CreateInvoice() {
             downloadBlob(result.blob, result.filename); 
             showPopup('Downloaded', 'Browser doesn\'t support sharing.', 'info'); 
         } 
-    } catch(e){ 
+    } catch { 
         showPopup('Error','Failed to share','error') 
     } finally { 
         setSharing(false) 

@@ -122,7 +122,7 @@ export default function Dashboard() {
   const [popup, setPopup] = useState({ isOpen: false, title: '', message: '', type: 'info', actionLabel: 'OK', cancelLabel: null, onAction: null })
 
   const navigate = useNavigate()
-  const { register, handleSubmit, setValue, watch } = useForm()
+  const { register, handleSubmit, setValue } = useForm()
 
   const showPopup = (title, message, type = 'info', actionLabel = 'OK', onAction = null, cancelLabel = null) => {
       setPopup({ isOpen: true, title, message, type, actionLabel, onAction, cancelLabel })
@@ -138,6 +138,7 @@ export default function Dashboard() {
         fetchInvoices(session.user.id)
       }
     })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const fetchProfile = async (userId) => {
@@ -238,7 +239,7 @@ export default function Dashboard() {
           setInvoices(prev => prev.map(inv => inv.id === invoice.id ? { ...inv, status: nextStatus } : inv));
           const { error } = await supabase.from('invoices').update({ status: nextStatus }).eq('id', invoice.id);
           if (error) throw error;
-      } catch (err) {
+      } catch {
           setInvoices(prev => prev.map(inv => inv.id === invoice.id ? { ...inv, status: currentStatus } : inv));
           showPopup('Error', 'Failed to update status', 'error');
       }
