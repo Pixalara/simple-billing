@@ -5,13 +5,9 @@ import { useForm } from 'react-hook-form'
 import { INDIAN_STATES } from '../constants'
 import DatePicker from "react-datepicker"
 import "react-datepicker/dist/react-datepicker.css"
-// Charts
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts'
-// Excel Export
 import ExcelJS from 'exceljs'
 import { saveAs } from 'file-saver'
-
-// --- IMPORT THE FOOTER ---
 import BrandingFooter from '../components/BrandingFooter'
 
 // --- PREMIUM POPUP COMPONENT ---
@@ -51,9 +47,9 @@ const Popup = ({ isOpen, onClose, title, message, type, actionLabel, onAction, c
 // --- ANALYTICS DATA PROCESSORS ---
 const processStatusData = (invoices) => {
     const data = [
-        { name: 'Paid', value: 0, color: '#10b981' }, // Emerald
-        { name: 'Pending', value: 0, color: '#f59e0b' }, // Amber
-        { name: 'Overdue', value: 0, color: '#ef4444' }  // Red
+        { name: 'Paid', value: 0, color: '#10b981' },
+        { name: 'Pending', value: 0, color: '#f59e0b' },
+        { name: 'Overdue', value: 0, color: '#ef4444' }
     ];
 
     invoices.forEach(inv => {
@@ -62,7 +58,7 @@ const processStatusData = (invoices) => {
         
         if (status === 'PAID') data[0].value += amount;
         else if (status === 'OVERDUE') data[2].value += amount;
-        else data[1].value += amount; // Default to Pending
+        else data[1].value += amount;
     });
 
     return data.filter(item => item.value > 0);
@@ -79,10 +75,9 @@ const processTopClients = (invoices) => {
     return Object.entries(clients)
         .map(([name, value]) => ({ name, value }))
         .sort((a, b) => b.value - a.value)
-        .slice(0, 5); // Top 5
+        .slice(0, 5);
 };
 
-// --- CUSTOM TOOLTIP FOR PIE CHART ---
 const CustomTooltip = ({ active, payload }) => {
     if (active && payload && payload.length) {
         return (
@@ -111,17 +106,15 @@ export default function Dashboard() {
   const [savedSignature, setSavedSignature] = useState(null)
   const [savedStamp, setSavedStamp] = useState(null)
   
-  // New state to control edit mode
-  const [isEditingProfile, setIsEditingProfile] = useState(true)
+  // Profile lock/unlock state
+  const [isEditingProfile, setIsEditingProfile] = useState(false)
   
   const [invoices, setInvoices] = useState([]) 
   const [stats, setStats] = useState({ total: 0, revenue: 0 })
   
-  // --- CALCULATE ANALYTICS DATA ---
   const statusData = useMemo(() => processStatusData(invoices), [invoices]);
   const topClients = useMemo(() => processTopClients(invoices), [invoices]);
 
-  // --- FILTER STATES ---
   const [searchTerm, setSearchTerm] = useState('')
   const [showFilters, setShowFilters] = useState(false)
   const [filters, setFilters] = useState({ startDate: null, endDate: null, minAmount: '', maxAmount: '' })
@@ -129,7 +122,7 @@ export default function Dashboard() {
   const [popup, setPopup] = useState({ isOpen: false, title: '', message: '', type: 'info', actionLabel: 'OK', cancelLabel: null, onAction: null })
 
   const navigate = useNavigate()
-  const { register, handleSubmit, setValue } = useForm()
+  const { register, handleSubmit, setValue, watch } = useForm()
 
   const showPopup = (title, message, type = 'info', actionLabel = 'OK', onAction = null, cancelLabel = null) => {
       setPopup({ isOpen: true, title, message, type, actionLabel, onAction, cancelLabel })
@@ -169,10 +162,9 @@ export default function Dashboard() {
       if (data.signature_url) setSavedSignature(data.signature_url)
       if (data.stamp_url) setSavedStamp(data.stamp_url)
       
-      // Lock the profile if data exists
-      setIsEditingProfile(false)
+      // Lock profile if data exists, unlock if new user
+      setIsEditingProfile(!data.business_name)
     } else {
-        // Unlock if no data (new user)
         setIsEditingProfile(true)
     }
     setLoading(false)
@@ -236,7 +228,6 @@ export default function Dashboard() {
     }
   }
 
-  // --- STATUS UPDATE LOGIC ---
   const cycleStatus = async (e, invoice) => {
       e.stopPropagation();
       
@@ -258,7 +249,7 @@ export default function Dashboard() {
       switch(status) {
           case 'PAID': return 'bg-green-100 text-green-700 border-green-200 hover:bg-green-200';
           case 'OVERDUE': return 'bg-red-100 text-red-700 border-red-200 hover:bg-red-200';
-          default: return 'bg-amber-100 text-amber-700 border-amber-200 hover:bg-amber-200'; // Pending
+          default: return 'bg-amber-100 text-amber-700 border-amber-200 hover:bg-amber-200';
       }
   }
 
@@ -291,7 +282,6 @@ export default function Dashboard() {
   const enforceUpperCase = (e, f) => setValue(f, e.target.value.toUpperCase())
   const enforceCapitalLetters = (e, f) => setValue(f, e.target.value.replace(/[^A-Za-z\s]/g, '').toUpperCase())
 
-  // --- FILTERING LOGIC ---
   const getFilteredInvoices = () => {
     return invoices.filter(inv => {
         const searchLower = searchTerm.toLowerCase().trim()
@@ -323,7 +313,6 @@ export default function Dashboard() {
   const filteredInvoices = getFilteredInvoices()
   const activeFilterCount = (filters.startDate ? 1 : 0) + (filters.endDate ? 1 : 0) + (filters.minAmount ? 1 : 0) + (filters.maxAmount ? 1 : 0)
 
-  // --- PREMIUM EXCEL EXPORT (GSTR-1) ---
   const handleExport = async () => {
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('GSTR-1 Report');
@@ -459,7 +448,6 @@ export default function Dashboard() {
           <button onClick={handleLogout} className="text-red-600 font-medium text-sm hover:underline">Sign Out</button>
         </div>
 
-        {/* Stats Row */}
         <div className="grid grid-cols-2 gap-4 mb-6">
             <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
                 <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Total Invoices</p>
@@ -471,10 +459,7 @@ export default function Dashboard() {
             </div>
         </div>
 
-        {/* --- INSIGHTS ROW --- */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            
-            {/* PIE CHART */}
             <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center justify-center relative min-h-[300px]">
                 <h3 className="absolute top-5 left-5 text-xs font-bold text-gray-400 uppercase tracking-wider">Payment Status</h3>
                 
@@ -498,7 +483,6 @@ export default function Dashboard() {
                 )}
             </div>
 
-            {/* TOP CLIENTS LIST */}
             <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col min-h-[300px]">
                 <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Top Clients by Revenue</p>
                 <div className="flex-1 flex flex-col justify-center space-y-3">
@@ -528,11 +512,19 @@ export default function Dashboard() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             
-            {/* Left Col: Profile & Settings */}
             <div className="lg:col-span-1 bg-white p-5 rounded-xl shadow-sm h-fit">
                 <div className="flex justify-between items-center mb-4 border-b pb-2">
                     <h2 className="text-lg font-bold text-gray-800">Business Profile</h2>
-                    {!isEditingProfile && <span className="text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded font-bold">LOCKED</span>}
+                    {!isEditingProfile ? (
+                        <button 
+                            onClick={() => setIsEditingProfile(true)} 
+                            className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-lg font-bold hover:bg-blue-700 transition-colors"
+                        >
+                            Edit
+                        </button>
+                    ) : (
+                        <span className="text-xs bg-green-100 text-green-600 px-2 py-1 rounded font-bold">EDITING</span>
+                    )}
                 </div>
                 
                 <div className="grid grid-cols-3 gap-3 mb-6">
@@ -544,87 +536,60 @@ export default function Dashboard() {
                                  type === 'stamp' && savedStamp ? <img src={savedStamp} alt="Stamp" className="h-full w-full object-contain p-1" /> :
                                  <span className="text-gray-400 text-[10px] capitalize">{type}</span>}
                             </div>
-                            
-                            {/* Only show upload button when editing */}
-                            {isEditingProfile && (
-                                <label className="text-[10px] text-blue-600 font-bold cursor-pointer hover:underline text-center capitalize">
-                                    {(type === 'logo' ? uploadingLogo : type === 'signature' ? uploadingSig : uploadingStamp) ? '...' : 'Upload'}
-                                    <input type="file" accept="image/*" onChange={(e) => handleFileUpload(e, type)} className="hidden" />
-                                </label>
-                            )}
+                            <label className="text-[10px] text-blue-600 font-bold cursor-pointer hover:underline text-center capitalize">
+                                {(type === 'logo' ? uploadingLogo : type === 'signature' ? uploadingSig : uploadingStamp) ? '...' : 'Upload'}
+                                <input type="file" accept="image/*" onChange={(e) => handleFileUpload(e, type)} className="hidden" />
+                            </label>
                         </div>
                     ))}
                 </div>
 
                 <form onSubmit={handleSubmit(updateProfile)} className="space-y-3">
-                    <input disabled={!isEditingProfile} {...register('business_name')} placeholder="BUSINESS NAME" onChange={(e) => enforceLettersOnly(e, 'business_name')} className="w-full p-2 border rounded text-sm bg-gray-50 disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed" />
-                    <input disabled={!isEditingProfile} {...register('business_email')} placeholder="BUSINESS EMAIL" className="w-full p-2 border rounded text-sm bg-gray-50 disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed" />
-                    <input disabled={!isEditingProfile} {...register('business_phone')} placeholder="BUSINESS PHONE" onChange={(e) => enforceNumbersOnly(e, 'business_phone')} maxLength={10} className="w-full p-2 border rounded text-sm bg-gray-50 disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed" />
-                    <input disabled={!isEditingProfile} {...register('website')} placeholder="WEBSITE" className="w-full p-2 border rounded text-sm bg-gray-50 disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed" />
-                    <input disabled={!isEditingProfile} {...register('gstin')} placeholder="GSTIN" onChange={(e) => enforceUpperCase(e, 'gstin')} className="w-full p-2 border rounded text-sm bg-gray-50 disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed" />
-                    <select disabled={!isEditingProfile} {...register('state')} className="w-full p-2 border rounded text-sm bg-gray-50 disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed"><option value="">Select State</option>{INDIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}</select>
+                    <input {...register('business_name')} disabled={!isEditingProfile} placeholder="BUSINESS NAME" onChange={(e) => enforceLettersOnly(e, 'business_name')} className={`w-full p-2 border rounded text-sm ${!isEditingProfile ? 'bg-gray-50 text-gray-600 cursor-not-allowed' : 'bg-white'}`} />
+                    <input {...register('business_email')} disabled={!isEditingProfile} placeholder="BUSINESS EMAIL" className={`w-full p-2 border rounded text-sm ${!isEditingProfile ? 'bg-gray-50 text-gray-600 cursor-not-allowed' : 'bg-white'}`} />
+                    <input {...register('business_phone')} disabled={!isEditingProfile} placeholder="BUSINESS PHONE" onChange={(e) => enforceNumbersOnly(e, 'business_phone')} maxLength={10} className={`w-full p-2 border rounded text-sm ${!isEditingProfile ? 'bg-gray-50 text-gray-600 cursor-not-allowed' : 'bg-white'}`} />
+                    <input {...register('website')} disabled={!isEditingProfile} placeholder="WEBSITE" className={`w-full p-2 border rounded text-sm ${!isEditingProfile ? 'bg-gray-50 text-gray-600 cursor-not-allowed' : 'bg-white'}`} />
+                    <input {...register('gstin')} disabled={!isEditingProfile} placeholder="GSTIN" onChange={(e) => enforceUpperCase(e, 'gstin')} className={`w-full p-2 border rounded text-sm ${!isEditingProfile ? 'bg-gray-50 text-gray-600 cursor-not-allowed' : 'bg-white'}`} />
+                    <select {...register('state')} disabled={!isEditingProfile} className={`w-full p-2 border rounded text-sm ${!isEditingProfile ? 'bg-gray-50 text-gray-600 cursor-not-allowed' : 'bg-white'}`}><option value="">Select State</option>{INDIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}</select>
 
                     <div className="pt-4 border-t mt-4">
                         <h3 className="text-xs font-bold text-gray-500 uppercase mb-2">Bank Details</h3>
                         <div className="space-y-2">
-                            <input disabled={!isEditingProfile} {...register('bank_name')} placeholder="BANK NAME" onChange={(e) => enforceCapitalLetters(e, 'bank_name')} className="w-full p-2 border rounded text-sm bg-gray-50 disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed" />
-                            <input disabled={!isEditingProfile} {...register('account_number')} placeholder="ACCOUNT NUMBER" onChange={(e) => enforceNumbersOnly(e, 'account_number')} className="w-full p-2 border rounded text-sm bg-gray-50 disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed" />
-                            <input disabled={!isEditingProfile} {...register('ifsc_code')} placeholder="IFSC CODE" onChange={(e) => enforceUpperCase(e, 'ifsc_code')} className="w-full p-2 border rounded text-sm bg-gray-50 disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed" />
-                            <input disabled={!isEditingProfile} {...register('branch_name')} placeholder="BRANCH NAME" onChange={(e) => enforceCapitalLetters(e, 'branch_name')} className="w-full p-2 border rounded text-sm bg-gray-50 disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed" />
+                            <input {...register('bank_name')} disabled={!isEditingProfile} placeholder="BANK NAME" onChange={(e) => enforceCapitalLetters(e, 'bank_name')} className={`w-full p-2 border rounded text-sm ${!isEditingProfile ? 'bg-gray-50 text-gray-600 cursor-not-allowed' : 'bg-white'}`} />
+                            <input {...register('account_number')} disabled={!isEditingProfile} placeholder="ACCOUNT NUMBER" onChange={(e) => enforceNumbersOnly(e, 'account_number')} className={`w-full p-2 border rounded text-sm ${!isEditingProfile ? 'bg-gray-50 text-gray-600 cursor-not-allowed' : 'bg-white'}`} />
+                            <input {...register('ifsc_code')} disabled={!isEditingProfile} placeholder="IFSC CODE" onChange={(e) => enforceUpperCase(e, 'ifsc_code')} className={`w-full p-2 border rounded text-sm ${!isEditingProfile ? 'bg-gray-50 text-gray-600 cursor-not-allowed' : 'bg-white'}`} />
+                            <input {...register('branch_name')} disabled={!isEditingProfile} placeholder="BRANCH NAME" onChange={(e) => enforceCapitalLetters(e, 'branch_name')} className={`w-full p-2 border rounded text-sm ${!isEditingProfile ? 'bg-gray-50 text-gray-600 cursor-not-allowed' : 'bg-white'}`} />
                         </div>
                     </div>
 
                     <div className="pt-4 border-t mt-4 space-y-2">
                         <div className="flex items-center gap-2">
-                            <input disabled={!isEditingProfile} type="checkbox" {...register('print_duplicates')} id="print_dup" className="w-4 h-4 text-blue-600 rounded cursor-pointer disabled:cursor-not-allowed" />
-                            <label htmlFor="print_dup" className={`text-xs font-bold ${!isEditingProfile ? 'text-gray-400 cursor-not-allowed' : 'text-gray-700 cursor-pointer'}`}>Generate Original & Duplicate?</label>
+                            <input type="checkbox" {...register('print_duplicates')} disabled={!isEditingProfile} id="print_dup" className="w-4 h-4 text-blue-600 rounded cursor-pointer" />
+                            <label htmlFor="print_dup" className="text-xs font-bold text-gray-700 cursor-pointer">Generate Original & Duplicate?</label>
                         </div>
                         <div className="flex items-center gap-2">
-                            <input disabled={!isEditingProfile} type="checkbox" {...register('print_triplicates')} id="print_trip" className="w-4 h-4 text-blue-600 rounded cursor-pointer disabled:cursor-not-allowed" />
-                            <label htmlFor="print_trip" className={`text-xs font-bold ${!isEditingProfile ? 'text-gray-400 cursor-not-allowed' : 'text-gray-700 cursor-pointer'}`}>Generate Triplicate Copy?</label>
+                            <input type="checkbox" {...register('print_triplicates')} disabled={!isEditingProfile} id="print_trip" className="w-4 h-4 text-blue-600 rounded cursor-pointer" />
+                            <label htmlFor="print_trip" className="text-xs font-bold text-gray-700 cursor-pointer">Generate Triplicate Copy?</label>
                         </div>
                         <div className="flex items-center gap-2">
-                            <input disabled={!isEditingProfile} type="checkbox" {...register('enable_manual_invoice_no')} id="manual_inv" className="w-4 h-4 text-blue-600 rounded cursor-pointer disabled:cursor-not-allowed" />
-                            <label htmlFor="manual_inv" className={`text-xs font-bold ${!isEditingProfile ? 'text-gray-400 cursor-not-allowed' : 'text-gray-700 cursor-pointer'}`}>Enable Manual Invoice Numbering?</label>
+                            <input type="checkbox" {...register('enable_manual_invoice_no')} disabled={!isEditingProfile} id="manual_inv" className="w-4 h-4 text-blue-600 rounded cursor-pointer" />
+                            <label htmlFor="manual_inv" className="text-xs font-bold text-gray-700 cursor-pointer">Enable Manual Invoice Numbering?</label>
                         </div>
                     </div>
 
-                    {/* ACTION BUTTONS */}
-                    {isEditingProfile ? (
-                        <div className="flex gap-2 mt-4">
-                            <button type="submit" className="flex-1 bg-blue-600 text-white py-2 rounded-lg font-bold text-sm shadow hover:bg-blue-700 transition-all">
-                                Save Profile
-                            </button>
-                            <button 
-                                type="button" 
-                                onClick={() => { fetchProfile(session.user.id); }} 
-                                className="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg font-bold text-sm hover:bg-gray-300 transition-all"
-                            >
-                                Cancel
-                            </button>
-                        </div>
-                    ) : (
-                        <button 
-                            type="button" 
-                            onClick={(e) => { e.preventDefault(); setIsEditingProfile(true); }} 
-                            className="w-full bg-amber-500 text-white py-2 rounded-lg font-bold text-sm shadow hover:bg-amber-600 mt-4 transition-all"
-                        >
-                            Edit Profile
-                        </button>
+                    {isEditingProfile && (
+                        <button type="submit" className="w-full bg-blue-600 text-white py-2 rounded-lg font-bold text-sm shadow hover:bg-blue-700 mt-4">Save Profile</button>
                     )}
                 </form>
             </div>
 
-            {/* Right Col: Actions & List */}
             <div className="lg:col-span-2 space-y-4">
                 <button onClick={() => navigate('/create-invoice')} className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-4 rounded-xl font-bold shadow-lg flex items-center justify-center gap-2 transform active:scale-95 transition-all">
                     <span className="text-xl">+</span> Create New Invoice
                 </button>
                 
-                {/* --- MAIN CONTAINER --- */}
                 <div className="bg-white rounded-xl shadow-sm border border-gray-100 relative">
                     
-                    {/* Header & Filter Bar */}
                     <div className="p-4 border-b bg-gray-50/50 space-y-3 rounded-t-xl">
                         <div className="flex flex-col md:flex-row gap-3 justify-between items-start md:items-center">
                             <h3 className="font-bold text-gray-700 text-sm">All Invoices ({invoices.length})</h3>
@@ -656,7 +621,6 @@ export default function Dashboard() {
                             </div>
                         </div>
 
-                        {/* Collapsible Filters */}
                         {showFilters && (
                             <div className="pt-3 border-t border-gray-200 grid grid-cols-2 md:grid-cols-4 gap-3 animate-in fade-in slide-in-from-top-2 relative z-50">
                                 <div className="relative">
@@ -697,7 +661,6 @@ export default function Dashboard() {
                         )}
                     </div>
 
-                    {/* Invoice List */}
                     {filteredInvoices.length === 0 ? (
                         <div className="p-12 text-center flex flex-col items-center justify-center opacity-60">
                             <svg className="w-12 h-12 text-gray-300 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
@@ -706,7 +669,6 @@ export default function Dashboard() {
                         </div>
                     ) : (
                         <>
-                            {/* Desktop Table View */}
                             <table className="hidden md:table w-full text-left text-sm rounded-b-xl overflow-hidden">
                                 <thead className="bg-gray-50 text-gray-500 uppercase font-semibold text-xs border-b">
                                     <tr>
@@ -739,7 +701,6 @@ export default function Dashboard() {
                                 </tbody>
                             </table>
 
-                            {/* Mobile List View */}
                             <div className="md:hidden divide-y divide-gray-100 rounded-b-xl overflow-hidden">
                                 {filteredInvoices.map((inv) => (
                                     <div key={inv.id} onClick={() => navigate(`/edit-invoice/${inv.id}`)} className="p-4 active:bg-blue-50 transition-colors cursor-pointer">
@@ -773,7 +734,7 @@ export default function Dashboard() {
             </div>
         </div>
       </div>
-{/* BRANDING FOOTER */}
+      
       <BrandingFooter />
 
     </div>
