@@ -1,12 +1,10 @@
 import { useState, useEffect, useRef } from 'react'
-import { useForm, useFieldArray, useWatch } from 'react-hook-form'
+import { useForm, useFieldArray } from 'react-hook-form'
 import { supabase } from '../supabaseClient'
 import { useNavigate, useParams } from 'react-router-dom'
 import { INDIAN_STATES, HSN_CODES } from '../constants'
 import SearchableSelect from '../components/SearchableSelect'
 import html2pdf from 'html2pdf.js'
-
-// Import Footer Component
 import BrandingFooter from '../components/BrandingFooter'
 
 // --- PREMIUM POPUP COMPONENT ---
@@ -48,14 +46,11 @@ const THEMES = [
 const numberToWords = (num) => {
     const a = ['', 'One ', 'Two ', 'Three ', 'Four ', 'Five ', 'Six ', 'Seven ', 'Eight ', 'Nine ', 'Ten ', 'Eleven ', 'Twelve ', 'Thirteen ', 'Fourteen ', 'Fifteen ', 'Sixteen ', 'Seventeen ', 'Eighteen ', 'Nineteen '];
     const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
-    const regex = /^(\d{2})(\d{2})(\d{2})(\d{1})(\d{2})$/;
-    const getLT20 = (n) => a[Number(n)];
-    const get20Plus = (n) => b[n[0]] + ' ' + a[n[1]];
     const convert = (num) => {
         if (num === 0) return '';
-        if (num < 20) return getLT20(num);
-        if (num < 100) return get20Plus(String(num));
-        if (num < 1000) return getLT20(String(num)[0]) + 'Hundred ' + convert(num % 100);
+        if (num < 20) return a[Number(num)];
+        if (num < 100) return b[Math.floor(num/10)] + ' ' + a[num % 10];
+        if (num < 1000) return a[Math.floor(num/100)] + 'Hundred ' + convert(num % 100);
         if (num < 100000) return convert(Math.floor(num / 1000)) + 'Thousand ' + convert(num % 1000);
         if (num < 10000000) return convert(Math.floor(num / 100000)) + 'Lakh ' + convert(num % 100000);
         return convert(Math.floor(num / 10000000)) + 'Crore ' + convert(num % 10000000);
@@ -164,14 +159,64 @@ export default function CreateInvoice() {
   }, [id, navigate, reset, setValue])
 
   useEffect(() => {
-    const handleResize = () => { if (containerRef.current) { const s = (containerRef.current.offsetWidth - 32) / 794; setPreviewScale(s > 1 ? 1 : s) } }; handleResize(); window.addEventListener('resize', handleResize); return () => window.removeEventListener('resize', handleResize);
+    const handleResize = () => { 
+      if (containerRef.current) { 
+        const s = (containerRef.current.offsetWidth - 32) / 794; 
+        setPreviewScale(s > 1 ? 1 : s) 
+      } 
+    }; 
+    handleResize(); 
+    window.addEventListener('resize', handleResize); 
+    return () => window.removeEventListener('resize', handleResize);
   }, [mobileTab])
   
-  const handleImageUpload = (e) => { const file = e.target.files[0]; if (file) { const reader = new FileReader(); reader.onloadend = () => setSignaturePreview(reader.result); reader.readAsDataURL(file) } }
-  const handleItemSelect = (index, item) => { setValue(`items.${index}.description`, item.description); if (item.code) setValue(`items.${index}.hsn`, item.code); if (item.rate) setValue(`items.${index}.gstRate`, item.rate) }
-  const calculateTotals = () => { let s=0,t=0; (formData.items||[]).forEach(i=>{const q=parseFloat(i.quantity)||0,p=parseFloat(i.price)||0,r=parseFloat(i.gstRate)||0,l=q*p; s+=l; t+=(l*r)/100}); const isInter=sellerProfile?.state&&formData.buyer_state&&(sellerProfile.state!==formData.buyer_state); return { subtotal: s.toFixed(2), cgst: isInter?0:(t/2).toFixed(2), sgst: isInter?0:(t/2).toFixed(2), igst: isInter?t.toFixed(2):0, grandTotal: (s+t).toFixed(2) } }
-  const totals = calculateTotals(); const amountInWords = totals.grandTotal ? numberToWords(totals.grandTotal) : '';
-  const getTaxRateText = (type) => { const rates = new Set(formData.items?.map(i => parseFloat(i.gstRate)).filter(r => r > 0)); if (rates.size === 1) { const r = [...rates][0]; if (type === 'IGST') return `(${r}%)`; if (type === 'CGST' || type === 'SGST') return `(${r/2}%)`; } return ''; }
+  const handleImageUpload = (e) => { 
+    const file = e.target.files[0]; 
+    if (file) { 
+      const reader = new FileReader(); 
+      reader.onloadend = () => setSignaturePreview(reader.result); 
+      reader.readAsDataURL(file) 
+    } 
+  }
+  
+  const handleItemSelect = (index, item) => { 
+    setValue(`items.${index}.description`, item.description); 
+    if (item.code) setValue(`items.${index}.hsn`, item.code); 
+    if (item.rate) setValue(`items.${index}.gstRate`, item.rate) 
+  }
+  
+  const calculateTotals = () => { 
+    let s=0,t=0; 
+    (formData.items||[]).forEach(i=>{
+      const q=parseFloat(i.quantity)||0,
+            p=parseFloat(i.price)||0,
+            r=parseFloat(i.gstRate)||0,
+            l=q*p; 
+      s+=l; 
+      t+=(l*r)/100
+    }); 
+    const isInter=sellerProfile?.state&&formData.buyer_state&&(sellerProfile.state!==formData.buyer_state); 
+    return { 
+      subtotal: s.toFixed(2), 
+      cgst: isInter?0:(t/2).toFixed(2), 
+      sgst: isInter?0:(t/2).toFixed(2), 
+      igst: isInter?t.toFixed(2):0, 
+      grandTotal: (s+t).toFixed(2) 
+    } 
+  }
+  
+  const totals = calculateTotals(); 
+  const amountInWords = totals.grandTotal ? numberToWords(totals.grandTotal) : '';
+  
+  const getTaxRateText = (type) => { 
+    const rates = new Set(formData.items?.map(i => parseFloat(i.gstRate)).filter(r => r > 0)); 
+    if (rates.size === 1) { 
+      const r = [...rates][0]; 
+      if (type === 'IGST') return `(${r}%)`; 
+      if (type === 'CGST' || type === 'SGST') return `(${r/2}%)`; 
+    } 
+    return ''; 
+  }
 
   const generatePdfBlob = async (copyType = '') => {
       const originalElement = invoiceRef.current
@@ -203,36 +248,32 @@ export default function CreateInvoice() {
           }
       }
 
-      // Set A4 page dimensions (210mm x 297mm = 794px x 1123px at 96dpi)
+      // Set exact A4 dimensions
       clone.style.width = '794px'
-      clone.style.height = 'auto'
-      clone.style.minHeight = 'unset'
-      clone.style.maxHeight = 'unset'
-      clone.style.overflow = 'visible'
+      clone.style.height = '1123px'
+      clone.style.minHeight = '1123px'
+      clone.style.maxHeight = '1123px'
+      clone.style.overflow = 'hidden'
       clone.style.transform = 'none'
       clone.style.margin = '0'
       clone.style.padding = '0'
       clone.style.backgroundColor = 'white'
-      clone.style.display = 'block'
+      clone.style.display = 'flex'
+      clone.style.flexDirection = 'column'
       clone.style.position = 'relative'
       clone.style.boxShadow = 'none'
       clone.style.border = 'none'
       clone.classList.remove('w-full', 'lg:w-7/12', 'flex', 'justify-center', 'shadow-2xl', 'p-8', 'hidden', 'lg:flex', 'rounded-2xl')
-      
-      // Remove the bottom color bar from clone to prevent extra page
-      const colorBar = clone.querySelector('[style*="bottom: 0"]')
-      if (colorBar) colorBar.remove()
       
       const container = document.createElement('div')
       container.style.position = 'fixed'
       container.style.left = '-9999px'
       container.style.top = '0'
       container.style.width = '794px' 
-      container.style.height = 'auto'
+      container.style.height = '1123px'
       container.style.backgroundColor = 'white'
       container.style.zIndex = '-9999'
-      container.style.margin = '0'
-      container.style.padding = '0'
+      container.style.overflow = 'hidden'
       
       container.appendChild(clone)
       document.body.appendChild(container)
@@ -261,6 +302,7 @@ export default function CreateInvoice() {
         filename: safeFileName,
         image: { type: 'jpeg', quality: 0.98 },
         enableLinks: false, 
+        pagebreak: { mode: 'avoid-all' },
         html2canvas: { 
             scale: 2, 
             useCORS: true, 
@@ -270,12 +312,14 @@ export default function CreateInvoice() {
             scrollX: 0,
             windowHeight: 1123,
             windowWidth: 794,
+            height: 1123,
+            width: 794,
             letterRendering: true,
             backgroundColor: '#ffffff'
         },
         jsPDF: { 
-            unit: 'mm', 
-            format: 'a4', 
+            unit: 'px', 
+            format: [794, 1123], 
             orientation: 'portrait',
             compress: true,
             precision: 10
@@ -411,7 +455,6 @@ export default function CreateInvoice() {
   return (
     <div className="min-h-screen bg-gray-100 p-0 md:p-4 lg:p-8 flex flex-col">
       
-      {/* --- RENDER POPUP --- */}
       <Popup 
         isOpen={popup.isOpen}
         onClose={closePopup}
@@ -461,7 +504,6 @@ export default function CreateInvoice() {
         }
       `}</style>
       
-      {/* --- MOBILE TABS --- */}
       <div className="lg:hidden sticky top-0 z-20 bg-white border-b flex text-sm font-bold shadow-sm">
         <button onClick={() => setMobileTab('edit')} className={`flex-1 py-3 text-center ${mobileTab === 'edit' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500'}`}>✎ Editor</button>
         <button onClick={() => setMobileTab('preview')} className={`flex-1 py-3 text-center ${mobileTab === 'preview' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500'}`}>👁 Preview</button>
@@ -625,10 +667,22 @@ export default function CreateInvoice() {
                 <div 
                     id="invoice-preview" 
                     ref={invoiceRef} 
-                    className="bg-white relative shrink-0" 
-                    style={{ width: '794px', height: '1123px', margin: 0, padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}
+                    className="bg-white relative shrink-0 shadow-xl" 
+                    style={{ 
+                      width: '794px', 
+                      height: '1123px', 
+                      minHeight: '1123px',
+                      maxHeight: '1123px',
+                      margin: 0, 
+                      padding: 0, 
+                      overflow: 'hidden', 
+                      display: 'flex', 
+                      flexDirection: 'column',
+                      position: 'relative'
+                    }}
                 >
                 
+                {/* Header */}
                 <div className="px-6 py-3 flex justify-between flex-shrink-0" style={{ backgroundColor: theme.hex, color: theme.text }}>
                     <div style={{ width: '50%' }}>
                         {sellerProfile?.logo_url && (
@@ -652,7 +706,8 @@ export default function CreateInvoice() {
                     </div>
                 </div>
 
-                <div className="px-6 py-3 flex-grow" style={{ display: 'flex', flexDirection: 'column', paddingBottom: '24px' }}>
+                {/* Content Area - flex-grow to push footer down */}
+                <div className="px-6 py-3 flex-grow" style={{ display: 'flex', flexDirection: 'column', paddingBottom: '100px' }}>
                     <div className="flex justify-between mb-4">
                         <div style={{ width: '60%' }}>
                             <h3 className="text-gray-500 text-[10px] uppercase font-bold mb-1">Bill To</h3>
@@ -676,18 +731,12 @@ export default function CreateInvoice() {
                         </div>
                     </div>
 
+                    {/* Items Table */}
                     <div style={{ width: '100%', display: 'block', marginBottom: '8px', flex: '0 1 auto' }}>
                         <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse' }}>
                             <thead>
                                 <tr style={{ backgroundColor: theme.hex, color: theme.text }}>
-                                    <th style={{ 
-                                        width: '38%', 
-                                        height: '35px', 
-                                        overflow: 'hidden',
-                                        verticalAlign: 'middle', 
-                                        backgroundColor: theme.hex, 
-                                        color: theme.text 
-                                    }}>
+                                    <th style={{ width: '38%', height: '35px', overflow: 'hidden', verticalAlign: 'middle', backgroundColor: theme.hex, color: theme.text }}>
                                         <div style={{ display: 'flex', alignItems: 'center', height: '100%', paddingLeft: '12px', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }}>ITEM</div>
                                     </th>
                                     <th style={{ width: '13%', height: '35px', overflow: 'hidden', verticalAlign: 'middle', backgroundColor: theme.hex, color: theme.text }}>
@@ -723,6 +772,7 @@ export default function CreateInvoice() {
                         </table>
                     </div>
                     
+                    {/* Totals */}
                     <div className="flex justify-end mb-4">
                         <div className="w-5/12 space-y-1 border-b pb-3">
                             <div className="flex justify-between text-gray-600 text-sm"><span>Subtotal</span><span>₹{totals.subtotal}</span></div>
@@ -757,7 +807,6 @@ export default function CreateInvoice() {
                     {/* Footer / Bank Info & Signature */}
                     <div className="flex justify-between items-end mt-2 pt-3 border-t border-gray-100 flex-shrink-0">
                         
-                        {/* Clean Bank Details - Content Only */}
                         <div className="w-[55%]">
                             {sellerProfile?.bank_name && (
                                 <div className="pt-1">
@@ -793,19 +842,30 @@ export default function CreateInvoice() {
                         </div>
                     </div>
                     
+                    {/* Terms & Conditions */}
                     <div className="mt-2 pt-2 border-t text-xs text-gray-600 flex-shrink-0">
                         <h4 className="font-bold text-gray-800 mb-1">Terms & Conditions</h4>
                         <p className="whitespace-pre-wrap text-[10px]">{formData.terms}</p>
                     </div>
                 </div>
                 
-                <div className="h-6 w-full flex-shrink-0" style={{ backgroundColor: theme.hex, position: 'absolute', bottom: 0, left: 0, right: 0 }}></div>
+                {/* Bottom Blue Bar - ABSOLUTE POSITIONED AT BOTTOM */}
+                <div 
+                  className="w-full flex-shrink-0" 
+                  style={{ 
+                    height: '24px',
+                    backgroundColor: theme.hex, 
+                    position: 'absolute', 
+                    bottom: 0, 
+                    left: 0, 
+                    right: 0 
+                  }}
+                ></div>
             </div>
         </div>
       </div>
       </div>
       
-      {/* BRANDING FOOTER PLACED AT THE VERY BOTTOM OF THE PAGE LAYOUT (FULL WIDTH) */}
       <div className="w-full mt-auto">
           <BrandingFooter />
       </div>
