@@ -201,6 +201,13 @@ export default function CreateInvoice() {
     }
   }
   
+  // Helper to get GSTIN input border class
+  const getGstinBorderClass = () => {
+    if (gstinError) return 'border-red-500';
+    if (formData.buyer_gstin?.length === 15 && validateGSTIN(formData.buyer_gstin)) return 'border-green-500';
+    return '';
+  }
+  
   const calculateTotals = () => { 
     let s=0,t=0; 
     (formData.items||[]).forEach(i=>{
@@ -374,7 +381,7 @@ export default function CreateInvoice() {
             }, 2000)
         }
 
-    } catch (e) {
+    } catch {
         showPopup('Error', 'Failed to generate PDF.', 'error');
     }
   }
@@ -398,7 +405,7 @@ export default function CreateInvoice() {
              }, 2000)
         }
 
-    } catch (e) {
+    } catch {
         showPopup('Error', 'Failed to generate PDF for email.', 'error');
         return
     }
@@ -432,7 +439,7 @@ export default function CreateInvoice() {
             downloadBlob(result.blob, result.filename); 
             showPopup('Downloaded', 'Browser doesn\'t support sharing.', 'info'); 
         } 
-    } catch(e){ 
+    } catch { 
         showPopup('Error','Failed to share','error') 
     } finally { 
         setSharing(false) 
@@ -598,7 +605,7 @@ export default function CreateInvoice() {
                   <input 
                       {...register('buyer_gstin')} 
                       placeholder="GSTIN (Optional - 15 characters)" 
-                      className={`w-full p-2 border rounded text-sm ${gstinError ? 'border-red-500' : ''}`}
+                      className={`w-full p-2 border rounded text-sm ${getGstinBorderClass()}`}
                       onChange={handleGstinChange}
                       maxLength={15}
                   />
@@ -606,6 +613,12 @@ export default function CreateInvoice() {
                   {formData.buyer_gstin && formData.buyer_gstin.length < 15 && !gstinError && (
                     <p className="text-amber-500 text-xs mt-1">
                       {15 - formData.buyer_gstin.length} characters remaining
+                    </p>
+                  )}
+                  {formData.buyer_gstin?.length === 15 && !gstinError && validateGSTIN(formData.buyer_gstin) && (
+                    <p className="text-green-600 text-xs mt-1 flex items-center gap-1">
+                      <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+                      Valid GSTIN
                     </p>
                   )}
                 </div>
@@ -706,10 +719,10 @@ export default function CreateInvoice() {
                     id="invoice-preview" 
                     ref={invoiceRef} 
                     className="bg-white relative shrink-0" 
-                    style={{ width: '794px', height: '1123px', margin: 0, padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}
+                    style={{ width: '794px', height: '1123px', margin: 0, padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', boxSizing: 'border-box' }}
                 >
                 
-                <div className="px-6 py-3 flex justify-between flex-shrink-0" style={{ backgroundColor: theme.hex, color: theme.text }}>
+                <div className="px-6 py-2 flex justify-between flex-shrink-0" style={{ backgroundColor: theme.hex, color: theme.text }}>
                     <div style={{ width: '50%' }}>
                         {sellerProfile?.logo_url && (
                             <img 
@@ -732,8 +745,8 @@ export default function CreateInvoice() {
                     </div>
                 </div>
 
-                <div className="px-6 py-3 flex-grow" style={{ display: 'flex', flexDirection: 'column', paddingBottom: '24px' }}>
-                    <div className="flex justify-between mb-4">
+                <div className="px-6 py-2 flex-grow" style={{ display: 'flex', flexDirection: 'column', paddingBottom: '0' }}>
+                    <div className="flex justify-between mb-2">
                         <div style={{ width: '60%' }}>
                             <h3 className="text-gray-500 text-[10px] uppercase font-bold mb-1">Bill To</h3>
                             <p className="text-base font-bold text-gray-800 leading-tight">{formData.buyer_name || 'Client Name'}</p>
@@ -756,7 +769,7 @@ export default function CreateInvoice() {
                         </div>
                     </div>
 
-                    <div style={{ width: '100%', display: 'block', marginBottom: '8px', flex: '0 1 auto' }}>
+                    <div style={{ width: '100%', display: 'block', marginBottom: '4px', flex: '0 1 auto' }}>
                         <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse' }}>
                             <thead>
                                 <tr style={{ backgroundColor: theme.hex, color: theme.text }}>
@@ -803,8 +816,8 @@ export default function CreateInvoice() {
                         </table>
                     </div>
                     
-                    <div className="flex justify-end mb-4">
-                        <div className="w-5/12 space-y-1 border-b pb-3">
+                    <div className="flex justify-end mb-2">
+                        <div className="w-5/12 space-y-1 border-b pb-2">
                             <div className="flex justify-between text-gray-600 text-sm"><span>Subtotal</span><span>₹{totals.subtotal}</span></div>
                             {parseFloat(totals.igst) > 0 ? (
                             <div className="flex justify-between text-gray-600 text-xs">
@@ -829,13 +842,13 @@ export default function CreateInvoice() {
                         </div>
                     </div>
 
-                    <div className="mt-1 text-right mb-2">
+                    <div className="mt-1 text-right mb-1">
                         <p className="text-xs text-gray-500 font-semibold italic">Amount in Words:</p>
                         <p className="text-xs font-bold text-gray-800">{amountInWords}</p>
                     </div>
                     
                     {/* Footer / Bank Info & Signature */}
-                    <div className="flex justify-between items-end mt-2 pt-3 border-t border-gray-100 flex-shrink-0">
+                    <div className="flex justify-between items-end mt-1 pt-2 border-t border-gray-100 flex-shrink-0">
                         
                         {/* Clean Bank Details - Content Only */}
                         <div className="w-[55%]">
@@ -873,13 +886,13 @@ export default function CreateInvoice() {
                         </div>
                     </div>
                     
-                    <div className="mt-2 pt-2 border-t text-xs text-gray-600 flex-shrink-0">
-                        <h4 className="font-bold text-gray-800 mb-1">Terms & Conditions</h4>
+                    <div className="mt-1 pt-1 border-t text-xs text-gray-600 flex-shrink-0" style={{ marginBottom: '30px' }}>
+                        <h4 className="font-bold text-gray-800 mb-0.5">Terms & Conditions</h4>
                         <p className="whitespace-pre-wrap text-[10px]">{formData.terms}</p>
                     </div>
                 </div>
                 
-                <div className="h-6 w-full flex-shrink-0" style={{ backgroundColor: theme.hex, position: 'absolute', bottom: 0, left: 0, right: 0 }}></div>
+                <div className="h-6 w-full flex-shrink-0" style={{ backgroundColor: theme.hex }}></div>
             </div>
         </div>
       </div>

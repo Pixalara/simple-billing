@@ -122,7 +122,7 @@ export default function Dashboard() {
   const [popup, setPopup] = useState({ isOpen: false, title: '', message: '', type: 'info', actionLabel: 'OK', cancelLabel: null, onAction: null })
 
   const navigate = useNavigate()
-  const { register, handleSubmit, setValue, watch } = useForm()
+  const { register, handleSubmit, setValue } = useForm()
 
   const showPopup = (title, message, type = 'info', actionLabel = 'OK', onAction = null, cancelLabel = null) => {
       setPopup({ isOpen: true, title, message, type, actionLabel, onAction, cancelLabel })
@@ -138,6 +138,7 @@ export default function Dashboard() {
         fetchInvoices(session.user.id)
       }
     })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const fetchProfile = async (userId) => {
@@ -155,8 +156,7 @@ export default function Dashboard() {
       setValue('branch_name', data.branch_name)
       
       setValue('print_duplicates', data.print_duplicates)
-      setValue('print_triplicates', data.print_triplicates) 
-      setValue('enable_manual_invoice_no', data.enable_manual_invoice_no)
+      setValue('print_triplicates', data.print_triplicates)
 
       if (data.logo_url) setSavedLogo(data.logo_url)
       if (data.signature_url) setSavedSignature(data.signature_url)
@@ -239,7 +239,7 @@ export default function Dashboard() {
           setInvoices(prev => prev.map(inv => inv.id === invoice.id ? { ...inv, status: nextStatus } : inv));
           const { error } = await supabase.from('invoices').update({ status: nextStatus }).eq('id', invoice.id);
           if (error) throw error;
-      } catch (err) {
+      } catch {
           setInvoices(prev => prev.map(inv => inv.id === invoice.id ? { ...inv, status: currentStatus } : inv));
           showPopup('Error', 'Failed to update status', 'error');
       }
@@ -514,16 +514,26 @@ export default function Dashboard() {
             
             <div className="lg:col-span-1 bg-white p-5 rounded-xl shadow-sm h-fit">
                 <div className="flex justify-between items-center mb-4 border-b pb-2">
-                    <h2 className="text-lg font-bold text-gray-800">Business Profile</h2>
+                    <div className="flex items-center gap-2">
+                        <h2 className="text-lg font-bold text-gray-800">Business Profile</h2>
+                        {!isEditingProfile && (
+                            <span className="text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded font-bold">LOCKED</span>
+                        )}
+                    </div>
                     {!isEditingProfile ? (
                         <button 
                             onClick={() => setIsEditingProfile(true)} 
                             className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-lg font-bold hover:bg-blue-700 transition-colors"
                         >
-                            Edit
+                            Edit Profile
                         </button>
                     ) : (
-                        <span className="text-xs bg-green-100 text-green-600 px-2 py-1 rounded font-bold">EDITING</span>
+                        <button 
+                            onClick={() => setIsEditingProfile(false)} 
+                            className="text-xs bg-gray-500 text-white px-3 py-1.5 rounded-lg font-bold hover:bg-gray-600 transition-colors"
+                        >
+                            Cancel
+                        </button>
                     )}
                 </div>
                 
@@ -570,10 +580,6 @@ export default function Dashboard() {
                         <div className="flex items-center gap-2">
                             <input type="checkbox" {...register('print_triplicates')} disabled={!isEditingProfile} id="print_trip" className="w-4 h-4 text-blue-600 rounded cursor-pointer" />
                             <label htmlFor="print_trip" className="text-xs font-bold text-gray-700 cursor-pointer">Generate Triplicate Copy?</label>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <input type="checkbox" {...register('enable_manual_invoice_no')} disabled={!isEditingProfile} id="manual_inv" className="w-4 h-4 text-blue-600 rounded cursor-pointer" />
-                            <label htmlFor="manual_inv" className="text-xs font-bold text-gray-700 cursor-pointer">Enable Manual Invoice Numbering?</label>
                         </div>
                     </div>
 
