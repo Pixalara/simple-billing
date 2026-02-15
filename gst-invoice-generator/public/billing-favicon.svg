@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Background circle with gradient -->
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4F46E5;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#7C3AED;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="paperGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFFFFF;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#F3F4F6;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background circle -->
+  <circle cx="32" cy="32" r="30" fill="url(#bgGradient)"/>
+  
+  <!-- Invoice/Document -->
+  <rect x="18" y="14" width="28" height="36" rx="2" fill="url(#paperGradient)" stroke="#E5E7EB" stroke-width="1"/>
+  
+  <!-- Invoice lines -->
+  <line x1="22" y1="20" x2="42" y2="20" stroke="#9CA3AF" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="22" y1="26" x2="38" y2="26" stroke="#D1D5DB" stroke-width="1.2" stroke-linecap="round"/>
+  <line x1="22" y1="31" x2="38" y2="31" stroke="#D1D5DB" stroke-width="1.2" stroke-linecap="round"/>
+  
+  <!-- Dollar sign or currency symbol -->
+  <circle cx="32" cy="40" r="6" fill="#4F46E5" opacity="0.9"/>
+  <text x="32" y="44.5" font-family="Arial, sans-serif" font-size="8" font-weight="bold" fill="#FFFFFF" text-anchor="middle">$</text>
+</svg>
