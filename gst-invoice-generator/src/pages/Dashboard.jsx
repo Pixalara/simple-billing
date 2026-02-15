@@ -390,7 +390,7 @@ export default function Dashboard() {
   if (loading) return <div className="p-10 text-center">Loading...</div>
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-6 pb-20">
+    <div className="min-h-screen bg-gray-50 p-3 sm:p-4 md:p-6 pb-20">
       
       <style>{`
         .react-datepicker-wrapper { width: 100%; }
@@ -444,25 +444,33 @@ export default function Dashboard() {
       <Popup isOpen={popup.isOpen} onClose={closePopup} title={popup.title} message={popup.message} type={popup.type} actionLabel={popup.actionLabel} cancelLabel={popup.cancelLabel} onAction={popup.onAction} />
 
       <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
           <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Dashboard</h1>
-          <button onClick={handleLogout} className="text-red-600 font-medium text-sm hover:underline">Sign Out</button>
+          <button 
+            onClick={handleLogout} 
+            className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-bold px-6 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 active:scale-95 flex items-center gap-2 text-base"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+            Sign Out
+          </button>
         </div>
 
-        <div className="grid grid-cols-2 gap-4 mb-6">
-            <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-6">
+            <div className="bg-white p-4 sm:p-5 rounded-xl shadow-sm border border-gray-100">
                 <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Total Invoices</p>
                 <p className="text-2xl font-bold text-gray-900 mt-1">{stats.total}</p>
             </div>
-            <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
+            <div className="bg-white p-4 sm:p-5 rounded-xl shadow-sm border border-gray-100">
                 <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Total Revenue</p>
                 <p className="text-2xl font-bold text-blue-600 mt-1">₹{stats.revenue.toLocaleString('en-IN')}</p>
             </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center justify-center relative min-h-[300px]">
-                <h3 className="absolute top-5 left-5 text-xs font-bold text-gray-400 uppercase tracking-wider">Payment Status</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 mb-6">
+            <div className="bg-white p-4 sm:p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center justify-center relative min-h-[300px]">
+                <h3 className="absolute top-4 sm:top-5 left-4 sm:left-5 text-xs font-bold text-gray-400 uppercase tracking-wider">Payment Status</h3>
                 
                 {statusData.length > 0 ? (
                     <div className="w-full h-56 mt-4">
@@ -484,7 +492,7 @@ export default function Dashboard() {
                 )}
             </div>
 
-            <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col min-h-[300px]">
+            <div className="bg-white p-4 sm:p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col min-h-[300px]">
                 <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Top Clients by Revenue</p>
                 <div className="flex-1 flex flex-col justify-center space-y-3">
                     {topClients.length === 0 ? (
@@ -511,9 +519,9 @@ export default function Dashboard() {
             </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
             
-            <div className="lg:col-span-1 bg-white p-5 rounded-xl shadow-sm h-fit">
+            <div className="lg:col-span-1 bg-white p-4 sm:p-5 rounded-xl shadow-sm h-fit">
                 <div className="flex justify-between items-center mb-4 border-b pb-2">
                     <div className="flex items-center gap-2">
                         <h2 className="text-lg font-bold text-gray-800">Business Profile</h2>

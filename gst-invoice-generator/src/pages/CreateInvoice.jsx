@@ -488,7 +488,7 @@ export default function CreateInvoice() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 p-0 md:p-4 lg:p-8 flex flex-col">
+    <div className="min-h-screen bg-gray-100 p-0 sm:p-2 md:p-4 lg:p-8 flex flex-col">
       
       <Popup 
         isOpen={popup.isOpen}
@@ -544,9 +544,9 @@ export default function CreateInvoice() {
         <button onClick={() => setMobileTab('preview')} className={`flex-1 py-3 text-center ${mobileTab === 'preview' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500'}`}>👁 Preview</button>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-6 flex-1">
+      <div className="flex flex-col lg:flex-row gap-3 sm:gap-4 lg:gap-6 flex-1">
         {/* --- LEFT SIDE: EDITOR --- */}
-        <div className={`w-full lg:w-5/12 bg-white p-4 md:p-6 rounded-lg shadow-lg h-fit overflow-y-auto max-h-screen custom-scrollbar ${mobileTab === 'preview' ? 'hidden lg:block' : 'block'}`}>
+        <div className={`w-full lg:w-5/12 bg-white p-3 sm:p-4 md:p-6 rounded-none lg:rounded-lg shadow-lg h-fit overflow-y-auto max-h-screen custom-scrollbar ${mobileTab === 'preview' ? 'hidden lg:block' : 'block'}`}>
             
             <button 
             onClick={() => navigate('/dashboard')}
@@ -710,11 +710,11 @@ export default function CreateInvoice() {
         {/* RIGHT SIDE: PREVIEW (Continues in next part due to character limit) */}
         <div 
             ref={containerRef}
-            className={`w-full lg:w-7/12 flex justify-center bg-gray-300 p-0 md:p-8 overflow-auto ${mobileTab === 'edit' ? 'hidden lg:flex' : 'flex'}`}
+            className={`w-full lg:w-7/12 flex justify-center bg-gray-300 p-0 sm:p-4 md:p-8 overflow-auto ${mobileTab === 'edit' ? 'hidden lg:flex' : 'flex'}`}
         >
             <div 
                 id="print-scaler" 
-                className="flex justify-center origin-top p-4 md:p-0 transition-transform duration-200 ease-out"
+                className="flex justify-center origin-top p-2 sm:p-4 md:p-0 transition-transform duration-200 ease-out"
                 style={{ 
                     transform: `scale(${previewScale})`, 
                     transformOrigin: 'top center',
