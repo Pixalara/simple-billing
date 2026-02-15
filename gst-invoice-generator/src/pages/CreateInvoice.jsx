@@ -69,7 +69,7 @@ const formatDate = (dateString) => {
 
 // GSTIN Validation Function
 const validateGSTIN = (gstin) => {
-    if (!gstin || gstin.trim() === '') return true; // Optional field
+    if (!gstin || gstin.trim() === '') return true;
     const gstinRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
     return gstinRegex.test(gstin) && gstin.length === 15;
 }
@@ -89,8 +89,6 @@ export default function CreateInvoice() {
   const [theme, setTheme] = useState(THEMES[0])
   const [signaturePreview, setSignaturePreview] = useState(null)
   const [stampPreview, setStampPreview] = useState(null) 
-  const [manualInvoiceEnabled, setManualInvoiceEnabled] = useState(false) 
-  const [existingInvoiceNo, setExistingInvoiceNo] = useState(null)
   const [gstinError, setGstinError] = useState('')
 
   const [popup, setPopup] = useState({ isOpen: false, title: '', message: '', type: 'success', actionLabel: 'OK', onAction: null, cancelLabel: null })
@@ -126,40 +124,38 @@ export default function CreateInvoice() {
           setSellerProfile(profile)
           if (profile.signature_url) setSignaturePreview(profile.signature_url)
           if (profile.stamp_url) setStampPreview(profile.stamp_url)
-          setManualInvoiceEnabled(profile.enable_manual_invoice_no) 
       }
 
       if (id) {
+        // EDITING EXISTING INVOICE
         const { data: invoice } = await supabase.from('invoices').select('*').eq('id', id).single()
         if (invoice) {
           reset(invoice.invoice_data)
           setValue('invoice_no', invoice.invoice_no)
-          setExistingInvoiceNo(invoice.invoice_no)
           if (invoice.invoice_data.theme) {
             const foundTheme = THEMES.find(t => t.hex === invoice.invoice_data.theme)
             if (foundTheme) setTheme(foundTheme)
           }
         }
       } else {
-        if (!profile?.enable_manual_invoice_no) {
-            try {
-                const date = new Date();
-                const day = String(date.getDate()).padStart(2, '0');
-                const month = String(date.getMonth() + 1).padStart(2, '0');
-                const year = String(date.getFullYear()).slice(-2);
-                const prefix = `${day}${month}${year}`; 
-                const { data: lastInvoice } = await supabase.from('invoices').select('invoice_no').eq('user_id', user.id).ilike('invoice_no', `${prefix}%`).order('invoice_no', { ascending: false }).limit(1).single();
-                let sequence = '01';
-                if (lastInvoice && lastInvoice.invoice_no) {
-                    const lastSeqStr = lastInvoice.invoice_no.replace(prefix, '');
-                    const lastSeqNum = parseInt(lastSeqStr, 10);
-                    if (!isNaN(lastSeqNum)) sequence = String(lastSeqNum + 1).padStart(2, '0');
-                }
-                setValue('invoice_no', `${prefix}${sequence}`)
-            } catch (e) {
-                console.error("Error generating invoice number:", e);
-                setValue('invoice_no', `DRAFT-${Date.now().toString().slice(-4)}`)
+        // CREATING NEW INVOICE - Auto-generate invoice number
+        try {
+            const date = new Date();
+            const day = String(date.getDate()).padStart(2, '0');
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const year = String(date.getFullYear()).slice(-2);
+            const prefix = `${day}${month}${year}`; 
+            const { data: lastInvoice } = await supabase.from('invoices').select('invoice_no').eq('user_id', user.id).ilike('invoice_no', `${prefix}%`).order('invoice_no', { ascending: false }).limit(1).single();
+            let sequence = '01';
+            if (lastInvoice && lastInvoice.invoice_no) {
+                const lastSeqStr = lastInvoice.invoice_no.replace(prefix, '');
+                const lastSeqNum = parseInt(lastSeqStr, 10);
+                if (!isNaN(lastSeqNum)) sequence = String(lastSeqNum + 1).padStart(2, '0');
             }
+            setValue('invoice_no', `${prefix}${sequence}`)
+        } catch (e) {
+            console.error("Error generating invoice number:", e);
+            setValue('invoice_no', `DRAFT-${Date.now().toString().slice(-4)}`)
         }
       }
     }
@@ -268,7 +264,6 @@ export default function CreateInvoice() {
           }
       }
 
-      // Set exact A4 dimensions (CRITICAL - DO NOT CHANGE)
       clone.style.width = '794px'
       clone.style.height = '1123px'
       clone.style.minHeight = '1123px'
@@ -298,7 +293,6 @@ export default function CreateInvoice() {
       container.appendChild(clone)
       document.body.appendChild(container)
 
-      // Wait for images to load
       const images = Array.from(container.querySelectorAll('img'));
       await Promise.all(images.map(img => {
           if (img.complete) return Promise.resolve();
@@ -309,7 +303,6 @@ export default function CreateInvoice() {
           });
       }));
 
-      // Wait for rendering
       await new Promise(resolve => setTimeout(resolve, 500));
 
       const buyerName = (formData.buyer_name || 'Customer').replace(/[^a-zA-Z0-9]/g, '_');
@@ -444,7 +437,6 @@ export default function CreateInvoice() {
   }
   
   const onSubmit = async (data) => {
-      // Validate GSTIN before submission
       if (data.buyer_gstin && !validateGSTIN(data.buyer_gstin)) {
           showPopup('Invalid GSTIN', 'Please enter a valid 15-character GSTIN or leave it blank.', 'error');
           return;
@@ -460,8 +452,12 @@ export default function CreateInvoice() {
               total_amount: totals.grandTotal 
           }; 
           
-          if (id) await supabase.from('invoices').update(payload).eq('id', id); 
-          else await supabase.from('invoices').insert(payload); 
+          // KEY FIX: Update existing invoice instead of creating new one
+          if (id) {
+              await supabase.from('invoices').update(payload).eq('id', id);
+          } else {
+              await supabase.from('invoices').insert(payload);
+          }
           
           showPopup(
               'Success!', 
@@ -558,11 +554,12 @@ export default function CreateInvoice() {
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
                 <div>
-                <label className="text-xs text-gray-500">Invoice No</label>
+                <label className="text-xs text-gray-500 font-bold">Invoice No (Auto-Generated)</label>
                 <input 
                     {...register('invoice_no')} 
-                    className="w-full p-2 border rounded text-sm bg-gray-100 text-gray-500 cursor-not-allowed"
+                    className="w-full p-2 border rounded text-sm bg-gray-100 text-gray-500 cursor-not-allowed font-mono"
                     readOnly
+                    title="Invoice number is automatically generated and cannot be edited"
                 />
                 </div>
                 <div>
@@ -685,7 +682,7 @@ export default function CreateInvoice() {
             </form>
         </div>
 
-        {/* --- RIGHT SIDE: PREVIEW (Continuing in next message due to length) --- */}
+        {/* --- RIGHT SIDE: PREVIEW (Invoice template - continuing below) --- */}
         <div 
             ref={containerRef}
             className={`w-full lg:w-7/12 flex justify-center bg-gray-300 p-0 md:p-8 overflow-auto ${mobileTab === 'edit' ? 'hidden lg:flex' : 'flex'}`}
@@ -701,7 +698,7 @@ export default function CreateInvoice() {
                 <div 
                     id="invoice-preview" 
                     ref={invoiceRef} 
-                    className="bg-white relative shrink-0" 
+                    className="bg-white relative shrink-0 shadow-xl" 
                     style={{ 
                         width: '794px', 
                         height: '1123px', 
@@ -738,7 +735,7 @@ export default function CreateInvoice() {
                     </div>
                 </div>
 
-                <div className="px-6 py-3 flex-grow" style={{ display: 'flex', flexDirection: 'column', paddingBottom: '24px' }}>
+                <div className="px-6 py-3 flex-grow" style={{ display: 'flex', flexDirection: 'column', paddingBottom: '100px' }}>
                     <div className="flex justify-between mb-4">
                         <div style={{ width: '60%' }}>
                             <h3 className="text-gray-500 text-[10px] uppercase font-bold mb-1">Bill To</h3>
@@ -766,28 +763,11 @@ export default function CreateInvoice() {
                         <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse' }}>
                             <thead>
                                 <tr style={{ backgroundColor: theme.hex, color: theme.text }}>
-                                    <th style={{ 
-                                        width: '38%', 
-                                        height: '35px', 
-                                        overflow: 'hidden',
-                                        verticalAlign: 'middle', 
-                                        backgroundColor: theme.hex, 
-                                        color: theme.text 
-                                    }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', height: '100%', paddingLeft: '12px', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }}>ITEM</div>
-                                    </th>
-                                    <th style={{ width: '13%', height: '35px', overflow: 'hidden', verticalAlign: 'middle', backgroundColor: theme.hex, color: theme.text }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', height: '100%', paddingLeft: '8px', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }}>HSN</div>
-                                    </th>
-                                    <th style={{ width: '10%', height: '35px', overflow: 'hidden', verticalAlign: 'middle', backgroundColor: theme.hex, color: theme.text }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }}>QTY</div>
-                                    </th>
-                                    <th style={{ width: '15%', height: '35px', overflow: 'hidden', verticalAlign: 'middle', backgroundColor: theme.hex, color: theme.text }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flexEnd', height: '100%', paddingRight: '12px', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }}>PRICE</div>
-                                    </th>
-                                    <th style={{ width: '24%', height: '35px', overflow: 'hidden', verticalAlign: 'middle', backgroundColor: theme.hex, color: theme.text }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flexEnd', height: '100%', paddingRight: '12px', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }}>TOTAL</div>
-                                    </th>
+                                    <th style={{ width: '38%', padding: '8px 12px', textAlign: 'left', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }}>ITEM</th>
+                                    <th style={{ width: '13%', padding: '8px 12px', textAlign: 'left', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }}>HSN</th>
+                                    <th style={{ width: '10%', padding: '8px', textAlign: 'center', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }}>QTY</th>
+                                    <th style={{ width: '15%', padding: '8px 12px', textAlign: 'right', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }}>PRICE</th>
+                                    <th style={{ width: '24%', padding: '8px 12px', textAlign: 'right', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }}>TOTAL</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -795,13 +775,11 @@ export default function CreateInvoice() {
                                     const amount = ((item.quantity||0) * (item.price||0));
                                     return (
                                         <tr key={i} style={{ borderBottom: '1px solid #e5e7eb' }}>
-                                            <td style={{ width: '38%', padding: '8px 0 8px 12px', verticalAlign: 'top' }}>
-                                                <p style={{ fontWeight: 600, fontSize: '13px', margin: 0, color: '#1f2937' }}>{item.description}</p>
-                                            </td>
-                                            <td style={{ width: '13%', padding: '8px 0 8px 12px', verticalAlign: 'top', fontSize: '12px', color: '#4b5563' }}>{item.hsn}</td>
-                                            <td style={{ width: '10%', padding: '8px 0', textAlign: 'center', verticalAlign: 'top', fontSize: '13px', color: '#1f2937' }}>{item.quantity}</td>
-                                            <td style={{ width: '15%', padding: '8px 12px 8px 0', textAlign: 'right', verticalAlign: 'top', fontSize: '13px', color: '#1f2937' }}>₹{item.price}</td>
-                                            <td style={{ width: '24%', padding: '8px 12px 8px 0', textAlign: 'right', verticalAlign: 'top', fontWeight: 'bold', fontSize: '13px', color: '#1f2937' }}>₹{(amount).toFixed(2)}</td>
+                                            <td style={{ padding: '8px 12px', verticalAlign: 'top', fontWeight: 600, fontSize: '13px', color: '#1f2937' }}>{item.description}</td>
+                                            <td style={{ padding: '8px 12px', verticalAlign: 'top', fontSize: '12px', color: '#4b5563' }}>{item.hsn}</td>
+                                            <td style={{ padding: '8px', textAlign: 'center', verticalAlign: 'top', fontSize: '13px', color: '#1f2937' }}>{item.quantity}</td>
+                                            <td style={{ padding: '8px 12px', textAlign: 'right', verticalAlign: 'top', fontSize: '13px', color: '#1f2937' }}>₹{item.price}</td>
+                                            <td style={{ padding: '8px 12px', textAlign: 'right', verticalAlign: 'top', fontWeight: 'bold', fontSize: '13px', color: '#1f2937' }}>₹{(amount).toFixed(2)}</td>
                                         </tr>
                                     )
                                 })}
@@ -840,23 +818,15 @@ export default function CreateInvoice() {
                         <p className="text-xs font-bold text-gray-800">{amountInWords}</p>
                     </div>
                     
-                    {/* Footer / Bank Info & Signature */}
                     <div className="flex justify-between items-end mt-2 pt-3 border-t border-gray-100 flex-shrink-0">
-                        
-                        {/* Clean Bank Details - Content Only */}
                         <div className="w-[55%]">
                             {sellerProfile?.bank_name && (
                                 <div className="pt-1">
                                     <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2 border-b border-gray-200 pb-1 w-fit pr-8">Bank Details</p>
                                     <div className="grid grid-cols-[80px_1fr] gap-y-1 text-xs w-fit min-w-[200px]">
                                         <span className="text-gray-500 font-medium">Bank:</span><span className="font-bold text-gray-800">{sellerProfile.bank_name}</span>
-                                        
-                                        <span className="text-gray-500 font-medium">A/c No:</span>
-                                        <span className="font-bold text-gray-800">{sellerProfile.account_number}</span>
-                                        
-                                        <span className="text-gray-500 font-medium">IFSC:</span>
-                                        <span className="font-bold text-gray-800">{sellerProfile.ifsc_code}</span>
-                                        
+                                        <span className="text-gray-500 font-medium">A/c No:</span><span className="font-bold text-gray-800">{sellerProfile.account_number}</span>
+                                        <span className="text-gray-500 font-medium">IFSC:</span><span className="font-bold text-gray-800">{sellerProfile.ifsc_code}</span>
                                         {sellerProfile.branch_name && (
                                             <>
                                                 <span className="text-gray-500 font-medium">Branch:</span>
@@ -891,7 +861,6 @@ export default function CreateInvoice() {
       </div>
       </div>
       
-      {/* BRANDING FOOTER PLACED AT THE VERY BOTTOM OF THE PAGE LAYOUT (FULL WIDTH) */}
       <div className="w-full mt-auto">
           <BrandingFooter />
       </div>
