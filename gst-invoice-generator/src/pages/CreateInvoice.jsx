@@ -7,6 +7,12 @@ import SearchableSelect from '../components/SearchableSelect'
 import html2pdf from 'html2pdf.js'
 import BrandingFooter from '../components/BrandingFooter'
 
+// PDF Generation Constants
+const MIN_VALID_PDF_SIZE_BYTES = 1000 // Minimum size in bytes for a valid PDF (1KB)
+const IMAGE_LOAD_TIMEOUT_MS = 3000 // Timeout for loading images (3 seconds)
+const MOBILE_RENDER_WAIT_MS = 1000 // Wait time for mobile device rendering (1 second)
+const DOWNLOAD_CLEANUP_DELAY_MS = 100 // Delay before cleaning up download link (100ms)
+
 // --- PREMIUM POPUP COMPONENT ---
 const Popup = ({ isOpen, onClose, title, message, type, actionLabel, onAction, cancelLabel }) => {
     if (!isOpen) return null;
@@ -303,19 +309,27 @@ export default function CreateInvoice() {
       container.appendChild(clone)
       document.body.appendChild(container)
 
-      // Wait for images to load
+      // Wait for fonts to load
+      if (document.fonts && document.fonts.ready) {
+          await document.fonts.ready;
+      }
+
+      // Wait for images to load with proper error handling
       const images = Array.from(container.querySelectorAll('img'));
       await Promise.all(images.map(img => {
-          if (img.complete) return Promise.resolve();
+          if (img.complete && img.naturalHeight !== 0) return Promise.resolve();
           return new Promise(resolve => { 
               img.onload = resolve; 
-              img.onerror = resolve;
-              setTimeout(resolve, 2000);
+              img.onerror = () => {
+                  console.warn('Image failed to load:', img.src);
+                  resolve();
+              };
+              setTimeout(resolve, IMAGE_LOAD_TIMEOUT_MS);
           });
       }));
 
-      // Wait for rendering
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Extended wait for rendering - especially important on mobile devices
+      await new Promise(resolve => setTimeout(resolve, MOBILE_RENDER_WAIT_MS));
 
       const buyerName = (formData.buyer_name || 'Customer').replace(/[^a-zA-Z0-9]/g, '_');
       const invoiceNum = (formData.invoice_no || 'DRAFT').replace(/[^a-zA-Z0-9]/g, '_');
@@ -340,14 +354,25 @@ export default function CreateInvoice() {
             height: 1123,
             width: 794,
             letterRendering: true,
-            backgroundColor: '#ffffff'
+            backgroundColor: '#ffffff',
+            removeContainer: true,
+            imageTimeout: 15000,
+            onclone: function(clonedDoc) {
+                // Ensure all styles are properly applied in the cloned document
+                const clonedElement = clonedDoc.querySelector('[style*="794px"]');
+                if (clonedElement) {
+                    clonedElement.style.visibility = 'visible';
+                    clonedElement.style.display = 'flex';
+                }
+            }
         },
         jsPDF: { 
             unit: 'px', 
             format: [794, 1123], 
             orientation: 'portrait',
             compress: true,
-            precision: 10
+            precision: 10,
+            hotfixes: ['px_scaling']
         }
       }
       
@@ -355,8 +380,15 @@ export default function CreateInvoice() {
         console.log('Starting PDF generation...');
         const pdfBlob = await html2pdf().set(opt).from(clone).output('blob')
         console.log('PDF generated successfully, size:', pdfBlob.size);
+        
+        // Verify the PDF blob is not empty or corrupted
+        if (!pdfBlob || pdfBlob.size < MIN_VALID_PDF_SIZE_BYTES) {
+            console.error('Generated PDF is too small or empty:', pdfBlob?.size);
+            throw new Error('Generated PDF appears to be empty or corrupted');
+        }
+        
         document.body.removeChild(container)
-        return { blob: pdfBlob, filename: opt.filename }
+        return { blob: pdfBlob, filename: safeFileName }
       } catch (err) {
         console.error('PDF generation error:', err);
         if(document.body.contains(container)) document.body.removeChild(container)
@@ -421,28 +453,68 @@ export default function CreateInvoice() {
   }
 
   const downloadBlob = (blob, filename) => {
+      if (!blob || blob.size < MIN_VALID_PDF_SIZE_BYTES) {
+          console.error('Invalid blob for download:', blob?.size);
+          showPopup('Error', 'Cannot download empty or corrupted PDF', 'error');
+          return;
+      }
+      
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
       a.download = filename
+      a.style.display = 'none'
+      document.body.appendChild(a)
       a.click()
-      URL.revokeObjectURL(url)
+      
+      // Cleanup after a delay to ensure download starts
+      setTimeout(() => {
+          document.body.removeChild(a)
+          URL.revokeObjectURL(url)
+      }, DOWNLOAD_CLEANUP_DELAY_MS)
   }
 
   const handleShare = async () => { 
     setSharing(true); 
     try { 
         const result = await generatePdfBlob(); 
-        if(!result) return; 
-        const file = new File([result.blob], result.filename, { type: 'application/pdf' }); 
+        if(!result) {
+            showPopup('Error', 'Failed to generate PDF', 'error');
+            return;
+        }
+        
+        // Ensure blob is valid before creating File
+        if (!result.blob || result.blob.size < MIN_VALID_PDF_SIZE_BYTES) {
+            console.error('Invalid PDF blob:', result.blob?.size);
+            showPopup('Error', 'Generated PDF is empty or corrupted', 'error');
+            return;
+        }
+        
+        // Create File with proper options for mobile compatibility
+        const file = new File([result.blob], result.filename, { 
+            type: 'application/pdf',
+            lastModified: Date.now()
+        }); 
+        
+        // Verify the File object was created successfully
+        if (!file || file.size < MIN_VALID_PDF_SIZE_BYTES) {
+            console.error('Invalid File object:', file?.size);
+            throw new Error('Failed to create valid File object');
+        }
+        
         if (navigator.canShare && navigator.canShare({ files: [file] })) { 
-            await navigator.share({ files: [file], title: 'Invoice', text: `Invoice from ${sellerProfile?.business_name}` }) 
+            await navigator.share({ 
+                files: [file], 
+                title: 'Invoice',
+                text: `Invoice from ${sellerProfile?.business_name || 'Business'}`
+            }) 
         } else { 
             downloadBlob(result.blob, result.filename); 
-            showPopup('Downloaded', 'Browser doesn\'t support sharing.', 'info'); 
+            showPopup('Downloaded', 'Browser doesn\'t support sharing. PDF has been downloaded.', 'info'); 
         } 
-    } catch { 
-        showPopup('Error','Failed to share','error') 
+    } catch (error) { 
+        console.error('Share error:', error);
+        showPopup('Error', 'Failed to share PDF: ' + (error.message || 'Unknown error'), 'error') 
     } finally { 
         setSharing(false) 
     } 
