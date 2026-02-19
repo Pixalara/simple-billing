@@ -250,9 +250,12 @@ export default function CreateInvoice() {
   }
 
   // Helper function to enforce visibility on elements for PDF generation
-  const enforceElementVisibility = (element) => {
-      const elements = element.querySelectorAll('*');
+  const enforceElementVisibility = (elementOrDoc) => {
+      const elements = elementOrDoc.querySelectorAll('*');
       elements.forEach(el => {
+          // Skip non-element nodes (text nodes, comments, etc.)
+          if (!el.classList) return;
+          
           // Remove Tailwind classes that can hide content
           el.classList.remove('hidden', 'invisible', 'opacity-0');
           // Ensure visibility for all children
