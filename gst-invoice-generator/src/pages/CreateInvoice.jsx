@@ -253,9 +253,6 @@ export default function CreateInvoice() {
   const enforceElementVisibility = (elementOrDoc) => {
       const elements = elementOrDoc.querySelectorAll('*');
       elements.forEach(el => {
-          // Skip non-element nodes (text nodes, comments, etc.)
-          if (!el.classList) return;
-          
           // Remove Tailwind classes that can hide content
           el.classList.remove('hidden', 'invisible', 'opacity-0');
           // Ensure visibility for all children
@@ -265,8 +262,8 @@ export default function CreateInvoice() {
           if (el.style.display === 'none') {
               el.style.display = '';
           }
-          // Ensure opacity is visible
-          if (el.style.opacity === '0') {
+          // Ensure opacity is visible (handle '0', '0.0', etc.)
+          if (el.style.opacity && parseFloat(el.style.opacity) === 0) {
               el.style.opacity = '1';
           }
       });
