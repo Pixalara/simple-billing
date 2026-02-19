@@ -249,6 +249,26 @@ export default function CreateInvoice() {
     return ''; 
   }
 
+  // Helper function to enforce visibility on elements for PDF generation
+  const enforceElementVisibility = (elementOrDoc) => {
+      const elements = elementOrDoc.querySelectorAll('*');
+      elements.forEach(el => {
+          // Remove Tailwind classes that can hide content
+          el.classList.remove('hidden', 'invisible', 'opacity-0');
+          // Ensure visibility for all children
+          if (el.style.visibility === 'hidden') {
+              el.style.visibility = 'visible';
+          }
+          if (el.style.display === 'none') {
+              el.style.display = '';
+          }
+          // Ensure opacity is visible (handle '0', '0.0', etc.)
+          if (el.style.opacity && parseFloat(el.style.opacity) === 0) {
+              el.style.opacity = '1';
+          }
+      });
+  };
+
   const generatePdfBlob = async (copyType = '') => {
       const originalElement = invoiceRef.current
       if (!originalElement) {
@@ -298,6 +318,9 @@ export default function CreateInvoice() {
       clone.style.opacity = '1'
       clone.classList.remove('w-full', 'lg:w-7/12', 'flex', 'justify-center', 'shadow-2xl', 'p-8', 'hidden', 'lg:flex', 'rounded-2xl')
       
+      // Ensure all child elements are visible by removing Tailwind visibility classes
+      enforceElementVisibility(clone);
+      
       const container = document.createElement('div')
       container.style.position = 'fixed'
       container.style.left = '-9999px'
@@ -309,6 +332,7 @@ export default function CreateInvoice() {
       container.style.overflow = 'hidden'
       container.style.visibility = 'visible'
       container.style.opacity = '1'
+      container.style.transform = 'none'
       
       container.appendChild(clone)
       document.body.appendChild(container)
@@ -370,19 +394,10 @@ export default function CreateInvoice() {
                     clonedContainer.style.display = 'flex';
                     clonedContainer.style.opacity = '1';
                     clonedContainer.style.backgroundColor = '#ffffff';
+                    clonedContainer.style.transform = 'none';
                 }
-                // Ensure all child elements are visible by removing inline hidden styles
-                const allElements = clonedDoc.querySelectorAll('*');
-                allElements.forEach(el => {
-                    // Remove visibility:hidden inline styles
-                    if (el.style.visibility === 'hidden') {
-                        el.style.visibility = 'visible';
-                    }
-                    // Remove display:none inline styles (empty string removes inline style, restores cascade)
-                    if (el.style.display === 'none') {
-                        el.style.display = '';
-                    }
-                });
+                // Ensure all child elements are visible by removing hidden styles and classes
+                enforceElementVisibility(clonedDoc);
             }
         },
         jsPDF: { 
