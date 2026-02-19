@@ -294,6 +294,8 @@ export default function CreateInvoice() {
       clone.style.position = 'relative'
       clone.style.boxShadow = 'none'
       clone.style.border = 'none'
+      clone.style.visibility = 'visible'
+      clone.style.opacity = '1'
       clone.classList.remove('w-full', 'lg:w-7/12', 'flex', 'justify-center', 'shadow-2xl', 'p-8', 'hidden', 'lg:flex', 'rounded-2xl')
       
       const container = document.createElement('div')
@@ -305,6 +307,8 @@ export default function CreateInvoice() {
       container.style.backgroundColor = 'white'
       container.style.zIndex = '-9999'
       container.style.overflow = 'hidden'
+      container.style.visibility = 'visible'
+      container.style.opacity = '1'
       
       container.appendChild(clone)
       document.body.appendChild(container)
@@ -359,11 +363,26 @@ export default function CreateInvoice() {
             imageTimeout: 15000,
             onclone: function(clonedDoc) {
                 // Ensure all styles are properly applied in the cloned document
-                const clonedElement = clonedDoc.querySelector('[style*="794px"]');
-                if (clonedElement) {
-                    clonedElement.style.visibility = 'visible';
-                    clonedElement.style.display = 'flex';
+                const clonedContainer = clonedDoc.querySelector('#invoice-preview') || 
+                                       clonedDoc.querySelector('[style*="794px"]');
+                if (clonedContainer) {
+                    clonedContainer.style.visibility = 'visible';
+                    clonedContainer.style.display = 'flex';
+                    clonedContainer.style.opacity = '1';
+                    clonedContainer.style.backgroundColor = '#ffffff';
                 }
+                // Ensure all child elements are visible by removing inline hidden styles
+                const allElements = clonedDoc.querySelectorAll('*');
+                allElements.forEach(el => {
+                    // Remove visibility:hidden inline styles
+                    if (el.style.visibility === 'hidden') {
+                        el.style.visibility = 'visible';
+                    }
+                    // Remove display:none inline styles (empty string removes inline style, restores cascade)
+                    if (el.style.display === 'none') {
+                        el.style.display = '';
+                    }
+                });
             }
         },
         jsPDF: { 
