@@ -371,12 +371,14 @@ export default function CreateInvoice() {
                     clonedContainer.style.opacity = '1';
                     clonedContainer.style.backgroundColor = '#ffffff';
                 }
-                // Ensure all child elements are visible
+                // Ensure all child elements are visible by removing inline hidden styles
                 const allElements = clonedDoc.querySelectorAll('*');
                 allElements.forEach(el => {
+                    // Remove visibility:hidden inline styles
                     if (el.style.visibility === 'hidden') {
                         el.style.visibility = 'visible';
                     }
+                    // Remove display:none inline styles (empty string removes inline style, restores cascade)
                     if (el.style.display === 'none') {
                         el.style.display = '';
                     }
