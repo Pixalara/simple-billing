@@ -7,6 +7,12 @@ import SearchableSelect from '../components/SearchableSelect'
 import html2pdf from 'html2pdf.js'
 import BrandingFooter from '../components/BrandingFooter'
 
+// PDF Generation Constants
+const MIN_VALID_PDF_SIZE_BYTES = 1000 // Minimum size in bytes for a valid PDF (1KB)
+const IMAGE_LOAD_TIMEOUT_MS = 3000 // Timeout for loading images (3 seconds)
+const MOBILE_RENDER_WAIT_MS = 1000 // Wait time for mobile device rendering (1 second)
+const DOWNLOAD_CLEANUP_DELAY_MS = 100 // Delay before cleaning up download link (100ms)
+
 // --- PREMIUM POPUP COMPONENT ---
 const Popup = ({ isOpen, onClose, title, message, type, actionLabel, onAction, cancelLabel }) => {
     if (!isOpen) return null;
@@ -318,12 +324,12 @@ export default function CreateInvoice() {
                   console.warn('Image failed to load:', img.src);
                   resolve();
               };
-              setTimeout(resolve, 3000);
+              setTimeout(resolve, IMAGE_LOAD_TIMEOUT_MS);
           });
       }));
 
       // Extended wait for rendering - especially important on mobile devices
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, MOBILE_RENDER_WAIT_MS));
 
       const buyerName = (formData.buyer_name || 'Customer').replace(/[^a-zA-Z0-9]/g, '_');
       const invoiceNum = (formData.invoice_no || 'DRAFT').replace(/[^a-zA-Z0-9]/g, '_');
@@ -376,7 +382,7 @@ export default function CreateInvoice() {
         console.log('PDF generated successfully, size:', pdfBlob.size);
         
         // Verify the PDF blob is not empty or corrupted
-        if (!pdfBlob || pdfBlob.size < 1000) {
+        if (!pdfBlob || pdfBlob.size < MIN_VALID_PDF_SIZE_BYTES) {
             console.error('Generated PDF is too small or empty:', pdfBlob?.size);
             throw new Error('Generated PDF appears to be empty or corrupted');
         }
@@ -447,7 +453,7 @@ export default function CreateInvoice() {
   }
 
   const downloadBlob = (blob, filename) => {
-      if (!blob || blob.size < 1000) {
+      if (!blob || blob.size < MIN_VALID_PDF_SIZE_BYTES) {
           console.error('Invalid blob for download:', blob?.size);
           showPopup('Error', 'Cannot download empty or corrupted PDF', 'error');
           return;
@@ -465,7 +471,7 @@ export default function CreateInvoice() {
       setTimeout(() => {
           document.body.removeChild(a)
           URL.revokeObjectURL(url)
-      }, 100)
+      }, DOWNLOAD_CLEANUP_DELAY_MS)
   }
 
   const handleShare = async () => { 
@@ -478,7 +484,7 @@ export default function CreateInvoice() {
         }
         
         // Ensure blob is valid before creating File
-        if (!result.blob || result.blob.size < 1000) {
+        if (!result.blob || result.blob.size < MIN_VALID_PDF_SIZE_BYTES) {
             console.error('Invalid PDF blob:', result.blob?.size);
             showPopup('Error', 'Generated PDF is empty or corrupted', 'error');
             return;
@@ -491,7 +497,7 @@ export default function CreateInvoice() {
         }); 
         
         // Verify the File object was created successfully
-        if (!file || file.size < 1000) {
+        if (!file || file.size < MIN_VALID_PDF_SIZE_BYTES) {
             console.error('Invalid File object:', file?.size);
             throw new Error('Failed to create valid File object');
         }
