@@ -377,7 +377,7 @@ export default function CreateInvoice() {
             scale: 2, 
             useCORS: true, 
             allowTaint: true,
-            logging: true,
+            logging: false,
             scrollY: 0,
             scrollX: 0,
             windowHeight: 1123,
@@ -414,8 +414,11 @@ export default function CreateInvoice() {
       try {
         console.log('Starting PDF generation...');
         // Use the clone element that's already in the DOM via container
-        const elementToRender = container.querySelector('#invoice-preview') || clone;
-        const pdfBlob = await html2pdf().set(opt).from(elementToRender).output('blob')
+        const elementToRender = container.querySelector('#invoice-preview');
+        if (!elementToRender) {
+            console.warn('Could not find #invoice-preview in container, using clone reference');
+        }
+        const pdfBlob = await html2pdf().set(opt).from(elementToRender || clone).output('blob')
         console.log('PDF generated successfully, size:', pdfBlob.size);
         
         // Verify the PDF blob is not empty or corrupted
