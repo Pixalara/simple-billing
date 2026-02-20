@@ -359,6 +359,9 @@ export default function CreateInvoice() {
       // Extended wait for rendering - especially important on mobile devices
       await new Promise(resolve => setTimeout(resolve, MOBILE_RENDER_WAIT_MS));
 
+      // Force a reflow to ensure all styles are computed
+      void clone.offsetHeight;
+
       const buyerName = (formData.buyer_name || 'Customer').replace(/[^a-zA-Z0-9]/g, '_');
       const invoiceNum = (formData.invoice_no || 'DRAFT').replace(/[^a-zA-Z0-9]/g, '_');
       const typeTag = copyType ? `_${copyType}` : '';
@@ -374,13 +377,11 @@ export default function CreateInvoice() {
             scale: 2, 
             useCORS: true, 
             allowTaint: true,
-            logging: false,
+            logging: true,
             scrollY: 0,
             scrollX: 0,
             windowHeight: 1123,
             windowWidth: 794,
-            height: 1123,
-            width: 794,
             letterRendering: true,
             backgroundColor: '#ffffff',
             removeContainer: true,
