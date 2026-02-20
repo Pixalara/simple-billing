@@ -372,9 +372,9 @@ export default function CreateInvoice() {
         filename: safeFileName,
         image: { type: 'jpeg', quality: 0.98 },
         enableLinks: false, 
-        pagebreak: { mode: 'avoid-all' },
+        pagebreak: { mode: 'avoid' },
         html2canvas: { 
-            scale: 1, 
+            scale: 2, 
             useCORS: true, 
             allowTaint: true,
             logging: false,
