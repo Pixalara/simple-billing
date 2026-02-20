@@ -374,7 +374,7 @@ export default function CreateInvoice() {
         enableLinks: false, 
         pagebreak: { mode: 'avoid-all' },
         html2canvas: { 
-            scale: 2, 
+            scale: 1, 
             useCORS: true, 
             allowTaint: true,
             logging: false,
