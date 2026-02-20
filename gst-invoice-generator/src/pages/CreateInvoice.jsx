@@ -359,6 +359,9 @@ export default function CreateInvoice() {
       // Extended wait for rendering - especially important on mobile devices
       await new Promise(resolve => setTimeout(resolve, MOBILE_RENDER_WAIT_MS));
 
+      // Force a reflow to ensure all styles are computed
+      void clone.offsetHeight;
+
       const buyerName = (formData.buyer_name || 'Customer').replace(/[^a-zA-Z0-9]/g, '_');
       const invoiceNum = (formData.invoice_no || 'DRAFT').replace(/[^a-zA-Z0-9]/g, '_');
       const typeTag = copyType ? `_${copyType}` : '';
@@ -379,8 +382,6 @@ export default function CreateInvoice() {
             scrollX: 0,
             windowHeight: 1123,
             windowWidth: 794,
-            height: 1123,
-            width: 794,
             letterRendering: true,
             backgroundColor: '#ffffff',
             removeContainer: true,
@@ -412,7 +413,12 @@ export default function CreateInvoice() {
       
       try {
         console.log('Starting PDF generation...');
-        const pdfBlob = await html2pdf().set(opt).from(clone).output('blob')
+        // Use the clone element that's already in the DOM via container
+        const elementToRender = container.querySelector('#invoice-preview');
+        if (!elementToRender) {
+            console.warn('Could not find #invoice-preview in container, using clone reference');
+        }
+        const pdfBlob = await html2pdf().set(opt).from(elementToRender || clone).output('blob')
         console.log('PDF generated successfully, size:', pdfBlob.size);
         
         // Verify the PDF blob is not empty or corrupted
