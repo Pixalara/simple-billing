@@ -891,26 +891,27 @@ export default function CreateInvoice() {
                             <thead>
                                 <tr style={{ backgroundColor: theme.hex, color: theme.text }}>
                                     <th style={{ 
-                                        width: '38%', 
+                                        width: '40%', 
                                         height: '35px', 
                                         overflow: 'hidden',
                                         verticalAlign: 'middle', 
                                         backgroundColor: theme.hex, 
-                                        color: theme.text 
+                                        color: theme.text,
+                                        padding: '8px 12px'
                                     }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', height: '100%', paddingLeft: '12px', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }}>ITEM</div>
+                                        <div style={{ display: 'flex', alignItems: 'center', height: '100%', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }}>ITEM</div>
                                     </th>
-                                    <th style={{ width: '13%', height: '35px', overflow: 'hidden', verticalAlign: 'middle', backgroundColor: theme.hex, color: theme.text }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', height: '100%', paddingLeft: '8px', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }}>HSN</div>
+                                    <th style={{ width: '15%', height: '35px', overflow: 'hidden', verticalAlign: 'middle', backgroundColor: theme.hex, color: theme.text, padding: '8px 12px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', height: '100%', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }}>HSN</div>
                                     </th>
-                                    <th style={{ width: '10%', height: '35px', overflow: 'hidden', verticalAlign: 'middle', backgroundColor: theme.hex, color: theme.text }}>
+                                    <th style={{ width: '10%', height: '35px', overflow: 'hidden', verticalAlign: 'middle', backgroundColor: theme.hex, color: theme.text, padding: '8px 12px', textAlign: 'center' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }}>QTY</div>
                                     </th>
-                                    <th style={{ width: '15%', height: '35px', overflow: 'hidden', verticalAlign: 'middle', backgroundColor: theme.hex, color: theme.text }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flexEnd', height: '100%', paddingRight: '12px', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }}>PRICE</div>
+                                    <th style={{ width: '15%', height: '35px', overflow: 'hidden', verticalAlign: 'middle', backgroundColor: theme.hex, color: theme.text, padding: '8px 12px', textAlign: 'right' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', height: '100%', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }}>PRICE</div>
                                     </th>
-                                    <th style={{ width: '24%', height: '35px', overflow: 'hidden', verticalAlign: 'middle', backgroundColor: theme.hex, color: theme.text }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flexEnd', height: '100%', paddingRight: '12px', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }}>TOTAL</div>
+                                    <th style={{ width: '20%', height: '35px', overflow: 'hidden', verticalAlign: 'middle', backgroundColor: theme.hex, color: theme.text, padding: '8px 12px', textAlign: 'right' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', height: '100%', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }}>TOTAL</div>
                                     </th>
                                 </tr>
                             </thead>
@@ -919,13 +920,13 @@ export default function CreateInvoice() {
                                     const amount = ((item.quantity||0) * (item.price||0));
                                     return (
                                         <tr key={i} style={{ borderBottom: '1px solid #e5e7eb' }}>
-                                            <td style={{ width: '38%', padding: '8px 0 8px 12px', verticalAlign: 'top' }}>
+                                            <td style={{ width: '40%', padding: '8px 12px', verticalAlign: 'top' }}>
                                                 <p style={{ fontWeight: 600, fontSize: '13px', margin: 0, color: '#1f2937' }}>{item.description}</p>
                                             </td>
-                                            <td style={{ width: '13%', padding: '8px 0 8px 12px', verticalAlign: 'top', fontSize: '12px', color: '#4b5563' }}>{item.hsn}</td>
-                                            <td style={{ width: '10%', padding: '8px 0', textAlign: 'center', verticalAlign: 'top', fontSize: '13px', color: '#1f2937' }}>{item.quantity}</td>
-                                            <td style={{ width: '15%', padding: '8px 12px 8px 0', textAlign: 'right', verticalAlign: 'top', fontSize: '13px', color: '#1f2937' }}>₹{item.price}</td>
-                                            <td style={{ width: '24%', padding: '8px 12px 8px 0', textAlign: 'right', verticalAlign: 'top', fontWeight: 'bold', fontSize: '13px', color: '#1f2937' }}>₹{(amount).toFixed(2)}</td>
+                                            <td style={{ width: '15%', padding: '8px 12px', verticalAlign: 'top', fontSize: '12px', color: '#4b5563' }}>{item.hsn}</td>
+                                            <td style={{ width: '10%', padding: '8px 12px', textAlign: 'center', verticalAlign: 'top', fontSize: '13px', color: '#1f2937', fontVariantNumeric: 'tabular-nums' }}>{item.quantity}</td>
+                                            <td style={{ width: '15%', padding: '8px 12px', textAlign: 'right', verticalAlign: 'top', fontSize: '13px', color: '#1f2937', fontVariantNumeric: 'tabular-nums' }}>₹{item.price}</td>
+                                            <td style={{ width: '20%', padding: '8px 12px', textAlign: 'right', verticalAlign: 'top', fontWeight: 'bold', fontSize: '13px', color: '#1f2937', fontVariantNumeric: 'tabular-nums' }}>₹{(amount).toFixed(2)}</td>
                                         </tr>
                                     )
                                 })}
@@ -934,26 +935,26 @@ export default function CreateInvoice() {
                     </div>
                     
                     <div className="flex justify-end mb-2">
-                        <div className="w-5/12 space-y-1 border-b pb-2">
-                            <div className="flex justify-between text-gray-600 text-sm"><span>Subtotal</span><span>₹{totals.subtotal}</span></div>
+                        <div className="w-[35%] space-y-1 border-b pb-2">
+                            <div className="flex justify-between text-gray-600 text-sm" style={{ fontVariantNumeric: 'tabular-nums' }}><span>Subtotal</span><span>₹{totals.subtotal}</span></div>
                             {parseFloat(totals.igst) > 0 ? (
-                            <div className="flex justify-between text-gray-600 text-xs">
+                            <div className="flex justify-between text-gray-600 text-xs" style={{ fontVariantNumeric: 'tabular-nums' }}>
                                 <span>IGST {getTaxRateText('IGST')}</span>
                                 <span>₹{totals.igst}</span>
                             </div>
                             ) : (
                             <>
-                                <div className="flex justify-between text-gray-600 text-xs">
+                                <div className="flex justify-between text-gray-600 text-xs" style={{ fontVariantNumeric: 'tabular-nums' }}>
                                     <span>CGST {getTaxRateText('CGST')}</span>
                                     <span>₹{totals.cgst}</span>
                                 </div>
-                                <div className="flex justify-between text-gray-600 text-xs">
+                                <div className="flex justify-between text-gray-600 text-xs" style={{ fontVariantNumeric: 'tabular-nums' }}>
                                     <span>SGST {getTaxRateText('SGST')}</span>
                                     <span>₹{totals.sgst}</span>
                                 </div>
                             </>
                             )}
-                            <div className="flex justify-between py-2 text-xl font-bold" style={{ color: theme.hex }}>
+                            <div className="flex justify-between py-2 text-xl font-bold" style={{ color: theme.hex, fontVariantNumeric: 'tabular-nums' }}>
                                 <span>Total</span><span>₹{totals.grandTotal}</span>
                             </div>
                         </div>
