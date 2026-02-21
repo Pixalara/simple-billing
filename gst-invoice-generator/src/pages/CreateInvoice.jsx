@@ -148,6 +148,10 @@ export default function CreateInvoice() {
             const foundTheme = THEMES.find(t => t.hex === invoice.invoice_data.theme)
             if (foundTheme) setTheme(foundTheme)
           }
+          // Restore includeGST state if it was saved
+          if (invoice.invoice_data.includeGST !== undefined) {
+            setIncludeGST(invoice.invoice_data.includeGST)
+          }
         }
       } else if (!profile?.enable_manual_invoice_no) {
         // NEW INVOICE - AUTO-GENERATE ONLY IF MANUAL MODE IS DISABLED
@@ -590,7 +594,7 @@ export default function CreateInvoice() {
           const payload = { 
               user_id: user.id, 
               invoice_no: data.invoice_no, 
-              invoice_data: { ...data, totals, theme: theme.hex }, 
+              invoice_data: { ...data, totals, theme: theme.hex, includeGST }, 
               total_amount: totals.grandTotal 
           }; 
           
