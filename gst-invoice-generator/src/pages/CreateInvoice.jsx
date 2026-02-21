@@ -112,7 +112,7 @@ export default function CreateInvoice() {
       setPopup({ ...popup, isOpen: false }) 
   }
 
-  const { register, control, handleSubmit, setValue, reset, watch } = useForm({
+  const { register, control, handleSubmit, setValue, reset, watch, getValues } = useForm({
     defaultValues: {
       invoice_no: '',
       invoiceDate: new Date().toISOString().split('T')[0],
@@ -179,12 +179,13 @@ export default function CreateInvoice() {
     if (!includeGST) {
       setValue('buyer_gstin', '')
       setGstinError('')
-      formData.items?.forEach((_, index) => {
+      const items = getValues('items')
+      items?.forEach((_, index) => {
         setValue(`items.${index}.hsn`, '')
         setValue(`items.${index}.gstRate`, 0)
       })
     }
-  }, [includeGST, setValue, formData.items])
+  }, [includeGST, setValue, getValues])
 
   useEffect(() => {
     const handleResize = () => { 
@@ -694,8 +695,8 @@ export default function CreateInvoice() {
 
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             {/* GST Filter */}
-            <div className="bg-blue-50 p-3 rounded border border-blue-200">
-                <h3 className="text-sm font-semibold mb-2 text-gray-700">Invoice Type</h3>
+            <fieldset className="bg-blue-50 p-3 rounded border border-blue-200">
+                <legend className="text-sm font-semibold mb-2 text-gray-700">Invoice Type</legend>
                 <div className="flex gap-3">
                     <label className="flex items-center gap-2 cursor-pointer">
                         <input 
@@ -704,6 +705,7 @@ export default function CreateInvoice() {
                             checked={includeGST} 
                             onChange={() => setIncludeGST(true)}
                             className="w-4 h-4 text-blue-600"
+                            aria-label="Create Invoice with GST"
                         />
                         <span className={`text-sm font-medium ${includeGST ? 'text-blue-700' : 'text-gray-600'}`}>
                             Create Invoice with GST
@@ -716,13 +718,14 @@ export default function CreateInvoice() {
                             checked={!includeGST} 
                             onChange={() => setIncludeGST(false)}
                             className="w-4 h-4 text-blue-600"
+                            aria-label="Create Invoice without GST"
                         />
                         <span className={`text-sm font-medium ${!includeGST ? 'text-blue-700' : 'text-gray-600'}`}>
                             Create Invoice without GST
                         </span>
                     </label>
                 </div>
-            </div>
+            </fieldset>
 
             <div className="grid grid-cols-2 gap-3">
                 <div>
