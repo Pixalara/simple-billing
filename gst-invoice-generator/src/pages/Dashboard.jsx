@@ -444,7 +444,7 @@ export default function Dashboard() {
       <Popup isOpen={popup.isOpen} onClose={closePopup} title={popup.title} message={popup.message} type={popup.type} actionLabel={popup.actionLabel} cancelLabel={popup.cancelLabel} onAction={popup.onAction} />
 
       <div className="max-w-7xl mx-auto">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+        <div className="flex flex-row justify-between items-center gap-4 mb-6">
           <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Dashboard</h1>
           <button 
             onClick={handleLogout} 
