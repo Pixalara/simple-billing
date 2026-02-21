@@ -13,6 +13,9 @@ const IMAGE_LOAD_TIMEOUT_MS = 3000 // Timeout for loading images (3 seconds)
 const MOBILE_RENDER_WAIT_MS = 1000 // Wait time for mobile device rendering (1 second)
 const DOWNLOAD_CLEANUP_DELAY_MS = 100 // Delay before cleaning up download link (100ms)
 
+// Field styling constants
+const DISABLED_FIELD_CLASSES = 'bg-gray-100 text-gray-500 cursor-not-allowed'
+
 // --- PREMIUM POPUP COMPONENT ---
 const Popup = ({ isOpen, onClose, title, message, type, actionLabel, onAction, cancelLabel }) => {
     if (!isOpen) return null;
@@ -170,6 +173,18 @@ export default function CreateInvoice() {
     }
     loadData()
   }, [id, navigate, reset, setValue])
+
+  // Clear GST-related fields when GST filter changes to "without GST"
+  useEffect(() => {
+    if (!includeGST) {
+      setValue('buyer_gstin', '')
+      setGstinError('')
+      formData.items?.forEach((_, index) => {
+        setValue(`items.${index}.hsn`, '')
+        setValue(`items.${index}.gstRate`, 0)
+      })
+    }
+  }, [includeGST, setValue, formData.items])
 
   useEffect(() => {
     const handleResize = () => { 
@@ -754,7 +769,7 @@ export default function CreateInvoice() {
                   <input 
                       {...register('buyer_gstin')} 
                       placeholder="GSTIN (Optional - 15 characters)" 
-                      className={`w-full p-2 border rounded text-sm ${!includeGST ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : getGstinBorderClass()}`}
+                      className={`w-full p-2 border rounded text-sm ${!includeGST ? DISABLED_FIELD_CLASSES : getGstinBorderClass()}`}
                       onChange={handleGstinChange}
                       maxLength={15}
                       disabled={!includeGST}
@@ -795,7 +810,7 @@ export default function CreateInvoice() {
                             <input 
                                 {...register(`items.${index}.hsn`)} 
                                 placeholder="HSN" 
-                                className={`w-full p-2 border rounded text-sm ${!includeGST ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`}
+                                className={`w-full p-2 border rounded text-sm ${!includeGST ? DISABLED_FIELD_CLASSES : ''}`}
                                 disabled={!includeGST}
                             />
                         </div>
@@ -811,7 +826,7 @@ export default function CreateInvoice() {
                             <label className="text-xs text-gray-500">GST %</label>
                             <select 
                                 {...register(`items.${index}.gstRate`)} 
-                                className={`w-full p-2 border rounded text-sm ${!includeGST ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`}
+                                className={`w-full p-2 border rounded text-sm ${!includeGST ? DISABLED_FIELD_CLASSES : ''}`}
                                 disabled={!includeGST}
                             >
                                 <option value="0">0%</option>
