@@ -97,6 +97,7 @@ export default function CreateInvoice() {
   const [stampPreview, setStampPreview] = useState(null) 
   const [gstinError, setGstinError] = useState('')
   const [manualInvoiceEnabled, setManualInvoiceEnabled] = useState(false)
+  const [includeGST, setIncludeGST] = useState(true)
 
   const [popup, setPopup] = useState({ isOpen: false, title: '', message: '', type: 'success', actionLabel: 'OK', onAction: null, cancelLabel: null })
   
@@ -221,7 +222,7 @@ export default function CreateInvoice() {
     (formData.items||[]).forEach(i=>{
       const q=parseFloat(i.quantity)||0,
             p=parseFloat(i.price)||0,
-            r=parseFloat(i.gstRate)||0,
+            r=includeGST ? (parseFloat(i.gstRate)||0) : 0,
             l=q*p; 
       s+=l; 
       t+=(l*r)/100
@@ -677,6 +678,37 @@ export default function CreateInvoice() {
             </div>
 
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            {/* GST Filter */}
+            <div className="bg-blue-50 p-3 rounded border border-blue-200">
+                <h3 className="text-sm font-semibold mb-2 text-gray-700">Invoice Type</h3>
+                <div className="flex gap-3">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                        <input 
+                            type="radio" 
+                            name="gstFilter" 
+                            checked={includeGST} 
+                            onChange={() => setIncludeGST(true)}
+                            className="w-4 h-4 text-blue-600"
+                        />
+                        <span className={`text-sm font-medium ${includeGST ? 'text-blue-700' : 'text-gray-600'}`}>
+                            Create Invoice with GST
+                        </span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                        <input 
+                            type="radio" 
+                            name="gstFilter" 
+                            checked={!includeGST} 
+                            onChange={() => setIncludeGST(false)}
+                            className="w-4 h-4 text-blue-600"
+                        />
+                        <span className={`text-sm font-medium ${!includeGST ? 'text-blue-700' : 'text-gray-600'}`}>
+                            Create Invoice without GST
+                        </span>
+                    </label>
+                </div>
+            </div>
+
             <div className="grid grid-cols-2 gap-3">
                 <div>
                 <label className="text-xs text-gray-500 flex items-center gap-1">
@@ -722,17 +754,18 @@ export default function CreateInvoice() {
                   <input 
                       {...register('buyer_gstin')} 
                       placeholder="GSTIN (Optional - 15 characters)" 
-                      className={`w-full p-2 border rounded text-sm ${getGstinBorderClass()}`}
+                      className={`w-full p-2 border rounded text-sm ${!includeGST ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : getGstinBorderClass()}`}
                       onChange={handleGstinChange}
                       maxLength={15}
+                      disabled={!includeGST}
                   />
-                  {gstinError && <p className="text-red-500 text-xs mt-1">{gstinError}</p>}
-                  {formData.buyer_gstin && formData.buyer_gstin.length < 15 && !gstinError && (
+                  {includeGST && gstinError && <p className="text-red-500 text-xs mt-1">{gstinError}</p>}
+                  {includeGST && formData.buyer_gstin && formData.buyer_gstin.length < 15 && !gstinError && (
                     <p className="text-amber-500 text-xs mt-1">
                       {15 - formData.buyer_gstin.length} characters remaining
                     </p>
                   )}
-                  {formData.buyer_gstin?.length === 15 && !gstinError && validateGSTIN(formData.buyer_gstin) && (
+                  {includeGST && formData.buyer_gstin?.length === 15 && !gstinError && validateGSTIN(formData.buyer_gstin) && (
                     <p className="text-green-600 text-xs mt-1 flex items-center gap-1">
                       <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
                       Valid GSTIN
@@ -759,7 +792,12 @@ export default function CreateInvoice() {
                     <div className="grid grid-cols-12 gap-2 mt-2">
                         <div className="col-span-3">
                             <label className="text-xs text-gray-500">HSN Code</label>
-                            <input {...register(`items.${index}.hsn`)} placeholder="HSN" className="w-full p-2 border rounded text-sm" />
+                            <input 
+                                {...register(`items.${index}.hsn`)} 
+                                placeholder="HSN" 
+                                className={`w-full p-2 border rounded text-sm ${!includeGST ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`}
+                                disabled={!includeGST}
+                            />
                         </div>
                         <div className="col-span-4">
                             <label className="text-xs text-gray-500">Price</label>
@@ -771,7 +809,11 @@ export default function CreateInvoice() {
                         </div>
                         <div className="col-span-3">
                             <label className="text-xs text-gray-500">GST %</label>
-                            <select {...register(`items.${index}.gstRate`)} className="w-full p-2 border rounded text-sm">
+                            <select 
+                                {...register(`items.${index}.gstRate`)} 
+                                className={`w-full p-2 border rounded text-sm ${!includeGST ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`}
+                                disabled={!includeGST}
+                            >
                                 <option value="0">0%</option>
                                 <option value="5">5%</option>
                                 <option value="12">12%</option>
@@ -869,7 +911,7 @@ export default function CreateInvoice() {
                             <p className="text-base font-bold text-gray-800 leading-tight">{formData.buyer_name || 'Client Name'}</p>
                             <p className="text-gray-600 text-xs whitespace-pre-wrap leading-tight">{formData.buyer_address}</p>
                             <p className="text-gray-600 text-xs">{formData.buyer_state}</p>
-                            {formData.buyer_gstin && <p className="text-xs font-semibold mt-1">GSTIN: {formData.buyer_gstin}</p>}
+                            {includeGST && formData.buyer_gstin && <p className="text-xs font-semibold mt-1">GSTIN: {formData.buyer_gstin}</p>}
                         </div>
                         <div className="text-right" style={{ width: '35%' }}>
                             <div className="grid grid-cols-[auto_auto] gap-x-3 justify-end items-baseline">
@@ -891,7 +933,7 @@ export default function CreateInvoice() {
                             <thead>
                                 <tr style={{ backgroundColor: theme.hex, color: theme.text }}>
                                     <th style={{ 
-                                        width: '40%', 
+                                        width: includeGST ? '40%' : '55%', 
                                         height: '35px', 
                                         overflow: 'hidden',
                                         verticalAlign: 'middle', 
@@ -901,9 +943,11 @@ export default function CreateInvoice() {
                                     }}>
                                         <div style={{ display: 'flex', alignItems: 'center', height: '100%', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }}>ITEM</div>
                                     </th>
-                                    <th style={{ width: '15%', height: '35px', overflow: 'hidden', verticalAlign: 'middle', backgroundColor: theme.hex, color: theme.text, padding: '8px 12px' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', height: '100%', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }}>HSN</div>
-                                    </th>
+                                    {includeGST && (
+                                        <th style={{ width: '15%', height: '35px', overflow: 'hidden', verticalAlign: 'middle', backgroundColor: theme.hex, color: theme.text, padding: '8px 12px' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', height: '100%', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }}>HSN</div>
+                                        </th>
+                                    )}
                                     <th style={{ width: '10%', height: '35px', overflow: 'hidden', verticalAlign: 'middle', backgroundColor: theme.hex, color: theme.text, padding: '8px 12px', textAlign: 'center' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }}>QTY</div>
                                     </th>
@@ -920,10 +964,12 @@ export default function CreateInvoice() {
                                     const amount = ((item.quantity||0) * (item.price||0));
                                     return (
                                         <tr key={i} style={{ borderBottom: '1px solid #e5e7eb' }}>
-                                            <td style={{ width: '40%', padding: '8px 12px', verticalAlign: 'top' }}>
+                                            <td style={{ width: includeGST ? '40%' : '55%', padding: '8px 12px', verticalAlign: 'top' }}>
                                                 <p style={{ fontWeight: 600, fontSize: '13px', margin: 0, color: '#1f2937' }}>{item.description}</p>
                                             </td>
-                                            <td style={{ width: '15%', padding: '8px 12px', verticalAlign: 'top', fontSize: '12px', color: '#4b5563' }}>{item.hsn}</td>
+                                            {includeGST && (
+                                                <td style={{ width: '15%', padding: '8px 12px', verticalAlign: 'top', fontSize: '12px', color: '#4b5563' }}>{item.hsn}</td>
+                                            )}
                                             <td style={{ width: '10%', padding: '8px 12px', textAlign: 'center', verticalAlign: 'top', fontSize: '13px', color: '#1f2937', fontVariantNumeric: 'tabular-nums' }}>{item.quantity}</td>
                                             <td style={{ width: '15%', padding: '8px 12px', textAlign: 'right', verticalAlign: 'top', fontSize: '13px', color: '#1f2937', fontVariantNumeric: 'tabular-nums' }}>₹{item.price}</td>
                                             <td style={{ width: '20%', padding: '8px 12px', textAlign: 'right', verticalAlign: 'top', fontWeight: 'bold', fontSize: '13px', color: '#1f2937', fontVariantNumeric: 'tabular-nums' }}>₹{(amount).toFixed(2)}</td>
@@ -937,22 +983,26 @@ export default function CreateInvoice() {
                     <div className="flex justify-end mb-2">
                         <div className="w-[35%] space-y-1 border-b pb-2">
                             <div className="flex justify-between text-gray-600 text-sm" style={{ fontVariantNumeric: 'tabular-nums' }}><span>Subtotal</span><span>₹{totals.subtotal}</span></div>
-                            {parseFloat(totals.igst) > 0 ? (
-                            <div className="flex justify-between text-gray-600 text-xs" style={{ fontVariantNumeric: 'tabular-nums' }}>
-                                <span>IGST {getTaxRateText('IGST')}</span>
-                                <span>₹{totals.igst}</span>
-                            </div>
-                            ) : (
-                            <>
-                                <div className="flex justify-between text-gray-600 text-xs" style={{ fontVariantNumeric: 'tabular-nums' }}>
-                                    <span>CGST {getTaxRateText('CGST')}</span>
-                                    <span>₹{totals.cgst}</span>
-                                </div>
-                                <div className="flex justify-between text-gray-600 text-xs" style={{ fontVariantNumeric: 'tabular-nums' }}>
-                                    <span>SGST {getTaxRateText('SGST')}</span>
-                                    <span>₹{totals.sgst}</span>
-                                </div>
-                            </>
+                            {includeGST && (
+                                <>
+                                    {parseFloat(totals.igst) > 0 ? (
+                                    <div className="flex justify-between text-gray-600 text-xs" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                                        <span>IGST {getTaxRateText('IGST')}</span>
+                                        <span>₹{totals.igst}</span>
+                                    </div>
+                                    ) : (
+                                    <>
+                                        <div className="flex justify-between text-gray-600 text-xs" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                                            <span>CGST {getTaxRateText('CGST')}</span>
+                                            <span>₹{totals.cgst}</span>
+                                        </div>
+                                        <div className="flex justify-between text-gray-600 text-xs" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                                            <span>SGST {getTaxRateText('SGST')}</span>
+                                            <span>₹{totals.sgst}</span>
+                                        </div>
+                                    </>
+                                    )}
+                                </>
                             )}
                             <div className="flex justify-between py-2 text-xl font-bold" style={{ color: theme.hex, fontVariantNumeric: 'tabular-nums' }}>
                                 <span>Total</span><span>₹{totals.grandTotal}</span>
