@@ -160,6 +160,7 @@ export default function Dashboard() {
     const { data } = await supabase.from('users').select('*').eq('id', userId).single()
     if (data) {
       setValue('business_name', data.business_name)
+      setValue('business_address', localStorage.getItem('business_address') || '')
       setValue('state', data.state)
       setValue('gstin', data.gstin)
       setValue('business_email', data.business_email)
@@ -233,7 +234,9 @@ export default function Dashboard() {
   const updateProfile = async (formData) => {
     try {
       setLoading(true)
-      const { error } = await supabase.from('users').upsert({ id: session.user.id, ...formData })
+      const { business_address, ...dbData } = formData
+      localStorage.setItem('business_address', business_address || '')
+      const { error } = await supabase.from('users').upsert({ id: session.user.id, ...dbData })
       if (error) throw error
       showPopup('Saved', 'Business Profile Saved Successfully!', 'success')
       setIsEditingProfile(false) // Lock after save
@@ -692,6 +695,7 @@ export default function Dashboard() {
 
                         <form onSubmit={handleSubmit(updateProfile)} className="space-y-3">
                             <input {...register('business_name')} disabled={!isEditingProfile} placeholder="BUSINESS NAME" onChange={(e) => enforceLettersOnly(e, 'business_name')} className={`w-full p-2 border rounded text-sm ${!isEditingProfile ? 'bg-gray-50 text-gray-600 cursor-not-allowed' : 'bg-white'}`} />
+                            <textarea {...register('business_address')} disabled={!isEditingProfile} placeholder="BUSINESS ADDRESS" className={`w-full p-2 border rounded text-sm ${!isEditingProfile ? 'bg-gray-50 text-gray-600 cursor-not-allowed' : 'bg-white'}`} rows="2" />
                             <input {...register('business_email')} disabled={!isEditingProfile} placeholder="BUSINESS EMAIL" className={`w-full p-2 border rounded text-sm ${!isEditingProfile ? 'bg-gray-50 text-gray-600 cursor-not-allowed' : 'bg-white'}`} />
                             <input {...register('business_phone')} disabled={!isEditingProfile} placeholder="BUSINESS PHONE" onChange={(e) => enforceNumbersOnly(e, 'business_phone')} maxLength={10} className={`w-full p-2 border rounded text-sm ${!isEditingProfile ? 'bg-gray-50 text-gray-600 cursor-not-allowed' : 'bg-white'}`} />
                             <input {...register('website')} disabled={!isEditingProfile} placeholder="WEBSITE" className={`w-full p-2 border rounded text-sm ${!isEditingProfile ? 'bg-gray-50 text-gray-600 cursor-not-allowed' : 'bg-white'}`} />

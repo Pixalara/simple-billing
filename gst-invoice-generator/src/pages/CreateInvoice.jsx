@@ -132,7 +132,7 @@ export default function CreateInvoice() {
       
       const { data: profile } = await supabase.from('users').select('*').eq('id', user.id).single()
       if (profile) {
-          setSellerProfile(profile)
+          setSellerProfile({ ...profile, address: localStorage.getItem('business_address') || '' })
           setManualInvoiceEnabled(profile.enable_manual_invoice_no || false)
           if (profile.signature_url) setSignaturePreview(profile.signature_url)
           if (profile.stamp_url) setStampPreview(profile.stamp_url)
@@ -918,6 +918,7 @@ export default function CreateInvoice() {
                     </div>
                     <div className="text-right" style={{ width: '50%' }}>
                         <h2 className="text-3xl font-bold leading-tight mb-1">{sellerProfile?.business_name || 'Your Business Name'}</h2>
+                        {sellerProfile?.address && <p className="opacity-95 text-[11px] leading-tight whitespace-pre-wrap mb-1">{sellerProfile.address}</p>}
                         <p className="opacity-90 text-sm leading-tight">{sellerProfile?.state}</p>
                         {sellerProfile?.business_email && <p className="opacity-90 text-sm leading-tight">{sellerProfile.business_email}</p>}
                         {sellerProfile?.business_phone && <p className="opacity-90 text-sm leading-tight">{sellerProfile.business_phone}</p>}

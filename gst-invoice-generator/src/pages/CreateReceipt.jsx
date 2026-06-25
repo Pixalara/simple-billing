@@ -152,7 +152,7 @@ export default function CreateReceipt() {
       // Fetch business profile
       const { data: profile } = await supabase.from('users').select('*').eq('id', user.id).single()
       if (profile) {
-        setSellerProfile(profile)
+        setSellerProfile({ ...profile, address: localStorage.getItem('business_address') || '' })
         if (profile.signature_url) setSignaturePreview(profile.signature_url)
         if (profile.stamp_url) setStampPreview(profile.stamp_url)
       }
@@ -825,6 +825,7 @@ export default function CreateReceipt() {
                   
                   <div className="text-right max-w-[50%]">
                     <h3 className="text-2xl font-black text-gray-800 leading-tight mb-1">{sellerProfile?.business_name || 'Business Name'}</h3>
+                    {sellerProfile?.address && <p className="text-[10px] text-gray-500 leading-tight whitespace-pre-wrap mb-1">{sellerProfile.address}</p>}
                     <p className="text-xs text-gray-500 leading-normal font-medium">{sellerProfile?.state}</p>
                     {sellerProfile?.business_email && <p className="text-xs text-gray-500 leading-normal font-medium">{sellerProfile.business_email}</p>}
                     {sellerProfile?.website && <p className="text-xs text-blue-600 leading-normal font-bold hover:underline">{sellerProfile.website}</p>}
