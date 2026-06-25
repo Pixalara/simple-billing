@@ -102,6 +102,7 @@ export default function CreateInvoice() {
   const [manualInvoiceEnabled, setManualInvoiceEnabled] = useState(false)
   const [includeGST, setIncludeGST] = useState(true)
   const [customers, setCustomers] = useState([])
+  const [products, setProducts] = useState([])
 
   const [popup, setPopup] = useState({ isOpen: false, title: '', message: '', type: 'success', actionLabel: 'OK', onAction: null, cancelLabel: null })
   
@@ -140,7 +141,7 @@ export default function CreateInvoice() {
           if (profile.stamp_url) setStampPreview(profile.stamp_url)
       }
 
-      // Fetch customers
+      // Fetch customers and products
       try {
         const { data: allDocs } = await supabase
           .from('invoices')
@@ -156,12 +157,17 @@ export default function CreateInvoice() {
               email: doc.invoice_data?.email || '',
               phone: doc.invoice_data?.phone || '',
               address: doc.invoice_data?.address || '',
-              product: doc.invoice_data?.product || '',
+              city: doc.invoice_data?.city || '',
+              state: doc.invoice_data?.state || '',
             }))
           setCustomers(custs)
+
+          const prods = allDocs
+            .filter(doc => doc.invoice_data?.type === 'product')
+          setProducts(prods)
         }
       } catch (err) {
-        console.error("Error fetching customers:", err)
+        console.error("Error fetching customers/products:", err)
       }
 
       if (id) {
@@ -864,8 +870,34 @@ export default function CreateInvoice() {
                 <h3 className="text-sm font-semibold mb-2 text-gray-700">Items</h3>
                 {fields.map((item, index) => (
                 <div key={item.id} className="flex flex-col gap-2 mb-4 p-3 bg-gray-50 rounded border">
+                    {products.length > 0 && (
+                      <div className="w-full">
+                        <label className="text-xs text-gray-500 font-bold block mb-1">Select Custom Product / Service (Auto-fill)</label>
+                        <select
+                          className="w-full p-2 border rounded text-sm bg-white focus:ring-2 focus:ring-blue-100 outline-none"
+                          onChange={(e) => {
+                            const val = e.target.value
+                            if (val === '') return
+                            const prod = products.find(p => p.invoice_no === val)
+                            if (prod) {
+                              setValue(`items.${index}.description`, prod.invoice_data.name)
+                              setValue(`items.${index}.hsn`, prod.invoice_data.hsn_sac || '')
+                              setValue(`items.${index}.price`, prod.invoice_data.price)
+                              setValue(`items.${index}.gstRate`, prod.invoice_data.tax_rate || 18)
+                            }
+                          }}
+                        >
+                          <option value="">-- Choose Product/Service --</option>
+                          {products.map(p => (
+                            <option key={p.id} value={p.invoice_no}>
+                              {p.invoice_data.name} (₹{p.invoice_data.price})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
                     <div className="w-full">
-                        <label className="text-xs text-gray-500 font-bold">Search Item</label>
+                        <label className="text-xs text-gray-500 font-bold">Search Item / Description</label>
                         <SearchableSelect 
                             options={HSN_CODES} 
                             value={formData.items[index]?.description}

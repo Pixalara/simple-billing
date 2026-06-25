@@ -108,8 +108,7 @@ function CustomerFormModal({ customerNode, onClose, onSave, allCustomers }) {
     phone: '',
     address: '',
     city: '',
-    state: '',
-    product: ''
+    state: ''
   })
   
   useEffect(() => {
@@ -121,8 +120,7 @@ function CustomerFormModal({ customerNode, onClose, onSave, allCustomers }) {
         phone: customerNode.invoice_data?.phone || '',
         address: customerNode.invoice_data?.address || '',
         city: customerNode.invoice_data?.city || '',
-        state: customerNode.invoice_data?.state || '',
-        product: customerNode.invoice_data?.product || ''
+        state: customerNode.invoice_data?.state || ''
       })
     } else {
       // Auto-generate customer ID
@@ -157,8 +155,7 @@ function CustomerFormModal({ customerNode, onClose, onSave, allCustomers }) {
           phone: fields.phone,
           address: fields.address,
           city: fields.city,
-          state: fields.state,
-          product: fields.product
+          state: fields.state
         },
         total_amount: 0
       }
@@ -271,16 +268,6 @@ function CustomerFormModal({ customerNode, onClose, onSave, allCustomers }) {
                 </select>
               </div>
             </div>
-            <div>
-              <label className="text-[10px] uppercase font-bold text-gray-400 mb-1 block">Product / Subscription Plan</label>
-              <input 
-                type="text" 
-                value={fields.product} 
-                onChange={e => setFields({...fields, product: e.target.value})} 
-                placeholder="e.g. Premium Plan"
-                className="w-full p-2 border rounded text-sm bg-white focus:ring-2 focus:ring-blue-100 outline-none"
-              />
-            </div>
           </form>
         </div>
 
@@ -300,6 +287,174 @@ function CustomerFormModal({ customerNode, onClose, onSave, allCustomers }) {
             className="px-4 py-2 bg-purple-600 text-white rounded-lg text-xs font-bold hover:bg-purple-700 disabled:opacity-50"
           >
             {loading ? 'Saving...' : 'Save Customer'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ProductFormModal({ productNode, onClose, onSave, allProducts }) {
+  const [loading, setLoading] = useState(false)
+  const isEdit = !!productNode;
+  const [fields, setFields] = useState({
+    product_id: '',
+    name: '',
+    price: '',
+    hsn_sac: '',
+    tax_rate: '18'
+  })
+  
+  useEffect(() => {
+    if (isEdit && productNode) {
+      setFields({
+        product_id: productNode.invoice_no,
+        name: productNode.invoice_data?.name || '',
+        price: productNode.invoice_data?.price || '',
+        hsn_sac: productNode.invoice_data?.hsn_sac || '',
+        tax_rate: productNode.invoice_data?.tax_rate || '18'
+      })
+    } else {
+      // Auto-generate product ID
+      const prefix = 'PROD-'
+      let maxNum = 1000
+      allProducts.forEach(prod => {
+        const idStr = prod.invoice_no.replace(prefix, '')
+        const num = parseInt(idStr, 10)
+        if (!isNaN(num) && num > maxNum) {
+          maxNum = num
+        }
+      })
+      setFields(f => ({ ...f, product_id: `${prefix}${maxNum + 1}` }))
+    }
+  }, [productNode, isEdit, allProducts])
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error("Not logged in");
+
+      const payload = {
+        user_id: user.id,
+        invoice_no: fields.product_id,
+        invoice_data: {
+          type: 'product',
+          product_id: fields.product_id,
+          name: fields.name,
+          price: parseFloat(fields.price || 0),
+          hsn_sac: fields.hsn_sac,
+          tax_rate: parseFloat(fields.tax_rate || 18)
+        },
+        total_amount: parseFloat(fields.price || 0)
+      }
+
+      if (isEdit) {
+        const { error } = await supabase.from('invoices').update(payload).eq('id', productNode.id)
+        if (error) throw error
+      } else {
+        const { error } = await supabase.from('invoices').insert(payload)
+        if (error) throw error
+      }
+      onSave()
+    } catch (err) {
+      alert("Error saving product/service: " + err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4 animate-in fade-in duration-200">
+      <div className="bg-white rounded-xl max-w-md w-full shadow-2xl flex flex-col max-h-[90vh] overflow-hidden">
+        {/* Modal Header */}
+        <div className="flex justify-between items-center border-b p-5">
+          <h3 className="text-lg font-bold text-gray-950">{isEdit ? 'Edit Product/Service' : 'Add New Product/Service'}</h3>
+          <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600 font-bold text-lg">×</button>
+        </div>
+        
+        {/* Modal Body (Scrollable) */}
+        <div className="flex-1 overflow-y-auto p-5">
+          <form id="product-form" onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="text-[10px] uppercase font-bold text-gray-400 mb-1 block">Product ID (Auto-Generated)</label>
+              <input 
+                type="text" 
+                value={fields.product_id} 
+                disabled 
+                className="w-full p-2 border rounded text-sm bg-gray-50 text-gray-500 border-gray-200 cursor-not-allowed outline-none font-mono font-bold"
+                required 
+              />
+            </div>
+            <div>
+              <label className="text-[10px] uppercase font-bold text-gray-400 mb-1 block">Name *</label>
+              <input 
+                type="text" 
+                value={fields.name} 
+                onChange={e => setFields({...fields, name: e.target.value})} 
+                placeholder="e.g. Software Consulting"
+                className="w-full p-2 border rounded text-sm bg-white focus:ring-2 focus:ring-blue-100 outline-none"
+                required 
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-[10px] uppercase font-bold text-gray-400 mb-1 block">Price / Rate (INR) *</label>
+                <input 
+                  type="number" 
+                  value={fields.price} 
+                  onChange={e => setFields({...fields, price: e.target.value})} 
+                  placeholder="e.g. 5000"
+                  className="w-full p-2 border rounded text-sm bg-white focus:ring-2 focus:ring-blue-100 outline-none"
+                  required 
+                />
+              </div>
+              <div>
+                <label className="text-[10px] uppercase font-bold text-gray-400 mb-1 block">HSN/SAC Code</label>
+                <input 
+                  type="text" 
+                  value={fields.hsn_sac} 
+                  onChange={e => setFields({...fields, hsn_sac: e.target.value})} 
+                  placeholder="e.g. 998311"
+                  className="w-full p-2 border rounded text-sm bg-white focus:ring-2 focus:ring-blue-100 outline-none"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="text-[10px] uppercase font-bold text-gray-400 mb-1 block">Default GST Tax Rate (%) *</label>
+              <select
+                value={fields.tax_rate}
+                onChange={e => setFields({...fields, tax_rate: e.target.value})}
+                className="w-full p-2 border rounded text-sm bg-white focus:ring-2 focus:ring-blue-100 outline-none"
+                required
+              >
+                <option value="0">0%</option>
+                <option value="5">5%</option>
+                <option value="12">12%</option>
+                <option value="18">18%</option>
+                <option value="28">28%</option>
+              </select>
+            </div>
+          </form>
+        </div>
+
+        {/* Modal Footer (Sticky) */}
+        <div className="flex gap-2 justify-end p-5 border-t bg-gray-50 rounded-b-xl">
+          <button 
+            type="button" 
+            onClick={onClose}
+            className="px-4 py-2 border rounded-lg text-xs font-bold text-gray-500 hover:bg-gray-50 bg-white"
+          >
+            Cancel
+          </button>
+          <button 
+            type="submit" 
+            form="product-form"
+            disabled={loading}
+            className="px-4 py-2 bg-amber-600 text-white rounded-lg text-xs font-bold hover:bg-amber-700 disabled:opacity-50"
+          >
+            {loading ? 'Saving...' : 'Save Product/Service'}
           </button>
         </div>
       </div>
@@ -335,12 +490,14 @@ export default function Dashboard() {
   })
   
   const [invoices, setInvoices] = useState([]) 
-  const [activeTab, setActiveTab] = useState('invoices') // 'invoices', 'receipts', 'customers'
+  const [activeTab, setActiveTab] = useState('invoices') // 'invoices', 'receipts', 'customers', 'products'
   const [customerModal, setCustomerModal] = useState({ isOpen: false, customer: null }) // modal for customer create/edit
+  const [productModal, setProductModal] = useState({ isOpen: false, product: null }) // modal for product create/edit
   
-  const allInvoices = useMemo(() => invoices.filter(inv => inv.invoice_data?.type !== 'receipt' && inv.invoice_data?.type !== 'customer'), [invoices]);
+  const allInvoices = useMemo(() => invoices.filter(inv => inv.invoice_data?.type !== 'receipt' && inv.invoice_data?.type !== 'customer' && inv.invoice_data?.type !== 'product'), [invoices]);
   const allReceipts = useMemo(() => invoices.filter(inv => inv.invoice_data?.type === 'receipt'), [invoices]);
   const allCustomers = useMemo(() => invoices.filter(inv => inv.invoice_data?.type === 'customer'), [invoices]);
+  const allProducts = useMemo(() => invoices.filter(inv => inv.invoice_data?.type === 'product'), [invoices]);
 
   const invoicesStats = useMemo(() => {
     const count = allInvoices.length
@@ -635,7 +792,11 @@ export default function Dashboard() {
   const enforceCapitalLetters = (e, f) => setValue(f, e.target.value.replace(/[^A-Za-z\s]/g, '').toUpperCase())
 
   const getFilteredInvoices = () => {
-    const listToFilter = activeTab === 'invoices' ? allInvoices : activeTab === 'receipts' ? allReceipts : allCustomers;
+    const listToFilter = 
+        activeTab === 'invoices' ? allInvoices : 
+        activeTab === 'receipts' ? allReceipts : 
+        activeTab === 'customers' ? allCustomers : 
+        allProducts;
     return listToFilter.filter(inv => {
         const searchLower = searchTerm.toLowerCase().trim()
         if (activeTab === 'customers') {
@@ -645,8 +806,16 @@ export default function Dashboard() {
                 (inv.invoice_no || '').toLowerCase().includes(searchLower) ||
                 (c.name || '').toLowerCase().includes(searchLower) ||
                 (c.email || '').toLowerCase().includes(searchLower) ||
-                (c.phone || '').toLowerCase().includes(searchLower) ||
-                (c.product || '').toLowerCase().includes(searchLower);
+                (c.phone || '').toLowerCase().includes(searchLower);
+            return matchesSearch;
+        }
+        if (activeTab === 'products') {
+            const p = inv.invoice_data || {};
+            const matchesSearch = 
+                !searchLower ||
+                (inv.invoice_no || '').toLowerCase().includes(searchLower) ||
+                (p.name || '').toLowerCase().includes(searchLower) ||
+                (p.hsn_sac || '').toLowerCase().includes(searchLower);
             return matchesSearch;
         }
 
@@ -1234,22 +1403,25 @@ export default function Dashboard() {
             </div>
 
             <div className="lg:col-span-2 space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <button onClick={() => navigate('/create-invoice')} className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-4 rounded-xl font-bold shadow-lg flex items-center justify-center gap-2 transform active:scale-95 transition-all">
-                        <span className="text-xl">+</span> Create GST Invoice
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                    <button onClick={() => navigate('/create-invoice')} className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-3 rounded-xl font-bold shadow-lg flex items-center justify-center gap-2 transform active:scale-95 transition-all text-xs">
+                        <span className="text-lg">+</span> Create Invoice
                     </button>
-                    <button onClick={() => navigate('/create-receipt')} className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 text-white py-4 rounded-xl font-bold shadow-lg flex items-center justify-center gap-2 transform active:scale-95 transition-all">
-                        <span className="text-xl">+</span> Generate Receipt
+                    <button onClick={() => navigate('/create-receipt')} className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 text-white py-3 rounded-xl font-bold shadow-lg flex items-center justify-center gap-2 transform active:scale-95 transition-all text-xs">
+                        <span className="text-lg">+</span> Create Receipt
                     </button>
-                    <button onClick={() => setCustomerModal({ isOpen: true, customer: null })} className="w-full bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white py-4 rounded-xl font-bold shadow-lg flex items-center justify-center gap-2 transform active:scale-95 transition-all">
-                        <span className="text-xl">+</span> Create Customer
+                    <button onClick={() => setCustomerModal({ isOpen: true, customer: null })} className="w-full bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white py-3 rounded-xl font-bold shadow-lg flex items-center justify-center gap-2 transform active:scale-95 transition-all text-xs">
+                        <span className="text-lg">+</span> Create Customer
+                    </button>
+                    <button onClick={() => setProductModal({ isOpen: true, product: null })} className="w-full bg-gradient-to-r from-amber-500 to-orange-600 text-white py-3 rounded-xl font-bold shadow-lg flex items-center justify-center gap-2 transform active:scale-95 transition-all text-xs">
+                        <span className="text-lg">+</span> Add Product
                     </button>
                 </div>
                 
                 <div className="bg-white rounded-xl shadow-sm border border-gray-100 relative">
                                   <div className="p-4 border-b bg-gray-50/50 space-y-3 rounded-t-xl">
                         {/* Tab Selector */}
-                        <div className="flex border-b border-gray-200 gap-2 mb-2">
+                        <div className="flex border-b border-gray-200 gap-2 mb-2 overflow-x-auto">
                             <button 
                                 onClick={() => { setActiveTab('invoices'); setSearchTerm(''); }}
                                 className={`pb-2 px-4 text-xs font-bold uppercase tracking-wider transition-all border-b-2 ${activeTab === 'invoices' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-400 hover:text-gray-600'}`}
@@ -1268,24 +1440,30 @@ export default function Dashboard() {
                             >
                                 Customers ({allCustomers.length})
                             </button>
+                            <button 
+                                onClick={() => { setActiveTab('products'); setSearchTerm(''); }}
+                                className={`pb-2 px-4 text-xs font-bold uppercase tracking-wider transition-all border-b-2 ${activeTab === 'products' ? 'border-amber-600 text-amber-600' : 'border-transparent text-gray-400 hover:text-gray-600'}`}
+                            >
+                                Products / Services ({allProducts.length})
+                            </button>
                         </div>
 
                         <div className="flex flex-col md:flex-row gap-3 justify-between items-start md:items-center">
                             <h3 className="font-bold text-gray-700 text-sm">
-                                {activeTab === 'invoices' ? 'All Invoices' : activeTab === 'receipts' ? 'All Receipts' : 'All Customers'} ({filteredInvoices.length})
+                                {activeTab === 'invoices' ? 'All Invoices' : activeTab === 'receipts' ? 'All Receipts' : activeTab === 'customers' ? 'All Customers' : 'Products & Services'} ({filteredInvoices.length})
                             </h3>
                             <div className="flex gap-2 w-full md:w-auto">
                                 <div className="relative flex-1 md:w-64">
                                     <svg className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
                                     <input 
                                         type="text" 
-                                        placeholder={activeTab === 'customers' ? "Search Name, Email, ID..." : "Search Customer or Doc #"} 
+                                        placeholder={activeTab === 'customers' ? "Search Name, Email, ID..." : activeTab === 'products' ? "Search Name, HSN..." : "Search Customer or Doc #"} 
                                         className="w-full pl-9 pr-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none"
                                         value={searchTerm}
                                         onChange={(e) => setSearchTerm(e.target.value)}
                                     />
                                 </div>
-                                {activeTab !== 'customers' && (
+                                {activeTab !== 'customers' && activeTab !== 'products' && (
                                     <>
                                         <button 
                                             onClick={handleExport}
@@ -1371,7 +1549,6 @@ export default function Dashboard() {
                                             <th className="px-5 py-3">Name</th>
                                             <th className="px-5 py-3">Email</th>
                                             <th className="px-5 py-3">Phone</th>
-                                            <th className="px-5 py-3 text-center">Plan</th>
                                             <th className="px-5 py-3 text-center">Invoices</th>
                                             <th className="px-5 py-3 text-center">Receipts</th>
                                             <th className="px-5 py-3 text-center">Action</th>
@@ -1386,7 +1563,6 @@ export default function Dashboard() {
                                                     <td className="px-5 py-3 font-bold text-gray-800">{c.name}</td>
                                                     <td className="px-5 py-3 text-gray-600">{c.email}</td>
                                                     <td className="px-5 py-3 text-gray-600">{c.phone || '-'}</td>
-                                                    <td className="px-5 py-3 text-center font-medium text-gray-700">{c.product || '-'}</td>
                                                     <td className="px-5 py-3 text-center">
                                                         <span className="bg-blue-100 text-blue-800 text-xs px-2.5 py-0.5 rounded-full font-bold border border-blue-200">
                                                             {getCustomerInvoiceCount(c)}
@@ -1403,6 +1579,55 @@ export default function Dashboard() {
                                                                 type="button"
                                                                 onClick={(e) => { e.stopPropagation(); setCustomerModal({ isOpen: true, customer: inv }); }} 
                                                                 className="text-gray-500 hover:text-blue-600 p-1 px-2.5 hover:bg-blue-50 rounded transition-all font-semibold text-xs border"
+                                                            >
+                                                                Edit
+                                                            </button>
+                                                            <button 
+                                                                type="button"
+                                                                onClick={(e) => { e.stopPropagation(); handleDeleteClick(inv.id, e); }} 
+                                                                className="text-red-650 hover:text-red-600 p-1 px-2.5 hover:bg-red-50 rounded transition-all font-semibold text-xs border"
+                                                            >
+                                                                Delete
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            ) : activeTab === 'products' ? (
+                                <table className="hidden md:table w-full text-left text-sm rounded-b-xl overflow-hidden">
+                                    <thead className="bg-gray-50 text-gray-500 uppercase font-semibold text-xs border-b border-gray-100">
+                                        <tr>
+                                            <th className="px-5 py-3">ID</th>
+                                            <th className="px-5 py-3">Name</th>
+                                            <th className="px-5 py-3 text-right">Price (₹)</th>
+                                            <th className="px-5 py-3 text-center">HSN/SAC</th>
+                                            <th className="px-5 py-3 text-center">Tax Rate</th>
+                                            <th className="px-5 py-3 text-center">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-100">
+                                        {filteredInvoices.map((inv) => {
+                                            const p = inv.invoice_data || {};
+                                            return (
+                                                <tr key={inv.id} className="hover:bg-amber-50 transition-colors">
+                                                    <td className="px-5 py-3 font-bold text-amber-600 font-mono">{inv.invoice_no}</td>
+                                                    <td className="px-5 py-3 font-bold text-gray-800">{p.name}</td>
+                                                    <td className="px-5 py-3 text-right font-bold text-gray-900">₹{p.price?.toFixed(2)}</td>
+                                                    <td className="px-5 py-3 text-center text-gray-600 font-mono">{p.hsn_sac || '-'}</td>
+                                                    <td className="px-5 py-3 text-center">
+                                                        <span className="bg-amber-100 text-amber-800 text-xs px-2.5 py-0.5 rounded-full font-bold border border-amber-200">
+                                                            {p.tax_rate}%
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-5 py-3 text-center">
+                                                        <div className="flex gap-2 justify-center">
+                                                            <button 
+                                                                type="button"
+                                                                onClick={(e) => { e.stopPropagation(); setProductModal({ isOpen: true, product: inv }); }} 
+                                                                className="text-gray-500 hover:text-amber-600 p-1 px-2.5 hover:bg-amber-50 rounded transition-all font-semibold text-xs border"
                                                             >
                                                                 Edit
                                                             </button>
@@ -1487,7 +1712,6 @@ export default function Dashboard() {
                                                     <div className="flex flex-col gap-0.5">
                                                         <span className="text-sm font-bold text-gray-800">{c.name}</span>
                                                         <span className="text-xs text-gray-500">{c.email} {c.phone && `• ${c.phone}`}</span>
-                                                        {c.product && <span className="text-[10px] font-bold text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded w-fit mt-1">{c.product}</span>}
                                                     </div>
                                                     <div className="flex items-center gap-3">
                                                         <button 
@@ -1501,6 +1725,45 @@ export default function Dashboard() {
                                                             type="button"
                                                             onClick={(e) => { e.stopPropagation(); handleDeleteClick(inv.id, e); }} 
                                                             className="text-red-600 hover:underline p-1 text-xs font-bold"
+                                                        >
+                                                            Delete
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            ) : activeTab === 'products' ? (
+                                <div className="md:hidden divide-y divide-gray-100 rounded-b-xl overflow-hidden">
+                                    {filteredInvoices.map((inv) => {
+                                        const p = inv.invoice_data || {};
+                                        return (
+                                            <div key={inv.id} className="p-4 hover:bg-amber-50 transition-colors">
+                                                <div className="flex justify-between items-center mb-2">
+                                                    <span className="font-bold text-amber-600 text-sm font-mono">{inv.invoice_no}</span>
+                                                    <span className="bg-amber-100 text-amber-800 text-[10px] px-2.5 py-0.5 rounded-full font-bold border border-amber-200">
+                                                        Tax: {p.tax_rate}%
+                                                    </span>
+                                                </div>
+                                                <div className="flex justify-between items-end">
+                                                    <div className="flex flex-col gap-0.5">
+                                                        <span className="text-sm font-bold text-gray-800">{p.name}</span>
+                                                        <span className="text-xs text-gray-900 font-bold">₹{p.price?.toFixed(2)}</span>
+                                                        {p.hsn_sac && <span className="text-[10px] text-gray-500 font-mono mt-0.5">HSN/SAC: {p.hsn_sac}</span>}
+                                                    </div>
+                                                    <div className="flex items-center gap-3">
+                                                        <button 
+                                                            type="button"
+                                                            onClick={(e) => { e.stopPropagation(); setProductModal({ isOpen: true, product: inv }); }} 
+                                                            className="text-blue-600 hover:underline p-1 text-xs font-bold"
+                                                        >
+                                                            Edit
+                                                        </button>
+                                                        <button 
+                                                            type="button"
+                                                            onClick={(e) => { e.stopPropagation(); handleDeleteClick(inv.id, e); }} 
+                                                            className="text-red-650 hover:underline p-1 text-xs font-bold"
                                                         >
                                                             Delete
                                                         </button>
@@ -1567,6 +1830,21 @@ export default function Dashboard() {
                     });
                 }}
                 allCustomers={allCustomers}
+            />
+        )}
+
+        {/* PRODUCT FORM MODAL */}
+        {productModal.isOpen && (
+            <ProductFormModal 
+                productNode={productModal.product} 
+                onClose={() => setProductModal({ isOpen: false, product: null })}
+                onSave={() => {
+                    setProductModal({ isOpen: false, product: null });
+                    supabase.auth.getUser().then(({ data: { user } }) => {
+                        if (user) fetchInvoices(user.id);
+                    });
+                }}
+                allProducts={allProducts}
             />
         )}
       </div>

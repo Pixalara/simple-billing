@@ -102,6 +102,7 @@ export default function CreateReceipt() {
   const [mobileTab, setMobileTab] = useState('edit') // 'edit' or 'preview'
   const [popup, setPopup] = useState({ isOpen: false, title: '', message: '', type: 'success', actionLabel: 'OK', onAction: null, cancelLabel: null })
   const [customers, setCustomers] = useState([])
+  const [products, setProducts] = useState([])
 
   const showPopup = (title, message, type = 'success', actionLabel = 'OK', onAction = null, cancelLabel = null) => { 
     setPopup({ isOpen: true, title, message, type, actionLabel, onAction, cancelLabel }) 
@@ -160,7 +161,7 @@ export default function CreateReceipt() {
         if (profile.stamp_url) setStampPreview(profile.stamp_url)
       }
 
-      // Fetch customers
+      // Fetch customers and products
       try {
         const { data: allDocs } = await supabase
           .from('invoices')
@@ -176,12 +177,17 @@ export default function CreateReceipt() {
               email: doc.invoice_data?.email || '',
               phone: doc.invoice_data?.phone || '',
               address: doc.invoice_data?.address || '',
-              product: doc.invoice_data?.product || '',
+              city: doc.invoice_data?.city || '',
+              state: doc.invoice_data?.state || '',
             }))
           setCustomers(custs)
+
+          const prods = allDocs
+            .filter(doc => doc.invoice_data?.type === 'product')
+          setProducts(prods)
         }
       } catch (err) {
-        console.error("Error fetching customers:", err)
+        console.error("Error fetching customers/products:", err)
       }
 
       // Load SaaS Settings Defaults
@@ -685,9 +691,6 @@ export default function CreateReceipt() {
                         setValue('buyer_email', cust.email)
                         const fullAddr = [cust.address, cust.city, cust.state].filter(Boolean).join(', ')
                         setValue('buyer_address', fullAddr)
-                        if (cust.product) {
-                          setValue('productName', cust.product)
-                        }
                       }
                     }}
                     value={formData.customerId || ''}
@@ -736,6 +739,34 @@ export default function CreateReceipt() {
             {/* Subscription details */}
             <div className="space-y-4 pt-4 border-t">
               <h3 className="text-xs uppercase font-bold text-gray-400 tracking-wider">Subscription Details</h3>
+              
+              {products.length > 0 && (
+                <div>
+                  <label className="text-xs font-bold text-gray-700 block mb-1">Select Custom Product / Service (Auto-fill)</label>
+                  <select
+                    className="w-full p-2 border rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-100 outline-none font-medium text-gray-700"
+                    onChange={(e) => {
+                      const val = e.target.value
+                      if (val === '') return
+                      const prod = products.find(p => p.invoice_no === val)
+                      if (prod) {
+                        setValue('productName', prod.invoice_data.name)
+                        setValue('planName', prod.invoice_data.name)
+                        setValue('amount', prod.invoice_data.price)
+                        setValue('taxRate', prod.invoice_data.tax_rate || 0)
+                      }
+                    }}
+                  >
+                    <option value="">-- Choose Product/Service --</option>
+                    {products.map(p => (
+                      <option key={p.id} value={p.invoice_no}>
+                        {p.invoice_data.name} (₹{p.invoice_data.price})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
               <div>
                 <label className="text-xs font-bold text-gray-700 block mb-1">Product Name</label>
                 <input 
