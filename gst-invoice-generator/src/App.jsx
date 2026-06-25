@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import CreateInvoice from './pages/CreateInvoice'
+import CreateReceipt from './pages/CreateReceipt'
 
 export default function App() {
   return (
@@ -11,11 +12,17 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/dashboard" element={<Dashboard />} />
         
-        {/* Route for Creating New */}
+        {/* Route for Creating New Invoice */}
         <Route path="/create-invoice" element={<CreateInvoice />} />
         
-        {/* Route for Editing Existing (Passing the ID) */}
+        {/* Route for Editing Existing Invoice (Passing the ID) */}
         <Route path="/edit-invoice/:id" element={<CreateInvoice />} />
+
+        {/* Route for Creating New Receipt */}
+        <Route path="/create-receipt" element={<CreateReceipt />} />
+        
+        {/* Route for Editing Existing Receipt (Passing the ID) */}
+        <Route path="/edit-receipt/:id" element={<CreateReceipt />} />
       </Routes>
     </BrowserRouter>
   )

@@ -49,7 +49,8 @@ const processStatusData = (invoices) => {
     const data = [
         { name: 'Paid', value: 0, color: '#10b981' },
         { name: 'Pending', value: 0, color: '#f59e0b' },
-        { name: 'Overdue', value: 0, color: '#ef4444' }
+        { name: 'Overdue', value: 0, color: '#ef4444' },
+        { name: 'Refunded', value: 0, color: '#6b7280' }
     ];
 
     invoices.forEach(inv => {
@@ -58,6 +59,7 @@ const processStatusData = (invoices) => {
         
         if (status === 'PAID') data[0].value += amount;
         else if (status === 'OVERDUE') data[2].value += amount;
+        else if (status === 'REFUNDED') data[3].value += amount;
         else data[1].value += amount;
     });
 
@@ -108,6 +110,19 @@ export default function Dashboard() {
   
   // Profile lock/unlock state
   const [isEditingProfile, setIsEditingProfile] = useState(false)
+  const [settingsTab, setSettingsTab] = useState('business')
+  const [saasSettings, setSaasSettings] = useState(() => {
+    const saved = localStorage.getItem('saas_receipt_settings')
+    return saved ? JSON.parse(saved) : {
+      productName: '',
+      planName: '',
+      amount: '',
+      planDuration: '1',
+      planType: 'monthly',
+      removeSignatureStamp: true,
+      isSystemGenerated: true
+    }
+  })
   
   const [invoices, setInvoices] = useState([]) 
   const [stats, setStats] = useState({ total: 0, revenue: 0 })
@@ -232,8 +247,9 @@ export default function Dashboard() {
   const cycleStatus = async (e, invoice) => {
       e.stopPropagation();
       
-      const statusOrder = ['PENDING', 'PAID', 'OVERDUE'];
-      const currentStatus = invoice.status || 'PENDING';
+      const isReceipt = invoice.invoice_data?.type === 'receipt';
+      const statusOrder = isReceipt ? ['PAID', 'REFUNDED'] : ['PENDING', 'PAID', 'OVERDUE'];
+      const currentStatus = invoice.status || (isReceipt ? 'PAID' : 'PENDING');
       const nextStatus = statusOrder[(statusOrder.indexOf(currentStatus) + 1) % statusOrder.length];
 
       try {
@@ -250,6 +266,7 @@ export default function Dashboard() {
       switch(status) {
           case 'PAID': return 'bg-green-100 text-green-700 border-green-200 hover:bg-green-200';
           case 'OVERDUE': return 'bg-red-100 text-red-700 border-red-200 hover:bg-red-200';
+          case 'REFUNDED': return 'bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200';
           default: return 'bg-amber-100 text-amber-700 border-amber-200 hover:bg-amber-200';
       }
   }
@@ -340,7 +357,7 @@ export default function Dashboard() {
     });
     headerRow.height = 30;
 
-    filteredInvoices.forEach(inv => {
+    filteredInvoices.filter(inv => inv.invoice_data?.type !== 'receipt').forEach(inv => {
         const d = inv.invoice_data || {};
         const t = d.totals || { subtotal: 0, igst: 0, cgst: 0, sgst: 0 };
         
@@ -524,88 +541,205 @@ export default function Dashboard() {
             <div className="lg:col-span-1 bg-white p-4 sm:p-5 rounded-xl shadow-sm h-fit">
                 <div className="flex justify-between items-center mb-4 border-b pb-2">
                     <div className="flex items-center gap-2">
-                        <h2 className="text-lg font-bold text-gray-800">Business Profile</h2>
-                        {!isEditingProfile && (
+                        <h2 className="text-lg font-bold text-gray-800">
+                            {settingsTab === 'business' ? 'Business Profile' : 'Receipt Defaults'}
+                        </h2>
+                        {settingsTab === 'business' && !isEditingProfile && (
                             <span className="text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded font-bold">LOCKED</span>
                         )}
                     </div>
-                    {!isEditingProfile ? (
-                        <button 
-                            onClick={() => setIsEditingProfile(true)} 
-                            className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-lg font-bold hover:bg-blue-700 transition-colors"
-                        >
-                            Edit Profile
-                        </button>
-                    ) : (
-                        <button 
-                            onClick={() => setIsEditingProfile(false)} 
-                            className="text-xs bg-gray-500 text-white px-3 py-1.5 rounded-lg font-bold hover:bg-gray-600 transition-colors"
-                        >
-                            Cancel
-                        </button>
+                    {settingsTab === 'business' && (
+                        !isEditingProfile ? (
+                            <button 
+                                onClick={() => setIsEditingProfile(true)} 
+                                className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-lg font-bold hover:bg-blue-700 transition-colors"
+                            >
+                                Edit Profile
+                            </button>
+                        ) : (
+                            <button 
+                                onClick={() => setIsEditingProfile(false)} 
+                                className="text-xs bg-gray-500 text-white px-3 py-1.5 rounded-lg font-bold hover:bg-gray-600 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                        )
                     )}
                 </div>
-                
-                <div className="grid grid-cols-3 gap-3 mb-6">
-                    {['logo', 'signature', 'stamp'].map(type => (
-                        <div key={type} className="flex flex-col items-center">
-                            <div className="w-full h-20 bg-gray-100 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center overflow-hidden mb-2 relative group hover:border-blue-400 transition-colors">
-                                {type === 'logo' && savedLogo ? <img src={savedLogo} alt="Logo" className="h-full w-full object-contain p-1" /> : 
-                                 type === 'signature' && savedSignature ? <img src={savedSignature} alt="Sig" className="h-full w-full object-contain p-1" /> :
-                                 type === 'stamp' && savedStamp ? <img src={savedStamp} alt="Stamp" className="h-full w-full object-contain p-1" /> :
-                                 <span className="text-gray-400 text-[10px] capitalize">{type}</span>}
+
+                <div className="flex border-b mb-4 gap-2">
+                    <button 
+                        onClick={() => setSettingsTab('business')} 
+                        className={`flex-1 pb-2 text-[11px] font-bold uppercase tracking-wider text-center border-b-2 transition-all ${settingsTab === 'business' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-400 hover:text-gray-600'}`}
+                    >
+                        Business Profile
+                    </button>
+                    <button 
+                        onClick={() => setSettingsTab('saas')} 
+                        className={`flex-1 pb-2 text-[11px] font-bold uppercase tracking-wider text-center border-b-2 transition-all ${settingsTab === 'saas' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-400 hover:text-gray-600'}`}
+                    >
+                        SaaS Receipts
+                    </button>
+                </div>
+
+                {settingsTab === 'saas' ? (
+                    <form onSubmit={(e) => {
+                        e.preventDefault();
+                        localStorage.setItem('saas_receipt_settings', JSON.stringify(saasSettings));
+                        showPopup('Saved', 'SaaS Receipt Defaults saved successfully!', 'success');
+                    }} className="space-y-3">
+                        <div>
+                            <label className="text-[10px] uppercase font-bold text-gray-400 mb-1 block">Product Name</label>
+                            <input 
+                                type="text" 
+                                value={saasSettings.productName} 
+                                onChange={(e) => setSaasSettings({...saasSettings, productName: e.target.value})} 
+                                placeholder="e.g. Pixalara" 
+                                className="w-full p-2 border rounded text-sm bg-white focus:ring-2 focus:ring-blue-100 outline-none" 
+                                required 
+                            />
+                        </div>
+                        <div>
+                            <label className="text-[10px] uppercase font-bold text-gray-400 mb-1 block">Plan Name</label>
+                            <input 
+                                type="text" 
+                                value={saasSettings.planName} 
+                                onChange={(e) => setSaasSettings({...saasSettings, planName: e.target.value})} 
+                                placeholder="e.g. Premium Plan" 
+                                className="w-full p-2 border rounded text-sm bg-white focus:ring-2 focus:ring-blue-100 outline-none" 
+                                required 
+                            />
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                            <div>
+                                <label className="text-[10px] uppercase font-bold text-gray-400 mb-1 block">Duration</label>
+                                <input 
+                                    type="number" 
+                                    value={saasSettings.planDuration} 
+                                    onChange={(e) => setSaasSettings({...saasSettings, planDuration: e.target.value})} 
+                                    placeholder="e.g. 1" 
+                                    className="w-full p-2 border rounded text-sm bg-white focus:ring-2 focus:ring-blue-100 outline-none" 
+                                    min="1" 
+                                    required 
+                                />
                             </div>
-                            <label className="text-[10px] text-blue-600 font-bold cursor-pointer hover:underline text-center capitalize">
-                                {(type === 'logo' ? uploadingLogo : type === 'signature' ? uploadingSig : uploadingStamp) ? '...' : 'Upload'}
-                                <input type="file" accept="image/*" onChange={(e) => handleFileUpload(e, type)} className="hidden" />
-                            </label>
+                            <div>
+                                <label className="text-[10px] uppercase font-bold text-gray-400 mb-1 block">Billing Cycle</label>
+                                <select 
+                                    value={saasSettings.planType} 
+                                    onChange={(e) => setSaasSettings({...saasSettings, planType: e.target.value})} 
+                                    className="w-full p-2 border rounded text-sm bg-white focus:ring-2 focus:ring-blue-100 outline-none"
+                                >
+                                    <option value="monthly">Monthly</option>
+                                    <option value="yearly">Yearly</option>
+                                </select>
+                            </div>
                         </div>
-                    ))}
-                </div>
+                        <div>
+                            <label className="text-[10px] uppercase font-bold text-gray-400 mb-1 block">Default Amount</label>
+                            <input 
+                                type="number" 
+                                step="0.01" 
+                                value={saasSettings.amount} 
+                                onChange={(e) => setSaasSettings({...saasSettings, amount: e.target.value})} 
+                                placeholder="e.g. 4999.00" 
+                                className="w-full p-2 border rounded text-sm bg-white focus:ring-2 focus:ring-blue-100 outline-none" 
+                                required 
+                            />
+                        </div>
+                        <div className="pt-2 space-y-2 border-t mt-2">
+                            <div className="flex items-center gap-2">
+                                <input 
+                                    type="checkbox" 
+                                    id="remove_sig_stamp" 
+                                    checked={saasSettings.removeSignatureStamp} 
+                                    onChange={(e) => setSaasSettings({...saasSettings, removeSignatureStamp: e.target.checked})} 
+                                    className="w-4 h-4 text-blue-600 rounded cursor-pointer" 
+                                />
+                                <label htmlFor="remove_sig_stamp" className="text-xs font-bold text-gray-700 cursor-pointer">Remove Signature & Stamp</label>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <input 
+                                    type="checkbox" 
+                                    id="is_sys_gen" 
+                                    checked={saasSettings.isSystemGenerated} 
+                                    onChange={(e) => setSaasSettings({...saasSettings, isSystemGenerated: e.target.checked})} 
+                                    className="w-4 h-4 text-blue-600 rounded cursor-pointer" 
+                                />
+                                <label htmlFor="is_sys_gen" className="text-xs font-bold text-gray-700 cursor-pointer">Show "System Generated" Notice</label>
+                            </div>
+                        </div>
+                        <button type="submit" className="w-full bg-blue-600 text-white py-2 rounded-lg font-bold text-sm shadow hover:bg-blue-700 mt-4">Save SaaS Defaults</button>
+                    </form>
+                ) : (
+                    <>
+                        <div className="grid grid-cols-3 gap-3 mb-6">
+                            {['logo', 'signature', 'stamp'].map(type => (
+                                <div key={type} className="flex flex-col items-center">
+                                    <div className="w-full h-20 bg-gray-100 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center overflow-hidden mb-2 relative group hover:border-blue-400 transition-colors">
+                                        {type === 'logo' && savedLogo ? <img src={savedLogo} alt="Logo" className="h-full w-full object-contain p-1" /> : 
+                                         type === 'signature' && savedSignature ? <img src={savedSignature} alt="Sig" className="h-full w-full object-contain p-1" /> :
+                                         type === 'stamp' && savedStamp ? <img src={savedStamp} alt="Stamp" className="h-full w-full object-contain p-1" /> :
+                                         <span className="text-gray-400 text-[10px] capitalize">{type}</span>}
+                                    </div>
+                                    <label className="text-[10px] text-blue-600 font-bold cursor-pointer hover:underline text-center capitalize">
+                                        {(type === 'logo' ? uploadingLogo : type === 'signature' ? uploadingSig : uploadingStamp) ? '...' : 'Upload'}
+                                        <input type="file" accept="image/*" onChange={(e) => handleFileUpload(e, type)} className="hidden" />
+                                    </label>
+                                </div>
+                            ))}
+                        </div>
 
-                <form onSubmit={handleSubmit(updateProfile)} className="space-y-3">
-                    <input {...register('business_name')} disabled={!isEditingProfile} placeholder="BUSINESS NAME" onChange={(e) => enforceLettersOnly(e, 'business_name')} className={`w-full p-2 border rounded text-sm ${!isEditingProfile ? 'bg-gray-50 text-gray-600 cursor-not-allowed' : 'bg-white'}`} />
-                    <input {...register('business_email')} disabled={!isEditingProfile} placeholder="BUSINESS EMAIL" className={`w-full p-2 border rounded text-sm ${!isEditingProfile ? 'bg-gray-50 text-gray-600 cursor-not-allowed' : 'bg-white'}`} />
-                    <input {...register('business_phone')} disabled={!isEditingProfile} placeholder="BUSINESS PHONE" onChange={(e) => enforceNumbersOnly(e, 'business_phone')} maxLength={10} className={`w-full p-2 border rounded text-sm ${!isEditingProfile ? 'bg-gray-50 text-gray-600 cursor-not-allowed' : 'bg-white'}`} />
-                    <input {...register('website')} disabled={!isEditingProfile} placeholder="WEBSITE" className={`w-full p-2 border rounded text-sm ${!isEditingProfile ? 'bg-gray-50 text-gray-600 cursor-not-allowed' : 'bg-white'}`} />
-                    <input {...register('gstin')} disabled={!isEditingProfile} placeholder="GSTIN" onChange={(e) => enforceUpperCase(e, 'gstin')} className={`w-full p-2 border rounded text-sm ${!isEditingProfile ? 'bg-gray-50 text-gray-600 cursor-not-allowed' : 'bg-white'}`} />
-                    <select {...register('state')} disabled={!isEditingProfile} className={`w-full p-2 border rounded text-sm ${!isEditingProfile ? 'bg-gray-50 text-gray-600 cursor-not-allowed' : 'bg-white'}`}><option value="">Select State</option>{INDIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}</select>
+                        <form onSubmit={handleSubmit(updateProfile)} className="space-y-3">
+                            <input {...register('business_name')} disabled={!isEditingProfile} placeholder="BUSINESS NAME" onChange={(e) => enforceLettersOnly(e, 'business_name')} className={`w-full p-2 border rounded text-sm ${!isEditingProfile ? 'bg-gray-50 text-gray-600 cursor-not-allowed' : 'bg-white'}`} />
+                            <input {...register('business_email')} disabled={!isEditingProfile} placeholder="BUSINESS EMAIL" className={`w-full p-2 border rounded text-sm ${!isEditingProfile ? 'bg-gray-50 text-gray-600 cursor-not-allowed' : 'bg-white'}`} />
+                            <input {...register('business_phone')} disabled={!isEditingProfile} placeholder="BUSINESS PHONE" onChange={(e) => enforceNumbersOnly(e, 'business_phone')} maxLength={10} className={`w-full p-2 border rounded text-sm ${!isEditingProfile ? 'bg-gray-50 text-gray-600 cursor-not-allowed' : 'bg-white'}`} />
+                            <input {...register('website')} disabled={!isEditingProfile} placeholder="WEBSITE" className={`w-full p-2 border rounded text-sm ${!isEditingProfile ? 'bg-gray-50 text-gray-600 cursor-not-allowed' : 'bg-white'}`} />
+                            <input {...register('gstin')} disabled={!isEditingProfile} placeholder="GSTIN" onChange={(e) => enforceUpperCase(e, 'gstin')} className={`w-full p-2 border rounded text-sm ${!isEditingProfile ? 'bg-gray-50 text-gray-600 cursor-not-allowed' : 'bg-white'}`} />
+                            <select {...register('state')} disabled={!isEditingProfile} className={`w-full p-2 border rounded text-sm ${!isEditingProfile ? 'bg-gray-50 text-gray-600 cursor-not-allowed' : 'bg-white'}`}><option value="">Select State</option>{INDIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}</select>
 
-                    <div className="pt-4 border-t mt-4">
-                        <h3 className="text-xs font-bold text-gray-500 uppercase mb-2">Bank Details</h3>
-                        <div className="space-y-2">
-                            <input {...register('bank_name')} disabled={!isEditingProfile} placeholder="BANK NAME" onChange={(e) => enforceCapitalLetters(e, 'bank_name')} className={`w-full p-2 border rounded text-sm ${!isEditingProfile ? 'bg-gray-50 text-gray-600 cursor-not-allowed' : 'bg-white'}`} />
-                            <input {...register('account_number')} disabled={!isEditingProfile} placeholder="ACCOUNT NUMBER" onChange={(e) => enforceNumbersOnly(e, 'account_number')} className={`w-full p-2 border rounded text-sm ${!isEditingProfile ? 'bg-gray-50 text-gray-600 cursor-not-allowed' : 'bg-white'}`} />
-                            <input {...register('ifsc_code')} disabled={!isEditingProfile} placeholder="IFSC CODE" onChange={(e) => enforceUpperCase(e, 'ifsc_code')} className={`w-full p-2 border rounded text-sm ${!isEditingProfile ? 'bg-gray-50 text-gray-600 cursor-not-allowed' : 'bg-white'}`} />
-                            <input {...register('branch_name')} disabled={!isEditingProfile} placeholder="BRANCH NAME" onChange={(e) => enforceCapitalLetters(e, 'branch_name')} className={`w-full p-2 border rounded text-sm ${!isEditingProfile ? 'bg-gray-50 text-gray-600 cursor-not-allowed' : 'bg-white'}`} />
-                        </div>
-                    </div>
+                            <div className="pt-4 border-t mt-4">
+                                <h3 className="text-xs font-bold text-gray-500 uppercase mb-2">Bank Details</h3>
+                                <div className="space-y-2">
+                                    <input {...register('bank_name')} disabled={!isEditingProfile} placeholder="BANK NAME" onChange={(e) => enforceCapitalLetters(e, 'bank_name')} className={`w-full p-2 border rounded text-sm ${!isEditingProfile ? 'bg-gray-50 text-gray-600 cursor-not-allowed' : 'bg-white'}`} />
+                                    <input {...register('account_number')} disabled={!isEditingProfile} placeholder="ACCOUNT NUMBER" onChange={(e) => enforceNumbersOnly(e, 'account_number')} className={`w-full p-2 border rounded text-sm ${!isEditingProfile ? 'bg-gray-50 text-gray-600 cursor-not-allowed' : 'bg-white'}`} />
+                                    <input {...register('ifsc_code')} disabled={!isEditingProfile} placeholder="IFSC CODE" onChange={(e) => enforceUpperCase(e, 'ifsc_code')} className={`w-full p-2 border rounded text-sm ${!isEditingProfile ? 'bg-gray-50 text-gray-600 cursor-not-allowed' : 'bg-white'}`} />
+                                    <input {...register('branch_name')} disabled={!isEditingProfile} placeholder="BRANCH NAME" onChange={(e) => enforceCapitalLetters(e, 'branch_name')} className={`w-full p-2 border rounded text-sm ${!isEditingProfile ? 'bg-gray-50 text-gray-600 cursor-not-allowed' : 'bg-white'}`} />
+                                </div>
+                            </div>
 
-                    <div className="pt-4 border-t mt-4 space-y-2">
-                        <div className="flex items-center gap-2">
-                            <input type="checkbox" {...register('print_duplicates')} disabled={!isEditingProfile} id="print_dup" className="w-4 h-4 text-blue-600 rounded cursor-pointer" />
-                            <label htmlFor="print_dup" className="text-xs font-bold text-gray-700 cursor-pointer">Generate Original & Duplicate?</label>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <input type="checkbox" {...register('print_triplicates')} disabled={!isEditingProfile} id="print_trip" className="w-4 h-4 text-blue-600 rounded cursor-pointer" />
-                            <label htmlFor="print_trip" className="text-xs font-bold text-gray-700 cursor-pointer">Generate Triplicate Copy?</label>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <input type="checkbox" {...register('enable_manual_invoice_no')} disabled={!isEditingProfile} id="manual_inv" className="w-4 h-4 text-blue-600 rounded cursor-pointer" />
-                            <label htmlFor="manual_inv" className="text-xs font-bold text-gray-700 cursor-pointer">Enable Manual Invoice Number Entry?</label>
-                        </div>
-                    </div>
+                            <div className="pt-4 border-t mt-4 space-y-2">
+                                <div className="flex items-center gap-2">
+                                    <input type="checkbox" {...register('print_duplicates')} disabled={!isEditingProfile} id="print_dup" className="w-4 h-4 text-blue-600 rounded cursor-pointer" />
+                                    <label htmlFor="print_dup" className="text-xs font-bold text-gray-700 cursor-pointer">Generate Original & Duplicate?</label>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <input type="checkbox" {...register('print_triplicates')} disabled={!isEditingProfile} id="print_trip" className="w-4 h-4 text-blue-600 rounded cursor-pointer" />
+                                    <label htmlFor="print_trip" className="text-xs font-bold text-gray-700 cursor-pointer">Generate Triplicate Copy?</label>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <input type="checkbox" {...register('enable_manual_invoice_no')} disabled={!isEditingProfile} id="manual_inv" className="w-4 h-4 text-blue-600 rounded cursor-pointer" />
+                                    <label htmlFor="manual_inv" className="text-xs font-bold text-gray-700 cursor-pointer">Enable Manual Invoice Number Entry?</label>
+                                </div>
+                            </div>
 
-                    {isEditingProfile && (
-                        <button type="submit" className="w-full bg-blue-600 text-white py-2 rounded-lg font-bold text-sm shadow hover:bg-blue-700 mt-4">Save Profile</button>
-                    )}
-                </form>
+                            {isEditingProfile && (
+                                <button type="submit" className="w-full bg-blue-600 text-white py-2 rounded-lg font-bold text-sm shadow hover:bg-blue-700 mt-4">Save Profile</button>
+                            )}
+                        </form>
+                    </>
+                )}
             </div>
 
             <div className="lg:col-span-2 space-y-4">
-                <button onClick={() => navigate('/create-invoice')} className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-4 rounded-xl font-bold shadow-lg flex items-center justify-center gap-2 transform active:scale-95 transition-all">
-                    <span className="text-xl">+</span> Create New Invoice
-                </button>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <button onClick={() => navigate('/create-invoice')} className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-4 rounded-xl font-bold shadow-lg flex items-center justify-center gap-2 transform active:scale-95 transition-all">
+                        <span className="text-xl">+</span> Create GST Invoice
+                    </button>
+                    <button onClick={() => navigate('/create-receipt')} className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 text-white py-4 rounded-xl font-bold shadow-lg flex items-center justify-center gap-2 transform active:scale-95 transition-all">
+                        <span className="text-xl">+</span> Generate SaaS Receipt
+                    </button>
+                </div>
                 
                 <div className="bg-white rounded-xl shadow-sm border border-gray-100 relative">
                     
@@ -701,19 +835,31 @@ export default function Dashboard() {
                                 </thead>
                                 <tbody className="divide-y divide-gray-100">
                                     {filteredInvoices.map((inv) => (
-                                        <tr key={inv.id} onClick={() => navigate(`/edit-invoice/${inv.id}`)} className="hover:bg-blue-50 cursor-pointer group transition-colors">
+                                        <tr key={inv.id} onClick={() => navigate(inv.invoice_data?.type === 'receipt' ? `/edit-receipt/${inv.id}` : `/edit-invoice/${inv.id}`)} className="hover:bg-blue-50 cursor-pointer group transition-colors">
                                             <td className="px-5 py-3 text-gray-600">{new Date(inv.created_at).toLocaleDateString('en-IN')}</td>
-                                            <td className="px-5 py-3 font-bold text-blue-600 group-hover:underline">{inv.invoice_no}</td>
+                                            <td className="px-5 py-3 font-bold text-blue-600 group-hover:underline">
+                                                <div className="flex items-center gap-2">
+                                                    <span>{inv.invoice_no}</span>
+                                                    {inv.invoice_data?.type === 'receipt' ? (
+                                                        <span className="bg-emerald-100 text-emerald-800 text-[10px] px-1.5 py-0.5 rounded font-bold border border-emerald-200">RECEIPT</span>
+                                                    ) : (
+                                                        <span className="bg-blue-100 text-blue-800 text-[10px] px-1.5 py-0.5 rounded font-bold border border-blue-200">INVOICE</span>
+                                                    )}
+                                                </div>
+                                            </td>
                                             <td className="px-5 py-3 font-medium text-gray-800">{inv.invoice_data?.buyer_name}</td>
                                             <td className="px-5 py-3 text-center">
                                                 <button 
                                                     onClick={(e) => cycleStatus(e, inv)}
-                                                    className={`px-2.5 py-1 rounded-full text-[10px] font-bold border uppercase tracking-wide transition-all active:scale-95 ${getStatusBadgeStyles(inv.status || 'PENDING')}`}
+                                                    className={`px-2.5 py-1 rounded-full text-[10px] font-bold border uppercase tracking-wide transition-all active:scale-95 ${getStatusBadgeStyles(inv.status || (inv.invoice_data?.type === 'receipt' ? 'PAID' : 'PENDING'))}`}
                                                 >
-                                                    {inv.status || 'PENDING'}
+                                                    {inv.status || (inv.invoice_data?.type === 'receipt' ? 'PAID' : 'PENDING')}
                                                 </button>
                                             </td>
-                                            <td className="px-5 py-3 text-right font-bold text-gray-900">₹{inv.total_amount}</td>
+                                            <td className="px-5 py-3 text-right font-bold text-gray-900">
+                                                {inv.invoice_data?.type === 'receipt' ? (inv.invoice_data?.currencySymbol || '$') : '₹'}
+                                                {inv.total_amount}
+                                            </td>
                                             <td className="px-5 py-3 text-center"><button onClick={(e) => handleDeleteClick(inv.id, e)} className="text-gray-400 hover:text-red-600 p-1.5 hover:bg-red-50 rounded transition-all">🗑️</button></td>
                                         </tr>
                                     ))}
@@ -722,14 +868,21 @@ export default function Dashboard() {
 
                             <div className="md:hidden divide-y divide-gray-100 rounded-b-xl overflow-hidden">
                                 {filteredInvoices.map((inv) => (
-                                    <div key={inv.id} onClick={() => navigate(`/edit-invoice/${inv.id}`)} className="p-4 active:bg-blue-50 transition-colors cursor-pointer">
+                                    <div key={inv.id} onClick={() => navigate(inv.invoice_data?.type === 'receipt' ? `/edit-receipt/${inv.id}` : `/edit-invoice/${inv.id}`)} className="p-4 active:bg-blue-50 transition-colors cursor-pointer">
                                         <div className="flex justify-between items-center mb-2">
-                                            <span className="font-bold text-blue-600 text-sm">#{inv.invoice_no}</span>
+                                            <div className="flex items-center gap-2">
+                                                <span className="font-bold text-blue-600 text-sm">#{inv.invoice_no}</span>
+                                                {inv.invoice_data?.type === 'receipt' ? (
+                                                    <span className="bg-emerald-100 text-emerald-800 text-[9px] px-1 py-0.5 rounded font-bold border border-emerald-200">RECEIPT</span>
+                                                ) : (
+                                                    <span className="bg-blue-100 text-blue-800 text-[9px] px-1 py-0.5 rounded font-bold border border-blue-200">INVOICE</span>
+                                                )}
+                                            </div>
                                             <button 
                                                 onClick={(e) => cycleStatus(e, inv)}
-                                                className={`px-2 py-0.5 rounded-full text-[10px] font-bold border uppercase ${getStatusBadgeStyles(inv.status || 'PENDING')}`}
+                                                className={`px-2 py-0.5 rounded-full text-[10px] font-bold border uppercase ${getStatusBadgeStyles(inv.status || (inv.invoice_data?.type === 'receipt' ? 'PAID' : 'PENDING'))}`}
                                             >
-                                                {inv.status || 'PENDING'}
+                                                {inv.status || (inv.invoice_data?.type === 'receipt' ? 'PAID' : 'PENDING')}
                                             </button>
                                         </div>
                                         <div className="flex justify-between items-end">
@@ -738,7 +891,10 @@ export default function Dashboard() {
                                                 <span className="text-xs text-gray-400">{new Date(inv.created_at).toLocaleDateString('en-IN')}</span>
                                             </div>
                                             <div className="flex items-center gap-3">
-                                                <span className="font-bold text-gray-900 text-base">₹{inv.total_amount}</span>
+                                                <span className="font-bold text-gray-900 text-base">
+                                                    {inv.invoice_data?.type === 'receipt' ? (inv.invoice_data?.currencySymbol || '$') : '₹'}
+                                                    {inv.total_amount}
+                                                </span>
                                                 <button onClick={(e) => handleDeleteClick(inv.id, e)} className="text-gray-400 hover:text-red-600 p-2 rounded-full hover:bg-red-50">
                                                     🗑️
                                                 </button>
