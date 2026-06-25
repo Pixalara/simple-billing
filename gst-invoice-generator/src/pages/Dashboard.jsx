@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form'
 import { INDIAN_STATES } from '../constants'
 import DatePicker from "react-datepicker"
 import "react-datepicker/dist/react-datepicker.css"
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts'
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, Bar, Line, XAxis, YAxis, CartesianGrid, ComposedChart } from 'recharts'
 import ExcelJS from 'exceljs'
 import { saveAs } from 'file-saver'
 import BrandingFooter from '../components/BrandingFooter'
@@ -335,13 +335,116 @@ export default function Dashboard() {
   })
   
   const [invoices, setInvoices] = useState([]) 
-  const [stats, setStats] = useState({ total: 0, revenue: 0 })
   const [activeTab, setActiveTab] = useState('invoices') // 'invoices', 'receipts', 'customers'
   const [customerModal, setCustomerModal] = useState({ isOpen: false, customer: null }) // modal for customer create/edit
   
   const allInvoices = useMemo(() => invoices.filter(inv => inv.invoice_data?.type !== 'receipt' && inv.invoice_data?.type !== 'customer'), [invoices]);
   const allReceipts = useMemo(() => invoices.filter(inv => inv.invoice_data?.type === 'receipt'), [invoices]);
   const allCustomers = useMemo(() => invoices.filter(inv => inv.invoice_data?.type === 'customer'), [invoices]);
+
+  const invoicesStats = useMemo(() => {
+    const count = allInvoices.length
+    const totalAmount = allInvoices.reduce((acc, curr) => acc + (curr.total_amount || 0), 0)
+    return { count, totalAmount }
+  }, [allInvoices])
+
+  const receiptsStats = useMemo(() => {
+    const count = allReceipts.length
+    const totalsByCurrency = {}
+    allReceipts.forEach(r => {
+      const currency = r.invoice_data?.currency || 'USD'
+      const symbol = r.invoice_data?.currencySymbol || '$'
+      if (!totalsByCurrency[currency]) {
+        totalsByCurrency[currency] = { symbol, amount: 0 }
+      }
+      totalsByCurrency[currency].amount += parseFloat(r.total_amount || 0)
+    })
+    return { count, totalsByCurrency }
+  }, [allReceipts])
+
+  const monthlyTrends = useMemo(() => {
+    const map = {}
+    
+    allInvoices.forEach(inv => {
+      const date = new Date(inv.created_at || new Date())
+      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+      const label = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+      if (!map[key]) {
+        map[key] = { key, label, invoiceAmount: 0, invoiceCount: 0, receiptAmount: 0, receiptCount: 0 }
+      }
+      map[key].invoiceAmount += parseFloat(inv.total_amount || 0)
+      map[key].invoiceCount += 1
+    })
+
+    allReceipts.forEach(rec => {
+      const date = new Date(rec.created_at || new Date())
+      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+      const label = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+      if (!map[key]) {
+        map[key] = { key, label, invoiceAmount: 0, invoiceCount: 0, receiptAmount: 0, receiptCount: 0 }
+      }
+      const currency = rec.invoice_data?.currency || 'USD'
+      const rate = currency === 'USD' ? 83 : currency === 'EUR' ? 90 : 1
+      map[key].receiptAmount += parseFloat(rec.total_amount || 0) * rate
+      map[key].receiptCount += 1
+    })
+
+    return Object.values(map).sort((a, b) => a.key.localeCompare(b.key))
+  }, [allInvoices, allReceipts])
+
+  const productRevenueData = useMemo(() => {
+    const map = {}
+    allReceipts.forEach(r => {
+      const name = r.invoice_data?.productName || 'Other Plan'
+      const currency = r.invoice_data?.currency || 'USD'
+      const rate = currency === 'USD' ? 83 : currency === 'EUR' ? 90 : 1
+      const amountInINR = parseFloat(r.total_amount || 0) * rate
+      if (!map[name]) {
+        map[name] = { name, value: 0, displayByCurrency: {} }
+      }
+      map[name].value += amountInINR
+      
+      if (!map[name].displayByCurrency[currency]) {
+        map[name].displayByCurrency[currency] = 0
+      }
+      map[name].displayByCurrency[currency] += parseFloat(r.total_amount || 0)
+    })
+    const colors = ['#8b5cf6', '#3b82f6', '#10b981', '#f59e0b', '#ec4899', '#374151']
+    return Object.values(map).map((item, idx) => ({
+      name: item.name,
+      value: parseFloat(item.value.toFixed(2)),
+      color: colors[idx % colors.length],
+      displayByCurrency: item.displayByCurrency
+    }))
+  }, [allReceipts])
+
+  const taxCollectionData = useMemo(() => {
+    let cgst = 0, sgst = 0, igst = 0, saasTax = 0
+    allInvoices.forEach(inv => {
+      const t = inv.invoice_data?.totals || {}
+      cgst += parseFloat(t.cgst || 0)
+      sgst += parseFloat(t.sgst || 0)
+      igst += parseFloat(t.igst || 0)
+    })
+    allReceipts.forEach(rec => {
+      const taxAmt = parseFloat(rec.invoice_data?.taxAmount || 0)
+      const currency = rec.invoice_data?.currency || 'USD'
+      const rate = currency === 'USD' ? 83 : currency === 'EUR' ? 90 : 1
+      saasTax += taxAmt * rate
+    })
+
+    const data = [
+      { name: 'CGST (Invoices)', value: parseFloat(cgst.toFixed(2)), color: '#3b82f6' },
+      { name: 'SGST (Invoices)', value: parseFloat(sgst.toFixed(2)), color: '#60a5fa' },
+      { name: 'IGST (Invoices)', value: parseFloat(igst.toFixed(2)), color: '#1d4ed8' }
+    ]
+
+    if (saasTax > 0) {
+      data.push({ name: 'SaaS Tax (Receipts)', value: parseFloat(saasTax.toFixed(2)), color: '#10b981' })
+    }
+
+    return data.filter(item => item.value > 0)
+  }, [allInvoices, allReceipts])
 
   const getCustomerInvoiceCount = (customer) => {
     return allInvoices.filter(inv => 
@@ -423,9 +526,6 @@ export default function Dashboard() {
     const { data } = await supabase.from('invoices').select('*').eq('user_id', userId).order('created_at', { ascending: false })
     if (data) {
         setInvoices(data)
-        const docs = data.filter(inv => inv.invoice_data?.type !== 'customer')
-        const totalRev = docs.reduce((acc, curr) => acc + (curr.total_amount || 0), 0)
-        setStats({ total: docs.length, revenue: totalRev })
     }
   }
 
@@ -519,8 +619,6 @@ export default function Dashboard() {
         
         const updatedInvoices = invoices.filter(inv => inv.id !== id)
         setInvoices(updatedInvoices)
-        const totalRev = updatedInvoices.reduce((acc, curr) => acc + (curr.total_amount || 0), 0)
-        setStats({ total: updatedInvoices.length, revenue: totalRev })
         
         closePopup()
         setTimeout(() => showPopup('Deleted', 'Invoice removed.', 'success'), 300)
@@ -723,26 +821,169 @@ export default function Dashboard() {
           </button>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-6">
-            <div className="bg-white p-4 sm:p-5 rounded-xl shadow-sm border border-gray-100">
-                <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Total Invoices</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">{stats.total}</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
+            <div className="bg-white p-4 sm:p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between">
+                <div>
+                    <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Total Invoices</p>
+                    <p className="text-2xl font-bold text-gray-900 mt-1">{invoicesStats.count}</p>
+                </div>
+                <div className="mt-2 text-xs text-gray-400 font-semibold border-t pt-1.5 flex justify-between items-center">
+                    <span>GST Billing</span>
+                    <span className="text-[10px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded font-bold border border-blue-100">INR</span>
+                </div>
             </div>
-            <div className="bg-white p-4 sm:p-5 rounded-xl shadow-sm border border-gray-100">
-                <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Total Revenue</p>
-                <p className="text-2xl font-bold text-blue-600 mt-1">₹{stats.revenue.toLocaleString('en-IN')}</p>
+            
+            <div className="bg-white p-4 sm:p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between">
+                <div>
+                    <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Total Invoiced Amount</p>
+                    <p className="text-2xl font-bold text-blue-650 mt-1">₹{invoicesStats.totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                </div>
+                <div className="mt-2 text-xs text-gray-400 font-semibold border-t pt-1.5 flex justify-between items-center">
+                    <span>GST Invoiced Value</span>
+                    <span className="text-[10px] bg-blue-50 text-blue-650 px-1.5 py-0.5 rounded font-bold border border-blue-100">GST</span>
+                </div>
+            </div>
+            
+            <div className="bg-white p-4 sm:p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between">
+                <div>
+                    <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Total SaaS Receipts</p>
+                    <p className="text-2xl font-bold text-gray-900 mt-1">{receiptsStats.count}</p>
+                </div>
+                <div className="mt-2 text-xs text-gray-400 font-semibold border-t pt-1.5 flex justify-between items-center">
+                    <span>SaaS Transactions</span>
+                    <span className="text-[10px] bg-emerald-50 text-emerald-600 px-1.5 py-0.5 rounded font-bold border border-emerald-100">SaaS</span>
+                </div>
+            </div>
+            
+            <div className="bg-white p-4 sm:p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between">
+                <div>
+                    <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Realized SaaS Revenue</p>
+                    <div className="mt-1 flex flex-col gap-0.5">
+                        {Object.keys(receiptsStats.totalsByCurrency).length === 0 ? (
+                            <p className="text-2xl font-bold text-emerald-600">$0.00</p>
+                        ) : (
+                            Object.entries(receiptsStats.totalsByCurrency).map(([currency, data]) => (
+                                <p key={currency} className="text-2xl font-bold text-emerald-600 leading-tight">
+                                    {data.symbol}{data.amount.toLocaleString(currency === 'INR' ? 'en-IN' : 'en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    <span className="text-xs text-gray-450 font-normal ml-1">({currency})</span>
+                                </p>
+                            ))
+                        )}
+                    </div>
+                </div>
+                <div className="mt-2 text-xs text-gray-400 font-semibold border-t pt-1.5 flex justify-between items-center">
+                    <span>SaaS realized income</span>
+                    <span className="text-[10px] bg-emerald-50 text-emerald-600 px-1.5 py-0.5 rounded font-bold border border-emerald-100">Income</span>
+                </div>
             </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 mb-6">
-            <div className="bg-white p-4 sm:p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center justify-center relative min-h-[300px]">
-                <h3 className="absolute top-4 sm:top-5 left-4 sm:left-5 text-xs font-bold text-gray-400 uppercase tracking-wider">Payment Status</h3>
-                
+        {/* Analytics Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6">
+            
+            {/* Chart 1: Invoices Volume & Value Trend */}
+            <div className="bg-white p-4 sm:p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col h-[350px]">
+                <h3 className="text-xs font-bold text-gray-450 uppercase tracking-wider mb-4">GST Invoices Monthly Trend</h3>
+                {monthlyTrends.length > 0 ? (
+                    <div className="w-full flex-1 min-h-0">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <ComposedChart data={monthlyTrends}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+                                <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#6b7280' }} stroke="#e5e7eb" />
+                                <YAxis yAxisId="left" tick={{ fontSize: 10, fill: '#3b82f6' }} stroke="#3b82f6" label={{ value: 'Amount (₹)', angle: -90, position: 'insideLeft', style: { textAnchor: 'middle', fill: '#3b82f6', fontSize: 10, fontWeight: 'bold' } }} />
+                                <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10, fill: '#6b7280' }} stroke="#6b7280" label={{ value: 'Count', angle: 90, position: 'insideRight', style: { textAnchor: 'middle', fill: '#6b7280', fontSize: 10, fontWeight: 'bold' } }} />
+                                <Tooltip formatter={(value, name) => [name === 'invoiceAmount' ? `₹${value.toLocaleString('en-IN')}` : value, name === 'invoiceAmount' ? 'Total Amount' : 'Invoice Count']} />
+                                <Legend wrapperStyle={{ fontSize: 11 }} />
+                                <Bar yAxisId="left" dataKey="invoiceAmount" name="Total Amount" fill="#3b82f6" radius={[4, 4, 0, 0]} opacity={0.8} barSize={30} />
+                                <Line yAxisId="right" type="monotone" dataKey="invoiceCount" name="Invoice Count" stroke="#10b981" strokeWidth={2.5} dot={{ r: 3 }} />
+                            </ComposedChart>
+                        </ResponsiveContainer>
+                    </div>
+                ) : (
+                    <div className="flex-1 flex flex-col items-center justify-center opacity-40">
+                        <p className="text-xs font-medium">No invoice data available</p>
+                    </div>
+                )}
+            </div>
+
+            {/* Chart 2: Product-wise SaaS Revenue Breakdown */}
+            <div className="bg-white p-4 sm:p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col h-[350px]">
+                <h3 className="text-xs font-bold text-gray-455 uppercase tracking-wider mb-4">Product-wise SaaS Revenue (INR Equiv.)</h3>
+                {productRevenueData.length > 0 ? (
+                    <div className="w-full flex-1 min-h-0 flex flex-row items-center">
+                        <div className="w-1/2 h-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <PieChart>
+                                    <Pie data={productRevenueData} cx="50%" cy="50%" innerRadius={50} outerRadius={70} paddingAngle={4} dataKey="value" cornerRadius={4}>
+                                        {productRevenueData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />)}
+                                    </Pie>
+                                    <Tooltip formatter={(value, name, props) => {
+                                        const originalBreakdown = props.payload.displayByCurrency || {};
+                                        const breakdownText = Object.entries(originalBreakdown)
+                                            .map(([cur, amt]) => `${cur === 'USD' ? '$' : cur === 'EUR' ? '€' : '₹'}${amt.toLocaleString()}`)
+                                            .join(', ');
+                                        return [`₹${value.toLocaleString('en-IN')} (${breakdownText})`, props.payload.name];
+                                    }} />
+                                </PieChart>
+                            </ResponsiveContainer>
+                        </div>
+                        <div className="w-1/2 max-h-full overflow-y-auto px-2 space-y-1.5 custom-scrollbar">
+                            {productRevenueData.map((item, idx) => (
+                                <div key={idx} className="flex items-center gap-2 text-xs">
+                                    <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: item.color }}></div>
+                                    <span className="font-semibold text-gray-700 truncate flex-1">{item.name}</span>
+                                    <span className="font-bold text-gray-900 shrink-0">₹{item.value.toLocaleString('en-IN')}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                ) : (
+                    <div className="flex-1 flex flex-col items-center justify-center opacity-40">
+                        <p className="text-xs font-medium">No SaaS receipt data available</p>
+                    </div>
+                )}
+            </div>
+
+            {/* Chart 3: Tax Collection Breakdown */}
+            <div className="bg-white p-4 sm:p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col h-[350px]">
+                <h3 className="text-xs font-bold text-gray-460 uppercase tracking-wider mb-4">Tax Collections Breakdown (INR Equiv.)</h3>
+                {taxCollectionData.length > 0 ? (
+                    <div className="w-full flex-1 min-h-0 flex flex-row items-center">
+                        <div className="w-1/2 h-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <PieChart>
+                                    <Pie data={taxCollectionData} cx="50%" cy="50%" innerRadius={50} outerRadius={70} paddingAngle={4} dataKey="value" cornerRadius={4}>
+                                        {taxCollectionData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />)}
+                                    </Pie>
+                                    <Tooltip formatter={(value) => [`₹${value.toLocaleString('en-IN')}`, 'Tax Amount']} />
+                                </PieChart>
+                            </ResponsiveContainer>
+                        </div>
+                        <div className="w-1/2 max-h-full overflow-y-auto px-2 space-y-1.5 custom-scrollbar">
+                            {taxCollectionData.map((item, idx) => (
+                                <div key={idx} className="flex items-center gap-2 text-xs">
+                                    <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: item.color }}></div>
+                                    <span className="font-semibold text-gray-700 truncate flex-1">{item.name}</span>
+                                    <span className="font-bold text-gray-900 shrink-0">₹{item.value.toLocaleString('en-IN')}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                ) : (
+                    <div className="flex-1 flex flex-col items-center justify-center opacity-40">
+                        <p className="text-xs font-medium">No tax data available</p>
+                    </div>
+                )}
+            </div>
+
+            {/* Chart 4: Payment Status (Existing status chart) */}
+            <div className="bg-white p-4 sm:p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col relative h-[350px]">
+                <h3 className="text-xs font-bold text-gray-470 uppercase tracking-wider mb-4">Invoice Payment Status</h3>
                 {statusData.length > 0 ? (
-                    <div className="w-full h-56 mt-4">
+                    <div className="w-full flex-1 min-h-0">
                         <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
-                                <Pie data={statusData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value" cornerRadius={5}>
+                                <Pie data={statusData} cx="50%" cy="50%" innerRadius={50} outerRadius={70} paddingAngle={4} dataKey="value" cornerRadius={4}>
                                     {statusData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />)}
                                 </Pie>
                                 <Tooltip content={<CustomTooltip />} cursor={{ fill: 'transparent' }} />
@@ -751,15 +992,15 @@ export default function Dashboard() {
                         </ResponsiveContainer>
                     </div>
                 ) : (
-                    <div className="flex flex-col items-center justify-center opacity-40">
-                        <svg className="w-10 h-10 text-gray-300 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" /></svg>
-                        <p className="text-xs font-medium">No data available</p>
+                    <div className="flex-1 flex flex-col items-center justify-center opacity-40">
+                        <p className="text-xs font-medium">No payment status data available</p>
                     </div>
                 )}
             </div>
 
-            <div className="bg-white p-4 sm:p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col min-h-[300px]">
-                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Top Clients by Revenue</p>
+            {/* Chart 5: Top Clients by Revenue (Existing list) */}
+            <div className="bg-white p-4 sm:p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col lg:col-span-2 min-h-[250px]">
+                <p className="text-xs font-bold text-gray-480 uppercase tracking-wider mb-4">Top Clients by Revenue</p>
                 <div className="flex-1 flex flex-col justify-center space-y-3">
                     {topClients.length === 0 ? (
                         <div className="text-center opacity-40">
