@@ -38,6 +38,53 @@ export default function Landing() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // Scroll reveal Intersection Observer
+  useEffect(() => {
+    const observerOptions = {
+      root: null,
+      rootMargin: '0px',
+      threshold: 0.05
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('is-visible');
+        }
+      });
+    }, observerOptions);
+
+    const elements = document.querySelectorAll('.reveal-on-scroll');
+    elements.forEach(el => observer.observe(el));
+
+    return () => {
+      elements.forEach(el => observer.unobserve(el));
+    };
+  }, [activeSegment]);
+
+  // Update sliding tab indicator position and width dynamically
+  useEffect(() => {
+    const updateTabIndicator = () => {
+      const activeBtn = document.querySelector('.segment-tab-btn.active');
+      if (activeBtn) {
+        const container = activeBtn.parentElement;
+        container.style.setProperty('--active-tab-left', `${activeBtn.offsetLeft}px`);
+        container.style.setProperty('--active-tab-width', `${activeBtn.offsetWidth}px`);
+      }
+    };
+
+    updateTabIndicator();
+    window.addEventListener('resize', updateTabIndicator);
+    
+    // Rerun after a short delay to ensure styles have fully loaded
+    const timer = setTimeout(updateTabIndicator, 50);
+
+    return () => {
+      window.removeEventListener('resize', updateTabIndicator);
+      clearTimeout(timer);
+    };
+  }, [activeSegment]);
+
   // Invoice calculations
   const subtotal = simItems.reduce((acc, item) => acc + (item.qty * item.rate), 0);
   const cgst = clientState === 'Maharashtra' ? Math.round(subtotal * 0.09) : 0;
@@ -192,28 +239,26 @@ export default function Landing() {
         </button>
 
         {/* Mobile dropdown nav */}
-        {mobileMenuOpen && (
-          <div className="mobile-nav-menu">
-            <a href="#solutions" className="landing-nav-link" onClick={() => setMobileMenuOpen(false)}>Solutions</a>
-            <a href="#features" className="landing-nav-link" onClick={() => setMobileMenuOpen(false)}>Features</a>
-            <a href="#pricing" className="landing-nav-link" onClick={() => setMobileMenuOpen(false)}>Pricing</a>
-            <a href="#faqs" className="landing-nav-link" onClick={() => setMobileMenuOpen(false)}>FAQs</a>
-            <div className="mobile-nav-actions">
-              <Link to="/login" className="btn-login" onClick={() => setMobileMenuOpen(false)}>Log In</Link>
-              <button 
-                onClick={() => { setMobileMenuOpen(false); navigate('/login'); }} 
-                className="btn-primary"
-              >
-                Get Started
-              </button>
-            </div>
+        <div className={`mobile-nav-menu ${mobileMenuOpen ? 'open' : ''}`}>
+          <a href="#solutions" className="landing-nav-link" onClick={() => setMobileMenuOpen(false)}>Solutions</a>
+          <a href="#features" className="landing-nav-link" onClick={() => setMobileMenuOpen(false)}>Features</a>
+          <a href="#pricing" className="landing-nav-link" onClick={() => setMobileMenuOpen(false)}>Pricing</a>
+          <a href="#faqs" className="landing-nav-link" onClick={() => setMobileMenuOpen(false)}>FAQs</a>
+          <div className="mobile-nav-actions">
+            <Link to="/login" className="btn-login" onClick={() => setMobileMenuOpen(false)}>Log In</Link>
+            <button 
+              onClick={() => { setMobileMenuOpen(false); navigate('/login'); }} 
+              className="btn-primary"
+            >
+              Get Started
+            </button>
           </div>
-        )}
+        </div>
       </nav>
 
       {/* Hero Section */}
       <section className="landing-hero">
-        <div className="hero-content">
+        <div className="hero-content reveal-on-scroll">
           <div className="hero-badge">
             <span className="hero-badge-dot"></span>
             <span>Tax-Ready Billing Suite</span>
@@ -247,7 +292,7 @@ export default function Landing() {
         </div>
 
         {/* Interactive Live Invoice Builder widget */}
-        <div className="hero-visual">
+        <div className="hero-visual reveal-on-scroll delay-1">
           <div className="invoice-simulator-card">
             {showSuccess && (
               <div className="success-download-alert">
@@ -392,7 +437,7 @@ export default function Landing() {
       </section>
 
       {/* Business segment categories */}
-      <section id="solutions" className="segments-section">
+      <section id="solutions" className="segments-section reveal-on-scroll">
         <div className="section-header">
           <h2>Engineered for every business model</h2>
           <p>
@@ -401,7 +446,8 @@ export default function Landing() {
           </p>
         </div>
 
-        <div className="segment-tabs-container">
+        <div className="segment-tabs-container reveal-on-scroll delay-1">
+          <div className="segment-tabs-indicator"></div>
           <button 
             className={`segment-tab-btn ${activeSegment === 'saas' ? 'active' : ''}`}
             onClick={() => setActiveSegment('saas')}
@@ -422,7 +468,7 @@ export default function Landing() {
           </button>
         </div>
 
-        <div className="segment-display-panel" key={activeSegment}>
+        <div className="segment-display-panel reveal-on-scroll delay-2" key={activeSegment}>
           <div className="segment-details">
             <h3>{segments[activeSegment].title}</h3>
             <p className="segment-intro">{segments[activeSegment].intro}</p>
@@ -557,7 +603,7 @@ export default function Landing() {
       </section>
 
       {/* Bento Grid Features Section */}
-      <section id="features" className="features-section">
+      <section id="features" className="features-section reveal-on-scroll">
         <div className="section-header">
           <h2>Fully loaded with core features</h2>
           <p>
@@ -567,7 +613,7 @@ export default function Landing() {
 
         <div className="bento-grid">
           {/* GST Engine card (col-span-2) */}
-          <div className="bento-card col-span-2 gst-compliance-card">
+          <div className="bento-card col-span-2 gst-compliance-card reveal-on-scroll">
             <div className="card-top">
               <div className="feature-icon-box">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -599,7 +645,7 @@ export default function Landing() {
           </div>
 
           {/* Ledger Analytics Card */}
-          <div className="bento-card">
+          <div className="bento-card reveal-on-scroll delay-1">
             <div className="card-top">
               <div className="feature-icon-box">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -626,7 +672,7 @@ export default function Landing() {
           </div>
 
           {/* Customer Portal Card (col-span-2) */}
-          <div className="bento-card col-span-2 customer-portal-card">
+          <div className="bento-card col-span-2 customer-portal-card reveal-on-scroll">
             <div className="card-top">
               <div className="feature-icon-box">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -659,7 +705,7 @@ export default function Landing() {
           </div>
 
           {/* Recurring Billing Card */}
-          <div className="bento-card">
+          <div className="bento-card reveal-on-scroll delay-1">
             <div className="card-top">
               <div className="feature-icon-box">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -674,7 +720,7 @@ export default function Landing() {
           </div>
 
           {/* Customizable Layouts Card */}
-          <div className="bento-card">
+          <div className="bento-card reveal-on-scroll delay-2">
             <div className="card-top">
               <div className="feature-icon-box">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -691,7 +737,7 @@ export default function Landing() {
           </div>
 
           {/* Secure Cloud Backups Card */}
-          <div className="bento-card">
+          <div className="bento-card reveal-on-scroll">
             <div className="card-top">
               <div className="feature-icon-box">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -707,7 +753,7 @@ export default function Landing() {
           </div>
 
           {/* API Integrations Card */}
-          <div className="bento-card">
+          <div className="bento-card reveal-on-scroll delay-1">
             <div className="card-top">
               <div className="feature-icon-box">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -725,7 +771,7 @@ export default function Landing() {
       </section>
 
       {/* Pricing Section */}
-      <section id="pricing" className="pricing-section">
+      <section id="pricing" className="pricing-section reveal-on-scroll">
         <div className="section-header">
           <h2>Simple, transparent plans</h2>
           <p>
@@ -733,7 +779,7 @@ export default function Landing() {
           </p>
         </div>
 
-        <div className="pricing-switch-container">
+        <div className="pricing-switch-container reveal-on-scroll delay-1">
           <span 
             className={`pricing-switch-label ${billingInterval === 'monthly' ? 'active' : ''}`}
             onClick={() => setBillingInterval('monthly')}
@@ -755,14 +801,14 @@ export default function Landing() {
 
         <div className="pricing-grid">
           {/* Starter Plan */}
-          <div className="pricing-card">
+          <div className="pricing-card reveal-on-scroll">
             <div className="pricing-card-header">
               <h3 className="plan-name">Starter Plan</h3>
               <p className="plan-description">For freelancers and sole proprietors starting with local billing.</p>
             </div>
             <div className="plan-price-box">
               <span className="price-currency">₹</span>
-              <span className="price-amount">0</span>
+              <span key={billingInterval} className="price-amount">0</span>
               <span className="price-period">/ month</span>
             </div>
             <ul className="plan-features-list">
@@ -803,7 +849,7 @@ export default function Landing() {
           </div>
 
           {/* Growth Plan (Featured) */}
-          <div className="pricing-card featured">
+          <div className="pricing-card featured reveal-on-scroll delay-1">
             <div className="featured-tag">Most Popular</div>
             <div className="pricing-card-header">
               <h3 className="plan-name">Pro Growth</h3>
@@ -811,7 +857,7 @@ export default function Landing() {
             </div>
             <div className="plan-price-box">
               <span className="price-currency">₹</span>
-              <span className="price-amount">{billingInterval === 'monthly' ? '99' : '79'}</span>
+              <span key={billingInterval} className="price-amount">{billingInterval === 'monthly' ? '99' : '79'}</span>
               <span className="price-period">/ month</span>
             </div>
             <ul className="plan-features-list">
@@ -852,13 +898,13 @@ export default function Landing() {
           </div>
 
           {/* Enterprise Plan */}
-          <div className="pricing-card">
+          <div className="pricing-card reveal-on-scroll delay-2">
             <div className="pricing-card-header">
               <h3 className="plan-name">Enterprise Custom</h3>
               <p className="plan-description">For large organizations requiring customized reports and API keys.</p>
             </div>
             <div className="plan-price-box">
-              <span className="price-amount" style={{ fontSize: '2.5rem' }}>Custom</span>
+              <span key={billingInterval} className="price-amount" style={{ fontSize: '2.5rem' }}>Custom</span>
             </div>
             <ul className="plan-features-list">
               <li className="plan-feature-line">
@@ -900,13 +946,13 @@ export default function Landing() {
       </section>
 
       {/* Accordion FAQ Section */}
-      <section id="faqs" className="faq-section">
+      <section id="faqs" className="faq-section reveal-on-scroll">
         <div className="section-header">
           <h2>Frequently Asked Questions</h2>
           <p>Answers to common inquiries regarding tax rules, cycle invoicing, and client records.</p>
         </div>
 
-        <div className="faq-list">
+        <div className="faq-list reveal-on-scroll delay-1">
           {faqs.map((faq, index) => (
             <div 
               key={index} 
@@ -933,7 +979,7 @@ export default function Landing() {
       </section>
 
       {/* Sleek Footer */}
-      <footer className="landing-footer">
+      <footer className="landing-footer reveal-on-scroll">
         <div className="footer-grid">
           <div className="footer-branding">
             <Link to="/" className="landing-logo">
