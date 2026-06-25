@@ -937,8 +937,12 @@ export default function Dashboard() {
 
   if (loading) return <div className="p-10 text-center">Loading...</div>
 
-  return (
-    <div className="min-h-screen bg-gray-50 p-3 sm:p-4 md:p-6 pb-20">
+    return (
+    <div className="min-h-screen bg-slate-50/50 p-3 sm:p-4 md:p-6 pb-20 relative overflow-hidden">
+      {/* Premium background decorative glows */}
+      <div className="absolute top-[-10%] left-[-10%] w-[600px] h-[600px] rounded-full bg-gradient-to-tr from-indigo-200/15 to-purple-200/5 blur-[120px] pointer-events-none z-0"></div>
+      <div className="absolute bottom-[10%] right-[-10%] w-[600px] h-[600px] rounded-full bg-gradient-to-br from-emerald-200/10 to-teal-200/5 blur-[120px] pointer-events-none z-0"></div>
+      <div className="absolute top-[30%] left-[45%] w-[500px] h-[500px] rounded-full bg-amber-200/10 blur-[100px] pointer-events-none z-0"></div>
       
       <style>{`
         .react-datepicker-wrapper { width: 100%; }
@@ -991,13 +995,13 @@ export default function Dashboard() {
 
       <Popup isOpen={popup.isOpen} onClose={closePopup} title={popup.title} message={popup.message} type={popup.type} actionLabel={popup.actionLabel} cancelLabel={popup.cancelLabel} onAction={popup.onAction} />
 
-      <div className="max-w-7xl mx-auto">
+      <div className="relative z-10 max-w-7xl mx-auto">
         <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4 mb-6">
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Dashboard</h1>
+          <h1 className="text-2xl md:text-3xl font-extrabold text-gray-950 tracking-tight flex items-center gap-2">Dashboard</h1>
           <div className="flex flex-row items-center gap-3 justify-end">
             <button 
               onClick={() => setCustomerModal({ isOpen: true, customer: null })}
-              className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold px-5 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 active:scale-95 flex items-center gap-2 text-sm md:text-base shrink-0"
+              className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold px-5 py-3 rounded-xl shadow-md hover:shadow-lg hover:shadow-indigo-500/20 transition-all duration-200 transform hover:scale-[1.02] active:scale-95 flex items-center gap-2 text-sm md:text-base shrink-0 border border-indigo-500/10"
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
@@ -1006,7 +1010,7 @@ export default function Dashboard() {
             </button>
             <button 
               onClick={handleLogout} 
-              className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-bold px-6 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 active:scale-95 flex items-center gap-2 text-sm md:text-base shrink-0"
+              className="bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-600 hover:to-red-700 text-white font-bold px-6 py-3 rounded-xl shadow-md hover:shadow-lg hover:shadow-red-500/20 transition-all duration-200 transform hover:scale-[1.02] active:scale-95 flex items-center gap-2 text-sm md:text-base shrink-0 border border-red-500/10"
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
@@ -1016,59 +1020,91 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
-            <div className="bg-white p-4 sm:p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between">
-                <div>
-                    <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Total Invoices</p>
-                    <p className="text-2xl font-bold text-gray-900 mt-1">{invoicesStats.count}</p>
-                </div>
-                <div className="mt-2 text-xs text-gray-400 font-semibold border-t pt-1.5 flex justify-between items-center">
-                    <span>GST Billing</span>
-                    <span className="text-[10px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded font-bold border border-blue-100">INR</span>
-                </div>
-            </div>
-            
-            <div className="bg-white p-4 sm:p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between">
-                <div>
-                    <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Total Invoiced Amount</p>
-                    <p className="text-2xl font-bold text-blue-600 mt-1">₹{invoicesStats.totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                </div>
-                <div className="mt-2 text-xs text-gray-400 font-semibold border-t pt-1.5 flex justify-between items-center">
-                    <span>GST Invoiced Value</span>
-                    <span className="text-[10px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded font-bold border border-blue-100">GST</span>
-                </div>
-            </div>
-            
-            <div className="bg-white p-4 sm:p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between">
-                <div>
-                    <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Total Receipts</p>
-                    <p className="text-2xl font-bold text-gray-900 mt-1">{receiptsStats.count}</p>
-                </div>
-                <div className="mt-2 text-xs text-gray-400 font-semibold border-t pt-1.5 flex justify-between items-center">
-                    <span>Receipt Transactions</span>
-                    <span className="text-[10px] bg-emerald-50 text-emerald-600 px-1.5 py-0.5 rounded font-bold border border-emerald-100">Receipt</span>
-                </div>
-            </div>
-            
-            <div className="bg-white p-4 sm:p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between">
-                <div>
-                    <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Realized Revenue</p>
-                    <div className="mt-1 flex flex-col gap-0.5">
-                        {Object.keys(receiptsStats.totalsByCurrency).length === 0 ? (
-                            <p className="text-2xl font-bold text-emerald-600">₹0.00</p>
-                        ) : (
-                            Object.entries(receiptsStats.totalsByCurrency).map(([currency, data]) => (
-                                <p key={currency} className="text-2xl font-bold text-emerald-600 leading-tight">
-                                    {data.symbol}{data.amount.toLocaleString(currency === 'INR' ? 'en-IN' : 'en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                    <span className="text-xs text-gray-450 font-normal ml-1">({currency})</span>
-                                </p>
-                            ))
-                        )}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6">
+            {/* Total Invoices Card */}
+            <div className="bg-white/70 backdrop-blur-md p-4 sm:p-5 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-lg hover:shadow-indigo-500/5 border border-gray-100/80 flex flex-row items-center justify-between transition-all duration-300 hover:-translate-y-1 group border-l-4 border-l-indigo-500">
+                <div className="flex flex-col justify-between h-full">
+                    <div>
+                        <p className="text-gray-450 text-[10px] uppercase font-bold tracking-widest">Total Invoices</p>
+                        <p className="text-3xl font-extrabold text-gray-950 mt-2 tracking-tight group-hover:text-indigo-600 transition-colors duration-200">{invoicesStats.count}</p>
+                    </div>
+                    <div className="mt-4 text-[11px] text-gray-400 font-semibold flex items-center gap-1.5">
+                        <span className="text-[10px] bg-indigo-50/70 text-indigo-600 px-2 py-0.5 rounded-full font-bold border border-indigo-100/50">INR</span>
+                        <span>GST Invoices</span>
                     </div>
                 </div>
-                <div className="mt-2 text-xs text-gray-400 font-semibold border-t pt-1.5 flex justify-between items-center">
-                    <span>Receipts realized income</span>
-                    <span className="text-[10px] bg-emerald-50 text-emerald-600 px-1.5 py-0.5 rounded font-bold border border-emerald-100">Income</span>
+                <div className="w-12 h-12 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 border border-indigo-100/50 group-hover:scale-110 transition-transform duration-300">
+                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                </div>
+            </div>
+            
+            {/* Total Invoiced Amount Card */}
+            <div className="bg-white/70 backdrop-blur-md p-4 sm:p-5 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-lg hover:shadow-blue-500/5 border border-gray-100/80 flex flex-row items-center justify-between transition-all duration-300 hover:-translate-y-1 group border-l-4 border-l-blue-500">
+                <div className="flex flex-col justify-between h-full">
+                    <div>
+                        <p className="text-gray-455 text-[10px] uppercase font-bold tracking-widest">Invoiced Value</p>
+                        <p className="text-2xl font-extrabold text-blue-600 mt-2 tracking-tight">₹{invoicesStats.totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                    </div>
+                    <div className="mt-4 text-[11px] text-gray-400 font-semibold flex items-center gap-1.5">
+                        <span className="text-[10px] bg-blue-50/70 text-blue-600 px-2 py-0.5 rounded-full font-bold border border-blue-100/50">GST</span>
+                        <span>Total Billings</span>
+                    </div>
+                </div>
+                <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 border border-blue-100/50 group-hover:scale-110 transition-transform duration-300">
+                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </div>
+            </div>
+            
+            {/* Total Receipts Card */}
+            <div className="bg-white/70 backdrop-blur-md p-4 sm:p-5 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-lg hover:shadow-emerald-500/5 border border-gray-100/80 flex flex-row items-center justify-between transition-all duration-300 hover:-translate-y-1 group border-l-4 border-l-emerald-500">
+                <div className="flex flex-col justify-between h-full">
+                    <div>
+                        <p className="text-gray-450 text-[10px] uppercase font-bold tracking-widest">Total Receipts</p>
+                        <p className="text-3xl font-extrabold text-gray-955 mt-2 tracking-tight group-hover:text-emerald-600 transition-colors duration-200">{receiptsStats.count}</p>
+                    </div>
+                    <div className="mt-4 text-[11px] text-gray-400 font-semibold flex items-center gap-1.5">
+                        <span className="text-[10px] bg-emerald-50/70 text-emerald-600 px-2 py-0.5 rounded-full font-bold border border-emerald-100/50">Receipt</span>
+                        <span>Paid Ledgers</span>
+                    </div>
+                </div>
+                <div className="w-12 h-12 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600 border border-emerald-100/50 group-hover:scale-110 transition-transform duration-300">
+                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                    </svg>
+                </div>
+            </div>
+            
+            {/* Realized Revenue Card */}
+            <div className="bg-white/70 backdrop-blur-md p-4 sm:p-5 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-lg hover:shadow-teal-500/5 border border-gray-100/80 flex flex-row items-center justify-between transition-all duration-300 hover:-translate-y-1 group border-l-4 border-l-teal-500">
+                <div className="flex flex-col justify-between h-full">
+                    <div>
+                        <p className="text-gray-450 text-[10px] uppercase font-bold tracking-widest">Realized Revenue</p>
+                        <div className="mt-2 flex flex-col gap-0.5">
+                            {Object.keys(receiptsStats.totalsByCurrency).length === 0 ? (
+                                <p className="text-2xl font-extrabold text-emerald-600">₹0.00</p>
+                            ) : (
+                                Object.entries(receiptsStats.totalsByCurrency).map(([currency, data]) => (
+                                    <p key={currency} className="text-2xl font-extrabold text-emerald-600 leading-tight">
+                                        {data.symbol}{data.amount.toLocaleString(currency === 'INR' ? 'en-IN' : 'en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        <span className="text-[10px] text-gray-450 font-normal ml-1">({currency})</span>
+                                    </p>
+                                ))
+                             )}
+                        </div>
+                    </div>
+                    <div className="mt-4 text-[11px] text-gray-450 font-semibold flex items-center gap-1.5">
+                        <span className="text-[10px] bg-emerald-50/70 text-emerald-600 px-2 py-0.5 rounded-full font-bold border border-emerald-100/50">Income</span>
+                        <span>Cleared Income</span>
+                    </div>
+                </div>
+                <div className="w-12 h-12 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600 border border-emerald-100/50 group-hover:scale-110 transition-transform duration-300">
+                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                    </svg>
                 </div>
             </div>
         </div>
@@ -1077,7 +1113,7 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6">
             
             {/* Chart 1: Invoices Volume & Value Trend */}
-            <div className="bg-white p-4 sm:p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col h-[350px]">
+            <div className="bg-white/70 backdrop-blur-md p-4 sm:p-5 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.02)] border border-gray-100/80 flex flex-col h-[350px] transition-all duration-300 hover:shadow-md">
                 <h3 className="text-xs font-bold text-gray-450 uppercase tracking-wider mb-4">GST Invoices Monthly Trend</h3>
                 {monthlyTrends.length > 0 ? (
                     <div className="w-full flex-1 min-h-0">
@@ -1102,7 +1138,7 @@ export default function Dashboard() {
             </div>
 
             {/* Chart 2: Product-wise SaaS Revenue Breakdown */}
-            <div className="bg-white p-4 sm:p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col h-[350px]">
+            <div className="bg-white/70 backdrop-blur-md p-4 sm:p-5 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.02)] border border-gray-100/80 flex flex-col h-[350px] transition-all duration-300 hover:shadow-md">
                 <h3 className="text-xs font-bold text-gray-455 uppercase tracking-wider mb-4">Product-wise Revenue (INR Equiv.)</h3>
                 {productRevenueData.length > 0 ? (
                     <div className="w-full flex-1 min-h-0 flex flex-row items-center">
@@ -1140,7 +1176,7 @@ export default function Dashboard() {
             </div>
 
             {/* Chart 3: Tax Collection Breakdown */}
-            <div className="bg-white p-4 sm:p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col h-[350px]">
+            <div className="bg-white/70 backdrop-blur-md p-4 sm:p-5 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.02)] border border-gray-100/80 flex flex-col h-[350px] transition-all duration-300 hover:shadow-md">
                 <h3 className="text-xs font-bold text-gray-460 uppercase tracking-wider mb-4">Tax Collections Breakdown (INR Equiv.)</h3>
                 {taxCollectionData.length > 0 ? (
                     <div className="w-full flex-1 min-h-0 flex flex-row items-center">
@@ -1172,7 +1208,7 @@ export default function Dashboard() {
             </div>
 
             {/* Chart 4: Payment Status (Existing status chart) */}
-            <div className="bg-white p-4 sm:p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col relative h-[350px]">
+            <div className="bg-white/70 backdrop-blur-md p-4 sm:p-5 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.02)] border border-gray-100/80 flex flex-col relative h-[350px] transition-all duration-300 hover:shadow-md">
                 <h3 className="text-xs font-bold text-gray-470 uppercase tracking-wider mb-4">Invoice Payment Status</h3>
                 {statusData.length > 0 ? (
                     <div className="w-full flex-1 min-h-0">
@@ -1194,7 +1230,7 @@ export default function Dashboard() {
             </div>
 
             {/* Chart 5: Top Clients by Revenue (Existing list) */}
-            <div className="bg-white p-4 sm:p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col lg:col-span-2 min-h-[250px]">
+            <div className="bg-white/70 backdrop-blur-md p-4 sm:p-5 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.02)] border border-gray-100/80 flex flex-col lg:col-span-2 min-h-[250px] transition-all duration-300 hover:shadow-md">
                 <p className="text-xs font-bold text-gray-480 uppercase tracking-wider mb-4">Top Clients by Revenue</p>
                 <div className="flex-1 flex flex-col justify-center space-y-3">
                     {topClients.length === 0 ? (
@@ -1223,7 +1259,7 @@ export default function Dashboard() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
             
-            <div className="lg:col-span-1 bg-white p-4 sm:p-5 rounded-xl shadow-sm h-fit">
+            <div className="lg:col-span-1 bg-white/70 backdrop-blur-md p-4 sm:p-5 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.02)] border border-gray-100/80 h-fit transition-all duration-300 hover:shadow-md">
                 <div className="flex justify-between items-center mb-4 border-b pb-2">
                     <div className="flex items-center gap-2">
                         <h2 className="text-lg font-bold text-gray-800">
@@ -1433,7 +1469,7 @@ export default function Dashboard() {
                     </button>
                 </div>
                 
-                <div className="bg-white rounded-xl shadow-sm border border-gray-100 relative">
+                <div className="bg-white/70 backdrop-blur-md rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.02)] border border-gray-100/80 relative transition-all duration-300 hover:shadow-md">
                                   <div className="p-4 border-b bg-gray-50/50 space-y-3 rounded-t-xl">
                         {/* Tab Selector */}
                         <div className="flex border-b border-gray-200 gap-2 mb-2 overflow-x-auto">
