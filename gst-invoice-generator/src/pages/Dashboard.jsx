@@ -97,6 +97,175 @@ const CustomTooltip = ({ active, payload }) => {
     return null;
 };
 
+// --- CUSTOMER FORM MODAL COMPONENT ---
+function CustomerFormModal({ customerNode, onClose, onSave, allCustomers }) {
+  const [loading, setLoading] = useState(false)
+  const isEdit = !!customerNode;
+  const [fields, setFields] = useState({
+    customer_id: '',
+    name: '',
+    email: '',
+    phone: '',
+    address: '',
+    product: ''
+  })
+  
+  useEffect(() => {
+    if (isEdit && customerNode) {
+      setFields({
+        customer_id: customerNode.invoice_no,
+        name: customerNode.invoice_data?.name || '',
+        email: customerNode.invoice_data?.email || '',
+        phone: customerNode.invoice_data?.phone || '',
+        address: customerNode.invoice_data?.address || '',
+        product: customerNode.invoice_data?.product || ''
+      })
+    } else {
+      // Auto-generate customer ID
+      const prefix = 'CUST-'
+      let maxNum = 1000
+      allCustomers.forEach(cust => {
+        const idStr = cust.invoice_no.replace(prefix, '')
+        const num = parseInt(idStr, 10)
+        if (!isNaN(num) && num > maxNum) {
+          maxNum = num
+        }
+      })
+      setFields(f => ({ ...f, customer_id: `${prefix}${maxNum + 1}` }))
+    }
+  }, [customerNode, isEdit, allCustomers])
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error("Not logged in");
+
+      const payload = {
+        user_id: user.id,
+        invoice_no: fields.customer_id,
+        invoice_data: {
+          type: 'customer',
+          customer_id: fields.customer_id,
+          name: fields.name,
+          email: fields.email,
+          phone: fields.phone,
+          address: fields.address,
+          product: fields.product
+        },
+        total_amount: 0
+      }
+
+      if (isEdit) {
+        const { error } = await supabase.from('invoices').update(payload).eq('id', customerNode.id)
+        if (error) throw error
+      } else {
+        const { error } = await supabase.from('invoices').insert(payload)
+        if (error) throw error
+      }
+      onSave()
+    } catch (err) {
+      alert("Error saving customer: " + err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4 animate-in fade-in duration-200">
+      <div className="bg-white rounded-xl max-w-md w-full p-6 shadow-2xl space-y-4">
+        <div className="flex justify-between items-center border-b pb-2">
+          <h3 className="text-lg font-bold text-gray-950">{isEdit ? 'Edit Customer' : 'Add New Customer'}</h3>
+          <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-650 font-bold text-lg">×</button>
+        </div>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="text-[10px] uppercase font-bold text-gray-400 mb-1 block">Customer ID</label>
+            <input 
+              type="text" 
+              value={fields.customer_id} 
+              onChange={e => setFields({...fields, customer_id: e.target.value})} 
+              className="w-full p-2 border rounded text-sm bg-white focus:ring-2 focus:ring-blue-100 outline-none font-mono"
+              required 
+            />
+          </div>
+          <div>
+            <label className="text-[10px] uppercase font-bold text-gray-400 mb-1 block">Name</label>
+            <input 
+              type="text" 
+              value={fields.name} 
+              onChange={e => setFields({...fields, name: e.target.value})} 
+              placeholder="e.g. Acme Corporation"
+              className="w-full p-2 border rounded text-sm bg-white focus:ring-2 focus:ring-blue-100 outline-none"
+              required 
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="text-[10px] uppercase font-bold text-gray-400 mb-1 block">Email</label>
+              <input 
+                type="email" 
+                value={fields.email} 
+                onChange={e => setFields({...fields, email: e.target.value})} 
+                placeholder="e.g. info@acme.com"
+                className="w-full p-2 border rounded text-sm bg-white focus:ring-2 focus:ring-blue-100 outline-none"
+                required 
+              />
+            </div>
+            <div>
+              <label className="text-[10px] uppercase font-bold text-gray-400 mb-1 block">Phone</label>
+              <input 
+                type="text" 
+                value={fields.phone} 
+                onChange={e => setFields({...fields, phone: e.target.value})} 
+                placeholder="e.g. 9876543210"
+                className="w-full p-2 border rounded text-sm bg-white focus:ring-2 focus:ring-blue-100 outline-none"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="text-[10px] uppercase font-bold text-gray-400 mb-1 block">Billing Address</label>
+            <textarea 
+              value={fields.address} 
+              onChange={e => setFields({...fields, address: e.target.value})} 
+              placeholder="Street, City, ZIP..."
+              className="w-full p-2 border rounded text-sm bg-white focus:ring-2 focus:ring-blue-100 outline-none"
+              rows="2"
+            />
+          </div>
+          <div>
+            <label className="text-[10px] uppercase font-bold text-gray-400 mb-1 block">Product / Subscription Plan</label>
+            <input 
+              type="text" 
+              value={fields.product} 
+              onChange={e => setFields({...fields, product: e.target.value})} 
+              placeholder="e.g. SaaS Premium Plan"
+              className="w-full p-2 border rounded text-sm bg-white focus:ring-2 focus:ring-blue-100 outline-none"
+            />
+          </div>
+          <div className="flex gap-2 justify-end pt-4 border-t">
+            <button 
+              type="button" 
+              onClick={onClose}
+              className="px-4 py-2 border rounded-lg text-xs font-bold text-gray-500 hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button 
+              type="submit" 
+              disabled={loading}
+              className="px-4 py-2 bg-purple-650 text-white rounded-lg text-xs font-bold hover:bg-purple-750 disabled:opacity-50"
+            >
+              {loading ? 'Saving...' : 'Save Customer'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
 export default function Dashboard() {
   const [session, setSession] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -126,6 +295,28 @@ export default function Dashboard() {
   
   const [invoices, setInvoices] = useState([]) 
   const [stats, setStats] = useState({ total: 0, revenue: 0 })
+  const [activeTab, setActiveTab] = useState('invoices') // 'invoices', 'receipts', 'customers'
+  const [customerModal, setCustomerModal] = useState({ isOpen: false, customer: null }) // modal for customer create/edit
+  
+  const allInvoices = useMemo(() => invoices.filter(inv => inv.invoice_data?.type !== 'receipt' && inv.invoice_data?.type !== 'customer'), [invoices]);
+  const allReceipts = useMemo(() => invoices.filter(inv => inv.invoice_data?.type === 'receipt'), [invoices]);
+  const allCustomers = useMemo(() => invoices.filter(inv => inv.invoice_data?.type === 'customer'), [invoices]);
+
+  const getCustomerInvoiceCount = (customer) => {
+    return allInvoices.filter(inv => 
+        inv.invoice_data?.buyer_email === customer.email || 
+        inv.invoice_data?.buyer_name === customer.name ||
+        inv.invoice_data?.customerId === customer.customer_id
+    ).length;
+  }
+
+  const getCustomerReceiptCount = (customer) => {
+    return allReceipts.filter(rec => 
+        rec.invoice_data?.buyer_email === customer.email || 
+        rec.invoice_data?.buyer_name === customer.name ||
+        rec.invoice_data?.customerId === customer.customer_id
+    ).length;
+  }
   
   const statusData = useMemo(() => processStatusData(invoices), [invoices]);
   const topClients = useMemo(() => processTopClients(invoices), [invoices]);
@@ -191,8 +382,9 @@ export default function Dashboard() {
     const { data } = await supabase.from('invoices').select('*').eq('user_id', userId).order('created_at', { ascending: false })
     if (data) {
         setInvoices(data)
-        const totalRev = data.reduce((acc, curr) => acc + (curr.total_amount || 0), 0)
-        setStats({ total: data.length, revenue: totalRev })
+        const docs = data.filter(inv => inv.invoice_data?.type !== 'customer')
+        const totalRev = docs.reduce((acc, curr) => acc + (curr.total_amount || 0), 0)
+        setStats({ total: docs.length, revenue: totalRev })
     }
   }
 
@@ -304,8 +496,21 @@ export default function Dashboard() {
   const enforceCapitalLetters = (e, f) => setValue(f, e.target.value.replace(/[^A-Za-z\s]/g, '').toUpperCase())
 
   const getFilteredInvoices = () => {
-    return invoices.filter(inv => {
+    const listToFilter = activeTab === 'invoices' ? allInvoices : activeTab === 'receipts' ? allReceipts : allCustomers;
+    return listToFilter.filter(inv => {
         const searchLower = searchTerm.toLowerCase().trim()
+        if (activeTab === 'customers') {
+            const c = inv.invoice_data || {};
+            const matchesSearch = 
+                !searchLower ||
+                (inv.invoice_no || '').toLowerCase().includes(searchLower) ||
+                (c.name || '').toLowerCase().includes(searchLower) ||
+                (c.email || '').toLowerCase().includes(searchLower) ||
+                (c.phone || '').toLowerCase().includes(searchLower) ||
+                (c.product || '').toLowerCase().includes(searchLower);
+            return matchesSearch;
+        }
+
         const matchesSearch = 
             !searchLower ||
             inv.invoice_no.toLowerCase().includes(searchLower) ||
@@ -746,39 +951,75 @@ export default function Dashboard() {
                 </div>
                 
                 <div className="bg-white rounded-xl shadow-sm border border-gray-100 relative">
-                    
-                    <div className="p-4 border-b bg-gray-50/50 space-y-3 rounded-t-xl">
+                                  <div className="p-4 border-b bg-gray-50/50 space-y-3 rounded-t-xl">
+                        {/* Tab Selector */}
+                        <div className="flex border-b border-gray-200 gap-2 mb-2">
+                            <button 
+                                onClick={() => { setActiveTab('invoices'); setSearchTerm(''); }}
+                                className={`pb-2 px-4 text-xs font-bold uppercase tracking-wider transition-all border-b-2 ${activeTab === 'invoices' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-400 hover:text-gray-600'}`}
+                            >
+                                GST Invoices ({allInvoices.length})
+                            </button>
+                            <button 
+                                onClick={() => { setActiveTab('receipts'); setSearchTerm(''); }}
+                                className={`pb-2 px-4 text-xs font-bold uppercase tracking-wider transition-all border-b-2 ${activeTab === 'receipts' ? 'border-emerald-600 text-emerald-600' : 'border-transparent text-gray-400 hover:text-gray-600'}`}
+                            >
+                                SaaS Receipts ({allReceipts.length})
+                            </button>
+                            <button 
+                                onClick={() => { setActiveTab('customers'); setSearchTerm(''); }}
+                                className={`pb-2 px-4 text-xs font-bold uppercase tracking-wider transition-all border-b-2 ${activeTab === 'customers' ? 'border-purple-600 text-purple-600' : 'border-transparent text-gray-400 hover:text-gray-600'}`}
+                            >
+                                Customers ({allCustomers.length})
+                            </button>
+                        </div>
+
                         <div className="flex flex-col md:flex-row gap-3 justify-between items-start md:items-center">
-                            <h3 className="font-bold text-gray-700 text-sm">All Invoices ({invoices.length})</h3>
+                            <h3 className="font-bold text-gray-700 text-sm">
+                                {activeTab === 'invoices' ? 'All Invoices' : activeTab === 'receipts' ? 'All Receipts' : 'All Customers'} ({filteredInvoices.length})
+                            </h3>
                             <div className="flex gap-2 w-full md:w-auto">
                                 <div className="relative flex-1 md:w-64">
                                     <svg className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
                                     <input 
                                         type="text" 
-                                        placeholder="Search Customer or Invoice #" 
+                                        placeholder={activeTab === 'customers' ? "Search Name, Email, ID..." : "Search Customer or Doc #"} 
                                         className="w-full pl-9 pr-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none"
                                         value={searchTerm}
                                         onChange={(e) => setSearchTerm(e.target.value)}
                                     />
                                 </div>
-                                <button 
-                                    onClick={handleExport}
-                                    className="px-3 py-2 rounded-lg border border-gray-200 text-sm font-medium flex items-center gap-2 text-gray-600 hover:bg-gray-50 transition-colors"
-                                >
-                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                                    Export
-                                </button>
-                                <button 
-                                    onClick={() => setShowFilters(!showFilters)}
-                                    className={`px-3 py-2 rounded-lg border text-sm font-medium flex items-center gap-2 transition-colors ${showFilters || activeFilterCount > 0 ? 'bg-blue-50 border-blue-200 text-blue-600' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}
-                                >
-                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" /></svg>
-                                    Filters {activeFilterCount > 0 && <span className="bg-blue-600 text-white text-[10px] px-1.5 py-0.5 rounded-full">{activeFilterCount}</span>}
-                                </button>
+                                {activeTab !== 'customers' && (
+                                    <>
+                                        <button 
+                                            onClick={handleExport}
+                                            className="px-3 py-2 rounded-lg border border-gray-200 text-sm font-medium flex items-center gap-2 text-gray-600 hover:bg-gray-50 transition-colors"
+                                        >
+                                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                                            Export
+                                        </button>
+                                        <button 
+                                            onClick={() => setShowFilters(!showFilters)}
+                                            className={`px-3 py-2 rounded-lg border text-sm font-medium flex items-center gap-2 transition-colors ${showFilters || activeFilterCount > 0 ? 'bg-blue-50 border-blue-200 text-blue-600' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+                                        >
+                                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" /></svg>
+                                            Filters {activeFilterCount > 0 && <span className="bg-blue-600 text-white text-[10px] px-1.5 py-0.5 rounded-full">{activeFilterCount}</span>}
+                                        </button>
+                                    </>
+                                )}
+                                {activeTab === 'customers' && (
+                                    <button 
+                                        type="button"
+                                        onClick={() => setCustomerModal({ isOpen: true, customer: null })}
+                                        className="px-4 py-2 bg-purple-600 hover:bg-purple-750 text-white rounded-lg text-sm font-bold shadow transition-colors flex items-center gap-1 active:scale-95 transform"
+                                    >
+                                        <span>+</span> Add Customer
+                                    </button>
+                                )}
                             </div>
                         </div>
 
-                        {showFilters && (
+                        {activeTab !== 'customers' && showFilters && (
                             <div className="pt-3 border-t border-gray-200 grid grid-cols-2 md:grid-cols-4 gap-3 animate-in fade-in slide-in-from-top-2 relative z-50">
                                 <div className="relative">
                                     <label className="text-[10px] uppercase font-bold text-gray-400 mb-1 block">From Date</label>
@@ -821,97 +1062,217 @@ export default function Dashboard() {
                     {filteredInvoices.length === 0 ? (
                         <div className="p-12 text-center flex flex-col items-center justify-center opacity-60">
                             <svg className="w-12 h-12 text-gray-300 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                            <p className="text-gray-500 text-sm font-medium">No invoices found matching your filters.</p>
+                            <p className="text-gray-500 text-sm font-medium">No documents found matching your search.</p>
                             <button onClick={() => { setSearchTerm(''); setFilters({ startDate: null, endDate: null, minAmount: '', maxAmount: '' }) }} className="mt-2 text-blue-600 text-xs font-bold hover:underline">Reset Filters</button>
                         </div>
                     ) : (
                         <>
-                            <table className="hidden md:table w-full text-left text-sm rounded-b-xl overflow-hidden">
-                                <thead className="bg-gray-50 text-gray-500 uppercase font-semibold text-xs border-b">
-                                    <tr>
-                                        <th className="px-5 py-3">Date</th>
-                                        <th className="px-5 py-3">Invoice #</th>
-                                        <th className="px-5 py-3">Customer</th>
-                                        <th className="px-5 py-3 text-center">Status</th>
-                                        <th className="px-5 py-3 text-right">Amount</th>
-                                        <th className="px-5 py-3 text-center">Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-100">
+                            {activeTab === 'customers' ? (
+                                <table className="hidden md:table w-full text-left text-sm rounded-b-xl overflow-hidden">
+                                    <thead className="bg-gray-50 text-gray-500 uppercase font-semibold text-xs border-b border-gray-100">
+                                        <tr>
+                                            <th className="px-5 py-3">ID</th>
+                                            <th className="px-5 py-3">Name</th>
+                                            <th className="px-5 py-3">Email</th>
+                                            <th className="px-5 py-3">Phone</th>
+                                            <th className="px-5 py-3 text-center">Plan</th>
+                                            <th className="px-5 py-3 text-center">Invoices</th>
+                                            <th className="px-5 py-3 text-center">Receipts</th>
+                                            <th className="px-5 py-3 text-center">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-100">
+                                        {filteredInvoices.map((inv) => {
+                                            const c = inv.invoice_data || {};
+                                            return (
+                                                <tr key={inv.id} className="hover:bg-purple-50 transition-colors">
+                                                    <td className="px-5 py-3 font-bold text-purple-600 font-mono">{inv.invoice_no}</td>
+                                                    <td className="px-5 py-3 font-bold text-gray-800">{c.name}</td>
+                                                    <td className="px-5 py-3 text-gray-600">{c.email}</td>
+                                                    <td className="px-5 py-3 text-gray-650">{c.phone || '-'}</td>
+                                                    <td className="px-5 py-3 text-center font-medium text-gray-700">{c.product || '-'}</td>
+                                                    <td className="px-5 py-3 text-center">
+                                                        <span className="bg-blue-100 text-blue-800 text-xs px-2.5 py-0.5 rounded-full font-bold border border-blue-200">
+                                                            {getCustomerInvoiceCount(c)}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-5 py-3 text-center">
+                                                        <span className="bg-emerald-100 text-emerald-800 text-xs px-2.5 py-0.5 rounded-full font-bold border border-emerald-200">
+                                                            {getCustomerReceiptCount(c)}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-5 py-3 text-center">
+                                                        <div className="flex gap-2 justify-center">
+                                                            <button 
+                                                                type="button"
+                                                                onClick={(e) => { e.stopPropagation(); setCustomerModal({ isOpen: true, customer: inv }); }} 
+                                                                className="text-gray-500 hover:text-blue-600 p-1 px-2.5 hover:bg-blue-50 rounded transition-all font-semibold text-xs border"
+                                                            >
+                                                                Edit
+                                                            </button>
+                                                            <button 
+                                                                type="button"
+                                                                onClick={(e) => { e.stopPropagation(); handleDeleteClick(inv.id, e); }} 
+                                                                className="text-gray-505 hover:text-red-600 p-1 px-2.5 hover:bg-red-50 rounded transition-all font-semibold text-xs border"
+                                                            >
+                                                                Delete
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            ) : (
+                                <table className="hidden md:table w-full text-left text-sm rounded-b-xl overflow-hidden">
+                                    <thead className="bg-gray-50 text-gray-500 uppercase font-semibold text-xs border-b">
+                                        <tr>
+                                            <th className="px-5 py-3">Date</th>
+                                            <th className="px-5 py-3">Doc #</th>
+                                            <th className="px-5 py-3">Customer</th>
+                                            <th className="px-5 py-3 text-center">Status</th>
+                                            <th className="px-5 py-3 text-right">Amount</th>
+                                            <th className="px-5 py-3 text-center">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-100">
+                                        {filteredInvoices.map((inv) => (
+                                            <tr key={inv.id} onClick={() => navigate(inv.invoice_data?.type === 'receipt' ? `/edit-receipt/${inv.id}` : `/edit-invoice/${inv.id}`)} className="hover:bg-blue-50 cursor-pointer group transition-colors">
+                                                <td className="px-5 py-3 text-gray-600">{new Date(inv.created_at).toLocaleDateString('en-IN')}</td>
+                                                <td className="px-5 py-3 font-bold text-blue-600 group-hover:underline">
+                                                    <div className="flex items-center gap-2">
+                                                        <span>{inv.invoice_no}</span>
+                                                        {inv.invoice_data?.type === 'receipt' ? (
+                                                            <span className="bg-emerald-100 text-emerald-800 text-[10px] px-1.5 py-0.5 rounded font-bold border border-emerald-200">RECEIPT</span>
+                                                        ) : (
+                                                            <span className="bg-blue-100 text-blue-800 text-[10px] px-1.5 py-0.5 rounded font-bold border border-blue-200">INVOICE</span>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                                <td className="px-5 py-3 font-medium text-gray-800">{inv.invoice_data?.buyer_name}</td>
+                                                <td className="px-5 py-3 text-center">
+                                                    <button 
+                                                        onClick={(e) => cycleStatus(e, inv)}
+                                                        className={`px-2.5 py-1 rounded-full text-[10px] font-bold border uppercase tracking-wide transition-all active:scale-95 ${getStatusBadgeStyles(inv.status || (inv.invoice_data?.type === 'receipt' ? 'PAID' : 'PENDING'))}`}
+                                                    >
+                                                        {inv.status || (inv.invoice_data?.type === 'receipt' ? 'PAID' : 'PENDING')}
+                                                    </button>
+                                                </td>
+                                                <td className="px-5 py-3 text-right font-bold text-gray-900">
+                                                    {inv.invoice_data?.type === 'receipt' ? (inv.invoice_data?.currencySymbol || '$') : '₹'}
+                                                    {inv.total_amount}
+                                                </td>
+                                                <td className="px-5 py-3 text-center"><button onClick={(e) => handleDeleteClick(inv.id, e)} className="text-gray-400 hover:text-red-600 p-1.5 hover:bg-red-50 rounded transition-all">🗑️</button></td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            )}
+
+                            {activeTab === 'customers' ? (
+                                <div className="md:hidden divide-y divide-gray-100 rounded-b-xl overflow-hidden">
+                                    {filteredInvoices.map((inv) => {
+                                        const c = inv.invoice_data || {};
+                                        return (
+                                            <div key={inv.id} className="p-4 hover:bg-purple-50 transition-colors">
+                                                <div className="flex justify-between items-center mb-2">
+                                                    <span className="font-bold text-purple-650 text-sm font-mono">{inv.invoice_no}</span>
+                                                    <div className="flex gap-2">
+                                                        <span className="bg-blue-100 text-blue-800 text-[10px] px-2.5 py-0.5 rounded-full font-bold border border-blue-200">
+                                                            Inv: {getCustomerInvoiceCount(c)}
+                                                        </span>
+                                                        <span className="bg-emerald-100 text-emerald-800 text-[10px] px-2.5 py-0.5 rounded-full font-bold border border-emerald-200">
+                                                            Rec: {getCustomerReceiptCount(c)}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                <div className="flex justify-between items-end">
+                                                    <div className="flex flex-col gap-0.5">
+                                                        <span className="text-sm font-bold text-gray-800">{c.name}</span>
+                                                        <span className="text-xs text-gray-500">{c.email} {c.phone && `• ${c.phone}`}</span>
+                                                        {c.product && <span className="text-[10px] font-bold text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded w-fit mt-1">{c.product}</span>}
+                                                    </div>
+                                                    <div className="flex items-center gap-3">
+                                                        <button 
+                                                            type="button"
+                                                            onClick={(e) => { e.stopPropagation(); setCustomerModal({ isOpen: true, customer: inv }); }} 
+                                                            className="text-blue-600 hover:underline p-1 text-xs font-bold"
+                                                        >
+                                                            Edit
+                                                        </button>
+                                                        <button 
+                                                            type="button"
+                                                            onClick={(e) => { e.stopPropagation(); handleDeleteClick(inv.id, e); }} 
+                                                            className="text-red-650 hover:underline p-1 text-xs font-bold"
+                                                        >
+                                                            Delete
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            ) : (
+                                <div className="md:hidden divide-y divide-gray-100 rounded-b-xl overflow-hidden">
                                     {filteredInvoices.map((inv) => (
-                                        <tr key={inv.id} onClick={() => navigate(inv.invoice_data?.type === 'receipt' ? `/edit-receipt/${inv.id}` : `/edit-invoice/${inv.id}`)} className="hover:bg-blue-50 cursor-pointer group transition-colors">
-                                            <td className="px-5 py-3 text-gray-600">{new Date(inv.created_at).toLocaleDateString('en-IN')}</td>
-                                            <td className="px-5 py-3 font-bold text-blue-600 group-hover:underline">
+                                        <div key={inv.id} onClick={() => navigate(inv.invoice_data?.type === 'receipt' ? `/edit-receipt/${inv.id}` : `/edit-invoice/${inv.id}`)} className="p-4 active:bg-blue-50 transition-colors cursor-pointer">
+                                            <div className="flex justify-between items-center mb-2">
                                                 <div className="flex items-center gap-2">
-                                                    <span>{inv.invoice_no}</span>
+                                                    <span className="font-bold text-blue-600 text-sm">#{inv.invoice_no}</span>
                                                     {inv.invoice_data?.type === 'receipt' ? (
-                                                        <span className="bg-emerald-100 text-emerald-800 text-[10px] px-1.5 py-0.5 rounded font-bold border border-emerald-200">RECEIPT</span>
+                                                        <span className="bg-emerald-100 text-emerald-800 text-[9px] px-1 py-0.5 rounded font-bold border border-emerald-200">RECEIPT</span>
                                                     ) : (
-                                                        <span className="bg-blue-100 text-blue-800 text-[10px] px-1.5 py-0.5 rounded font-bold border border-blue-200">INVOICE</span>
+                                                        <span className="bg-blue-100 text-blue-800 text-[9px] px-1 py-0.5 rounded font-bold border border-blue-200">INVOICE</span>
                                                     )}
                                                 </div>
-                                            </td>
-                                            <td className="px-5 py-3 font-medium text-gray-800">{inv.invoice_data?.buyer_name}</td>
-                                            <td className="px-5 py-3 text-center">
                                                 <button 
                                                     onClick={(e) => cycleStatus(e, inv)}
-                                                    className={`px-2.5 py-1 rounded-full text-[10px] font-bold border uppercase tracking-wide transition-all active:scale-95 ${getStatusBadgeStyles(inv.status || (inv.invoice_data?.type === 'receipt' ? 'PAID' : 'PENDING'))}`}
+                                                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold border uppercase ${getStatusBadgeStyles(inv.status || (inv.invoice_data?.type === 'receipt' ? 'PAID' : 'PENDING'))}`}
                                                 >
                                                     {inv.status || (inv.invoice_data?.type === 'receipt' ? 'PAID' : 'PENDING')}
                                                 </button>
-                                            </td>
-                                            <td className="px-5 py-3 text-right font-bold text-gray-900">
-                                                {inv.invoice_data?.type === 'receipt' ? (inv.invoice_data?.currencySymbol || '$') : '₹'}
-                                                {inv.total_amount}
-                                            </td>
-                                            <td className="px-5 py-3 text-center"><button onClick={(e) => handleDeleteClick(inv.id, e)} className="text-gray-400 hover:text-red-600 p-1.5 hover:bg-red-50 rounded transition-all">🗑️</button></td>
-                                        </tr>
+                                            </div>
+                                            <div className="flex justify-between items-end">
+                                                <div className="flex flex-col gap-0.5">
+                                                    <span className="text-sm font-semibold text-gray-800">{inv.invoice_data?.buyer_name}</span>
+                                                    <span className="text-xs text-gray-400">{new Date(inv.created_at).toLocaleDateString('en-IN')}</span>
+                                                </div>
+                                                <div className="flex items-center gap-3">
+                                                    <span className="font-bold text-gray-900 text-base">
+                                                        {inv.invoice_data?.type === 'receipt' ? (inv.invoice_data?.currencySymbol || '$') : '₹'}
+                                                        {inv.total_amount}
+                                                    </span>
+                                                    <button onClick={(e) => handleDeleteClick(inv.id, e)} className="text-gray-400 hover:text-red-600 p-2 rounded-full hover:bg-red-50">
+                                                        🗑️
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
                                     ))}
-                                </tbody>
-                            </table>
-
-                            <div className="md:hidden divide-y divide-gray-100 rounded-b-xl overflow-hidden">
-                                {filteredInvoices.map((inv) => (
-                                    <div key={inv.id} onClick={() => navigate(inv.invoice_data?.type === 'receipt' ? `/edit-receipt/${inv.id}` : `/edit-invoice/${inv.id}`)} className="p-4 active:bg-blue-50 transition-colors cursor-pointer">
-                                        <div className="flex justify-between items-center mb-2">
-                                            <div className="flex items-center gap-2">
-                                                <span className="font-bold text-blue-600 text-sm">#{inv.invoice_no}</span>
-                                                {inv.invoice_data?.type === 'receipt' ? (
-                                                    <span className="bg-emerald-100 text-emerald-800 text-[9px] px-1 py-0.5 rounded font-bold border border-emerald-200">RECEIPT</span>
-                                                ) : (
-                                                    <span className="bg-blue-100 text-blue-800 text-[9px] px-1 py-0.5 rounded font-bold border border-blue-200">INVOICE</span>
-                                                )}
-                                            </div>
-                                            <button 
-                                                onClick={(e) => cycleStatus(e, inv)}
-                                                className={`px-2 py-0.5 rounded-full text-[10px] font-bold border uppercase ${getStatusBadgeStyles(inv.status || (inv.invoice_data?.type === 'receipt' ? 'PAID' : 'PENDING'))}`}
-                                            >
-                                                {inv.status || (inv.invoice_data?.type === 'receipt' ? 'PAID' : 'PENDING')}
-                                            </button>
-                                        </div>
-                                        <div className="flex justify-between items-end">
-                                            <div className="flex flex-col gap-0.5">
-                                                <span className="text-sm font-semibold text-gray-800">{inv.invoice_data?.buyer_name}</span>
-                                                <span className="text-xs text-gray-400">{new Date(inv.created_at).toLocaleDateString('en-IN')}</span>
-                                            </div>
-                                            <div className="flex items-center gap-3">
-                                                <span className="font-bold text-gray-900 text-base">
-                                                    {inv.invoice_data?.type === 'receipt' ? (inv.invoice_data?.currencySymbol || '$') : '₹'}
-                                                    {inv.total_amount}
-                                                </span>
-                                                <button onClick={(e) => handleDeleteClick(inv.id, e)} className="text-gray-400 hover:text-red-600 p-2 rounded-full hover:bg-red-50">
-                                                    🗑️
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
+                                </div>
+                            )}
                         </>
                     )}
                 </div>
             </div>
         </div>
+
+        {/* CUSTOMER FORM MODAL */}
+        {customerModal.isOpen && (
+            <CustomerFormModal 
+                customerNode={customerModal.customer} 
+                onClose={() => setCustomerModal({ isOpen: false, customer: null })}
+                onSave={() => {
+                    setCustomerModal({ isOpen: false, customer: null });
+                    supabase.auth.getUser().then(({ data: { user } }) => {
+                        if (user) fetchInvoices(user.id);
+                    });
+                }}
+                allCustomers={allCustomers}
+            />
+        )}
       </div>
       
       <BrandingFooter />

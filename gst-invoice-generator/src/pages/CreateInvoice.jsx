@@ -101,6 +101,7 @@ export default function CreateInvoice() {
   const [gstinError, setGstinError] = useState('')
   const [manualInvoiceEnabled, setManualInvoiceEnabled] = useState(false)
   const [includeGST, setIncludeGST] = useState(true)
+  const [customers, setCustomers] = useState([])
 
   const [popup, setPopup] = useState({ isOpen: false, title: '', message: '', type: 'success', actionLabel: 'OK', onAction: null, cancelLabel: null })
   
@@ -117,6 +118,7 @@ export default function CreateInvoice() {
       invoice_no: '',
       invoiceDate: new Date().toISOString().split('T')[0],
       dueDate: '',
+      customerId: '',
       items: [{ description: '', hsn: '', quantity: 1, price: 0, gstRate: 18 }],
       terms: '1. Payment must be made within 7 days from the invoice date.\n2. Goods once sold will not be taken back.\n3. Interest @ 18% p.a. will be charged if payment is delayed.',
     }
@@ -136,6 +138,30 @@ export default function CreateInvoice() {
           setManualInvoiceEnabled(profile.enable_manual_invoice_no || false)
           if (profile.signature_url) setSignaturePreview(profile.signature_url)
           if (profile.stamp_url) setStampPreview(profile.stamp_url)
+      }
+
+      // Fetch customers
+      try {
+        const { data: allDocs } = await supabase
+          .from('invoices')
+          .select('*')
+          .eq('user_id', user.id)
+        if (allDocs) {
+          const custs = allDocs
+            .filter(doc => doc.invoice_data?.type === 'customer')
+            .map(doc => ({
+              id: doc.id,
+              customer_id: doc.invoice_no,
+              name: doc.invoice_data?.name || '',
+              email: doc.invoice_data?.email || '',
+              phone: doc.invoice_data?.phone || '',
+              address: doc.invoice_data?.address || '',
+              product: doc.invoice_data?.product || '',
+            }))
+          setCustomers(custs)
+        }
+      } catch (err) {
+        console.error("Error fetching customers:", err)
       }
 
       if (id) {
@@ -759,6 +785,38 @@ export default function CreateInvoice() {
 
             <div className="bg-gray-50 p-3 rounded border">
                 <h3 className="text-sm font-semibold mb-2 text-gray-700">Bill To</h3>
+                
+                <input type="hidden" {...register('customerId')} />
+
+                {customers.length > 0 && (
+                  <div className="mb-3">
+                    <label className="text-[10px] uppercase font-bold text-gray-400 mb-1 block">Select Existing Customer (Auto-fill)</label>
+                    <select
+                      className="w-full p-2 border rounded text-sm bg-white focus:ring-2 focus:ring-blue-100 outline-none font-medium text-gray-750"
+                      onChange={(e) => {
+                        const selectedId = e.target.value
+                        if (selectedId === '') {
+                          setValue('customerId', '')
+                          return
+                        }
+                        const cust = customers.find(c => c.customer_id === selectedId)
+                        if (cust) {
+                          setValue('customerId', cust.customer_id)
+                          setValue('buyer_name', cust.name.toUpperCase())
+                          setValue('buyer_address', cust.address)
+                        }
+                      }}
+                      value={formData.customerId || ''}
+                    >
+                      <option value="">-- Choose a Customer --</option>
+                      {customers.map(c => (
+                        <option key={c.customer_id} value={c.customer_id}>
+                          {c.name} ({c.customer_id})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
                 
                 <input 
                     {...register('buyer_name')} 

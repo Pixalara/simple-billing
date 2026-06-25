@@ -101,6 +101,7 @@ export default function CreateReceipt() {
   const [previewScale, setPreviewScale] = useState(1)
   const [mobileTab, setMobileTab] = useState('edit') // 'edit' or 'preview'
   const [popup, setPopup] = useState({ isOpen: false, title: '', message: '', type: 'success', actionLabel: 'OK', onAction: null, cancelLabel: null })
+  const [customers, setCustomers] = useState([])
 
   const showPopup = (title, message, type = 'success', actionLabel = 'OK', onAction = null, cancelLabel = null) => { 
     setPopup({ isOpen: true, title, message, type, actionLabel, onAction, cancelLabel }) 
@@ -115,6 +116,7 @@ export default function CreateReceipt() {
       buyer_name: '',
       buyer_email: '',
       buyer_address: '',
+      customerId: '',
       productName: '',
       planName: '',
       amount: '',
@@ -155,6 +157,30 @@ export default function CreateReceipt() {
         setSellerProfile({ ...profile, address: localStorage.getItem('business_address') || '' })
         if (profile.signature_url) setSignaturePreview(profile.signature_url)
         if (profile.stamp_url) setStampPreview(profile.stamp_url)
+      }
+
+      // Fetch customers
+      try {
+        const { data: allDocs } = await supabase
+          .from('invoices')
+          .select('*')
+          .eq('user_id', user.id)
+        if (allDocs) {
+          const custs = allDocs
+            .filter(doc => doc.invoice_data?.type === 'customer')
+            .map(doc => ({
+              id: doc.id,
+              customer_id: doc.invoice_no,
+              name: doc.invoice_data?.name || '',
+              email: doc.invoice_data?.email || '',
+              phone: doc.invoice_data?.phone || '',
+              address: doc.invoice_data?.address || '',
+              product: doc.invoice_data?.product || '',
+            }))
+          setCustomers(custs)
+        }
+      } catch (err) {
+        console.error("Error fetching customers:", err)
       }
 
       // Load SaaS Settings Defaults
@@ -625,6 +651,43 @@ export default function CreateReceipt() {
             {/* Subscriber Info */}
             <div className="space-y-4 pt-4 border-t">
               <h3 className="text-xs uppercase font-bold text-gray-400 tracking-wider">Subscriber Details</h3>
+              
+              <input type="hidden" {...register('customerId')} />
+
+              {customers.length > 0 && (
+                <div>
+                  <label className="text-xs font-bold text-gray-700 block mb-1">Select Existing Customer (Auto-fill)</label>
+                  <select
+                    className="w-full p-2 border rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-100 outline-none font-medium text-gray-750"
+                    onChange={(e) => {
+                      const selectedId = e.target.value
+                      if (selectedId === '') {
+                        setValue('customerId', '')
+                        return
+                      }
+                      const cust = customers.find(c => c.customer_id === selectedId)
+                      if (cust) {
+                        setValue('customerId', cust.customer_id)
+                        setValue('buyer_name', cust.name)
+                        setValue('buyer_email', cust.email)
+                        setValue('buyer_address', cust.address)
+                        if (cust.product) {
+                          setValue('productName', cust.product)
+                        }
+                      }
+                    }}
+                    value={formData.customerId || ''}
+                  >
+                    <option value="">-- Choose a Customer --</option>
+                    {customers.map(c => (
+                      <option key={c.customer_id} value={c.customer_id}>
+                        {c.name} ({c.customer_id})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
               <div>
                 <label className="text-xs font-bold text-gray-700 block mb-1">Customer Name</label>
                 <input 
