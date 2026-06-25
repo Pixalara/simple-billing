@@ -3,14 +3,16 @@ import { useState, useRef, useEffect } from 'react'
 export default function SearchableSelect({ options, value, onChange, placeholder }) {
   const [isOpen, setIsOpen] = useState(false)
   const [search, setSearch] = useState('')
+  const [prevValue, setPrevValue] = useState(value)
   const wrapperRef = useRef(null)
 
   // Sync internal search state with external value (for initial load/edit)
-  useEffect(() => {
+  if (value !== prevValue) {
+    setPrevValue(value)
     if (value && value !== search) {
       setSearch(value)
     }
-  }, [value])
+  }
 
   const filteredOptions = options.filter(item => 
     item.description.toLowerCase().includes(search.toLowerCase()) ||
