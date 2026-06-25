@@ -658,7 +658,7 @@ export default function CreateReceipt() {
                 <div>
                   <label className="text-xs font-bold text-gray-700 block mb-1">Select Existing Customer (Auto-fill)</label>
                   <select
-                    className="w-full p-2 border rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-100 outline-none font-medium text-gray-750"
+                    className="w-full p-2 border rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-100 outline-none font-medium text-gray-700"
                     onChange={(e) => {
                       const selectedId = e.target.value
                       if (selectedId === '') {

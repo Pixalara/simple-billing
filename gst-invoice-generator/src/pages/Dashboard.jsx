@@ -184,7 +184,7 @@ function CustomerFormModal({ customerNode, onClose, onSave, allCustomers }) {
         {/* Modal Header */}
         <div className="flex justify-between items-center border-b p-5">
           <h3 className="text-lg font-bold text-gray-950">{isEdit ? 'Edit Customer' : 'Add New Customer'}</h3>
-          <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-650 font-bold text-lg">×</button>
+          <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600 font-bold text-lg">×</button>
         </div>
         
         {/* Modal Body (Scrollable) */}
@@ -297,7 +297,7 @@ function CustomerFormModal({ customerNode, onClose, onSave, allCustomers }) {
             type="submit" 
             form="customer-form"
             disabled={loading}
-            className="px-4 py-2 bg-purple-650 text-white rounded-lg text-xs font-bold hover:bg-purple-750 disabled:opacity-50"
+            className="px-4 py-2 bg-purple-600 text-white rounded-lg text-xs font-bold hover:bg-purple-700 disabled:opacity-50"
           >
             {loading ? 'Saving...' : 'Save Customer'}
           </button>
@@ -847,11 +847,11 @@ export default function Dashboard() {
             <div className="bg-white p-4 sm:p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between">
                 <div>
                     <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Total Invoiced Amount</p>
-                    <p className="text-2xl font-bold text-blue-650 mt-1">₹{invoicesStats.totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                    <p className="text-2xl font-bold text-blue-600 mt-1">₹{invoicesStats.totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                 </div>
                 <div className="mt-2 text-xs text-gray-400 font-semibold border-t pt-1.5 flex justify-between items-center">
                     <span>GST Invoiced Value</span>
-                    <span className="text-[10px] bg-blue-50 text-blue-650 px-1.5 py-0.5 rounded font-bold border border-blue-100">GST</span>
+                    <span className="text-[10px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded font-bold border border-blue-100">GST</span>
                 </div>
             </div>
             
@@ -1307,7 +1307,7 @@ export default function Dashboard() {
                                     <button 
                                         type="button"
                                         onClick={() => setCustomerModal({ isOpen: true, customer: null })}
-                                        className="px-4 py-2 bg-purple-600 hover:bg-purple-750 text-white rounded-lg text-sm font-bold shadow transition-colors flex items-center gap-1 active:scale-95 transform"
+                                        className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-bold shadow transition-colors flex items-center gap-1 active:scale-95 transform"
                                     >
                                         <span>+</span> Add Customer
                                     </button>
@@ -1385,7 +1385,7 @@ export default function Dashboard() {
                                                     <td className="px-5 py-3 font-bold text-purple-600 font-mono">{inv.invoice_no}</td>
                                                     <td className="px-5 py-3 font-bold text-gray-800">{c.name}</td>
                                                     <td className="px-5 py-3 text-gray-600">{c.email}</td>
-                                                    <td className="px-5 py-3 text-gray-650">{c.phone || '-'}</td>
+                                                    <td className="px-5 py-3 text-gray-600">{c.phone || '-'}</td>
                                                     <td className="px-5 py-3 text-center font-medium text-gray-700">{c.product || '-'}</td>
                                                     <td className="px-5 py-3 text-center">
                                                         <span className="bg-blue-100 text-blue-800 text-xs px-2.5 py-0.5 rounded-full font-bold border border-blue-200">
@@ -1409,7 +1409,7 @@ export default function Dashboard() {
                                                             <button 
                                                                 type="button"
                                                                 onClick={(e) => { e.stopPropagation(); handleDeleteClick(inv.id, e); }} 
-                                                                className="text-gray-505 hover:text-red-600 p-1 px-2.5 hover:bg-red-50 rounded transition-all font-semibold text-xs border"
+                                                                className="text-red-600 hover:text-red-600 p-1 px-2.5 hover:bg-red-50 rounded transition-all font-semibold text-xs border"
                                                             >
                                                                 Delete
                                                             </button>
@@ -1473,7 +1473,7 @@ export default function Dashboard() {
                                         return (
                                             <div key={inv.id} className="p-4 hover:bg-purple-50 transition-colors">
                                                 <div className="flex justify-between items-center mb-2">
-                                                    <span className="font-bold text-purple-650 text-sm font-mono">{inv.invoice_no}</span>
+                                                    <span className="font-bold text-purple-600 text-sm font-mono">{inv.invoice_no}</span>
                                                     <div className="flex gap-2">
                                                         <span className="bg-blue-100 text-blue-800 text-[10px] px-2.5 py-0.5 rounded-full font-bold border border-blue-200">
                                                             Inv: {getCustomerInvoiceCount(c)}
@@ -1500,7 +1500,7 @@ export default function Dashboard() {
                                                         <button 
                                                             type="button"
                                                             onClick={(e) => { e.stopPropagation(); handleDeleteClick(inv.id, e); }} 
-                                                            className="text-red-650 hover:underline p-1 text-xs font-bold"
+                                                            className="text-red-600 hover:underline p-1 text-xs font-bold"
                                                         >
                                                             Delete
                                                         </button>
