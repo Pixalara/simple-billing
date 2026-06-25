@@ -352,8 +352,8 @@ export default function Dashboard() {
     const count = allReceipts.length
     const totalsByCurrency = {}
     allReceipts.forEach(r => {
-      const currency = r.invoice_data?.currency || 'USD'
-      const symbol = r.invoice_data?.currencySymbol || '$'
+      const currency = r.invoice_data?.currency || 'INR'
+      const symbol = r.invoice_data?.currencySymbol || '₹'
       if (!totalsByCurrency[currency]) {
         totalsByCurrency[currency] = { symbol, amount: 0 }
       }
@@ -383,7 +383,7 @@ export default function Dashboard() {
       if (!map[key]) {
         map[key] = { key, label, invoiceAmount: 0, invoiceCount: 0, receiptAmount: 0, receiptCount: 0 }
       }
-      const currency = rec.invoice_data?.currency || 'USD'
+      const currency = rec.invoice_data?.currency || 'INR'
       const rate = currency === 'USD' ? 83 : currency === 'EUR' ? 90 : 1
       map[key].receiptAmount += parseFloat(rec.total_amount || 0) * rate
       map[key].receiptCount += 1
@@ -396,7 +396,7 @@ export default function Dashboard() {
     const map = {}
     allReceipts.forEach(r => {
       const name = r.invoice_data?.productName || 'Other Plan'
-      const currency = r.invoice_data?.currency || 'USD'
+      const currency = r.invoice_data?.currency || 'INR'
       const rate = currency === 'USD' ? 83 : currency === 'EUR' ? 90 : 1
       const amountInINR = parseFloat(r.total_amount || 0) * rate
       if (!map[name]) {
@@ -428,7 +428,7 @@ export default function Dashboard() {
     })
     allReceipts.forEach(rec => {
       const taxAmt = parseFloat(rec.invoice_data?.taxAmount || 0)
-      const currency = rec.invoice_data?.currency || 'USD'
+      const currency = rec.invoice_data?.currency || 'INR'
       const rate = currency === 'USD' ? 83 : currency === 'EUR' ? 90 : 1
       saasTax += taxAmt * rate
     })
@@ -871,7 +871,7 @@ export default function Dashboard() {
                     <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Realized Revenue</p>
                     <div className="mt-1 flex flex-col gap-0.5">
                         {Object.keys(receiptsStats.totalsByCurrency).length === 0 ? (
-                            <p className="text-2xl font-bold text-emerald-600">$0.00</p>
+                            <p className="text-2xl font-bold text-emerald-600">₹0.00</p>
                         ) : (
                             Object.entries(receiptsStats.totalsByCurrency).map(([currency, data]) => (
                                 <p key={currency} className="text-2xl font-bold text-emerald-600 leading-tight">

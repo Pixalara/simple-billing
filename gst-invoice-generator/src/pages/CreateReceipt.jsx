@@ -19,8 +19,8 @@ const THEMES = [
 ]
 
 const CURRENCIES = [
-  { code: 'USD', symbol: '$', name: 'US Dollar' },
   { code: 'INR', symbol: '₹', name: 'Indian Rupee' },
+  { code: 'USD', symbol: '$', name: 'US Dollar' },
   { code: 'EUR', symbol: '€', name: 'Euro' },
   { code: 'GBP', symbol: '£', name: 'British Pound' },
   { code: 'CAD', symbol: 'C$', name: 'Canadian Dollar' },
@@ -122,7 +122,7 @@ export default function CreateReceipt() {
       amount: '',
       planDuration: '1',
       planType: 'monthly',
-      currency: 'USD',
+      currency: 'INR',
       paymentMethod: 'Stripe',
       transactionId: '',
       taxRate: '0',
