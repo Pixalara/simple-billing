@@ -238,6 +238,12 @@ export default function Landing() {
               Explore Platform
             </a>
           </div>
+
+          <div className="hero-trust-indicators">
+            <span>✓ 14-Day Free Trial</span>
+            <span>✓ GST-Compliant Routing</span>
+            <span>✓ No Credit Card Required</span>
+          </div>
         </div>
 
         {/* Interactive Live Invoice Builder widget */}
@@ -391,7 +397,7 @@ export default function Landing() {
           <h2>Engineered for every business model</h2>
           <p>
             Whether you bill clients for recurring SaaS services, milestone hours, or point-of-sale retail checkouts, 
-            Pixalara adapts perfectly.
+            Pixalara adapts perfectly to keep records clean and compliant.
           </p>
         </div>
 
@@ -463,9 +469,9 @@ export default function Landing() {
       {/* Bento Grid Features Section */}
       <section id="features" className="features-section">
         <div className="section-header">
-          <h2>Engineered with elite core utilities</h2>
+          <h2>Fully loaded with core features</h2>
           <p>
-            Advanced modules built to accelerate invoices, balance customer ledgers, and secure records.
+            Automate tax routing, track balances, and secure your financial transactions in a centralized cloud ledger.
           </p>
         </div>
 
@@ -485,17 +491,17 @@ export default function Landing() {
               <h3>Automated Indian GST Compliance</h3>
               <p>
                 Dynamic location checking maps tax values (CGST, SGST, IGST) automatically. 
-                Built-in SAC/HSN catalog indexes allow quick product classification.
+                Built-in SAC/HSN catalog indexes allow quick product classification and seamless GSTR sales preparation.
               </p>
             </div>
             <div className="card-visual-illustration">
               <div className="compliance-visual">
                 <div className="comp-badge-row">
-                  <span>Acme Sales (Mumbai &rarr; Pune)</span>
+                  <span>Sales Invoice (Maharashtra &rarr; Pune)</span>
                   <span className="comp-tag">CGST (9%) + SGST (9%)</span>
                 </div>
                 <div className="comp-badge-row">
-                  <span>Acme Sales (Mumbai &rarr; Bengaluru)</span>
+                  <span>Sales Invoice (Maharashtra &rarr; Bengaluru)</span>
                   <span className="comp-tag">IGST (18%)</span>
                 </div>
               </div>
@@ -513,9 +519,9 @@ export default function Landing() {
                   <path d="M3 3v18h18"></path>
                 </svg>
               </div>
-              <h3>Real-Time Receivables</h3>
+              <h3>Insightful Revenue Ledger</h3>
               <p>
-                Track sales, outstanding balances, and GST collected in real-time.
+                Monitor monthly collections, pending receivables, and tax pool sums. Access custom transaction dashboards instantly.
               </p>
             </div>
             <div className="card-visual-illustration">
@@ -526,21 +532,6 @@ export default function Landing() {
                 <div className="chart-bar" style={{ height: '85%' }}></div>
                 <div className="chart-bar" style={{ height: '55%' }}></div>
               </div>
-            </div>
-          </div>
-
-          {/* Recurring Billing Card */}
-          <div className="bento-card">
-            <div className="card-top">
-              <div className="feature-icon-box">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path>
-                </svg>
-              </div>
-              <h3>Subscription Engine</h3>
-              <p>
-                Process weekly, monthly, and yearly cycles. Auto-generate subsequent invoices.
-              </p>
             </div>
           </div>
 
@@ -555,10 +546,10 @@ export default function Landing() {
                   <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
                 </svg>
               </div>
-              <h3>Private Customer Portal</h3>
+              <h3>Private Customer Self-Serve Portal</h3>
               <p>
                 Give clients self-serve access to view paid history, obtain PDF receipts, 
-                and modify billing details. Saves administrative time.
+                and modify billing details. Saves administrative time and builds trust.
               </p>
             </div>
             <div className="card-visual-illustration">
@@ -574,6 +565,70 @@ export default function Landing() {
                   <div className="skeleton-line w-75"></div>
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* Recurring Billing Card */}
+          <div className="bento-card">
+            <div className="card-top">
+              <div className="feature-icon-box">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path>
+                </svg>
+              </div>
+              <h3>Subscription Engine</h3>
+              <p>
+                Process weekly, monthly, and yearly cycles. Auto-generate subsequent invoices and calculate prorated fees on upgrades.
+              </p>
+            </div>
+          </div>
+
+          {/* Customizable Layouts Card */}
+          <div className="bento-card">
+            <div className="card-top">
+              <div className="feature-icon-box">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                  <line x1="9" y1="3" x2="9" y2="21"></line>
+                  <line x1="9" y1="9" x2="21" y2="9"></line>
+                </svg>
+              </div>
+              <h3>Customizable PDF Invoices</h3>
+              <p>
+                Upload your brand logo, add signature stamps, customize terms, and design client-facing billing layouts.
+              </p>
+            </div>
+          </div>
+
+          {/* Secure Cloud Backups Card */}
+          <div className="bento-card">
+            <div className="card-top">
+              <div className="feature-icon-box">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                </svg>
+              </div>
+              <h3>AES-256 Cloud Vault</h3>
+              <p>
+                All data is encrypted in transit and at rest. Automated daily backups ensure your files are safe and secure.
+              </p>
+            </div>
+          </div>
+
+          {/* API Integrations Card */}
+          <div className="bento-card">
+            <div className="card-top">
+              <div className="feature-icon-box">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="16 18 22 12 16 6"></polyline>
+                  <polyline points="8 6 2 12 8 18"></polyline>
+                </svg>
+              </div>
+              <h3>Webhooks & Developer APIs</h3>
+              <p>
+                Trigger actions on external systems when invoices are created, payments fail, or customer profiles change.
+              </p>
             </div>
           </div>
         </div>

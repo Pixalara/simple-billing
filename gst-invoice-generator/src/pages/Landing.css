@@ -229,9 +229,9 @@ body {
   cursor: pointer;
 }
 
-/* Hero Section */
+/* Hero Section - Tighter paddings */
 .landing-hero {
-  padding: 7rem 6% 4rem;
+  padding: 4.5rem 6% 3.5rem;
   max-width: 1300px;
   margin: 0 auto;
   display: grid;
@@ -295,7 +295,7 @@ body {
 .landing-hero p.hero-desc {
   font-size: 1.2rem;
   color: var(--color-text-muted);
-  margin-bottom: 2.5rem;
+  margin-bottom: 2.25rem;
   line-height: 1.65;
   max-width: 620px;
 }
@@ -303,6 +303,15 @@ body {
 .hero-actions {
   display: flex;
   gap: 1rem;
+}
+
+.hero-trust-indicators {
+  display: flex;
+  gap: 1.5rem;
+  margin-top: 2.25rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
 }
 
 /* Interactive Invoice Builder Widget - Light theme */
@@ -574,9 +583,9 @@ body {
   color: var(--color-text-muted);
 }
 
-/* Business segments section - Light themed */
+/* Business segments section - Tighter padding */
 .segments-section {
-  padding: 6rem 6%;
+  padding: 4.5rem 6%;
   background-color: var(--color-bg-alt);
   border-top: 1px solid var(--color-card-border);
   border-bottom: 1px solid var(--color-card-border);
@@ -587,7 +596,7 @@ body {
 .section-header {
   text-align: center;
   max-width: 750px;
-  margin: 0 auto 4rem;
+  margin: 0 auto 2.5rem; /* Reduced from 4rem */
 }
 
 .section-header h2 {
@@ -609,7 +618,7 @@ body {
   display: flex;
   justify-content: center;
   gap: 0.5rem;
-  margin-bottom: 3.5rem;
+  margin-bottom: 2.5rem; /* Reduced from 3.5rem */
   background: #FFFFFF;
   border: 1px solid var(--color-card-border);
   padding: 0.4rem;
@@ -778,9 +787,9 @@ body {
 
 .skeleton-small-line.w-70 { width: 70%; }
 
-/* Features Section (Bento Grid) - Light themed */
+/* Features Section (Bento Grid) - Tighter padding */
 .features-section {
-  padding: 7rem 6%;
+  padding: 4.5rem 6%;
   position: relative;
   z-index: 1;
 }
@@ -942,9 +951,9 @@ body {
   transition: height 0.5s ease;
 }
 
-/* Pricing Section - Light themed */
+/* Pricing Section - Tighter padding */
 .pricing-section {
-  padding: 7rem 6%;
+  padding: 4.5rem 6%;
   background-color: var(--color-bg-alt);
   position: relative;
   z-index: 1;
@@ -955,7 +964,7 @@ body {
   align-items: center;
   justify-content: center;
   gap: 1rem;
-  margin-bottom: 4rem;
+  margin-bottom: 2.5rem; /* Reduced from 4rem */
 }
 
 .pricing-switch-label {
@@ -1142,9 +1151,9 @@ body {
   font-size: 1rem;
 }
 
-/* FAQ Section - Light themed */
+/* FAQ Section - Tighter padding */
 .faq-section {
-  padding: 7rem 6%;
+  padding: 4.5rem 6%;
   max-width: 900px;
   margin: 0 auto;
   position: relative;
@@ -1332,7 +1341,7 @@ body {
   .landing-hero {
     grid-template-columns: 1fr;
     gap: 3rem;
-    padding-top: 5rem;
+    padding-top: 4rem;
   }
   
   .hero-content {
