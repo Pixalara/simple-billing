@@ -30,6 +30,7 @@ const CURRENCIES = [
 const PAYMENT_METHODS = [
   'Stripe',
   'PayPal',
+  'UPI',
   'Razorpay',
   'Credit Card',
   'Bank Transfer',
