@@ -512,6 +512,7 @@ export default function Dashboard() {
   const allReceipts = useMemo(() => invoices.filter(inv => inv.invoice_data?.type === 'receipt'), [invoices]);
   const allCustomers = useMemo(() => invoices.filter(inv => inv.invoice_data?.type === 'customer'), [invoices]);
   const allProducts = useMemo(() => invoices.filter(inv => inv.invoice_data?.type === 'product'), [invoices]);
+  const billingDocuments = useMemo(() => invoices.filter(inv => inv.invoice_data?.type !== 'customer' && inv.invoice_data?.type !== 'product'), [invoices]);
 
   const invoicesStats = useMemo(() => {
     const count = allInvoices.length
@@ -633,8 +634,8 @@ export default function Dashboard() {
     ).length;
   }
   
-  const statusData = useMemo(() => processStatusData(invoices), [invoices]);
-  const topClients = useMemo(() => processTopClients(invoices), [invoices]);
+  const statusData = useMemo(() => processStatusData(billingDocuments), [billingDocuments]);
+  const topClients = useMemo(() => processTopClients(billingDocuments), [billingDocuments]);
 
   const [searchTerm, setSearchTerm] = useState('')
   const [showFilters, setShowFilters] = useState(false)
