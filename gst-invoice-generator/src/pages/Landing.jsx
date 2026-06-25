@@ -10,10 +10,7 @@ export default function Landing() {
       {/* Navbar */}
       <nav className="landing-navbar">
         <Link to="/" className="landing-logo">
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect width="24" height="24" rx="6" fill="#FFC700" />
-            <path d="M7 17V7L17 17V7" stroke="#0A0A0A" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
+          <img src="/billing-favicon.svg" alt="Pixalara Bill Logo" />
           Pixalara Bill
         </Link>
         <div className="landing-nav-links">
