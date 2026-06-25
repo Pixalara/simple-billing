@@ -867,7 +867,7 @@ export default function CreateReceipt() {
                 </div>
 
                 {/* SUBSCRIPTION TABLE */}
-                <div className="mb-6 flex-grow overflow-hidden flex flex-col justify-start">
+                <div className="mb-4 overflow-hidden">
                   <table className="w-full text-left border-collapse">
                     <thead>
                       <tr className="text-[10px] font-bold uppercase tracking-wider text-gray-500 border-b border-gray-100">
@@ -898,7 +898,7 @@ export default function CreateReceipt() {
                 </div>
 
                 {/* TOTALS & STAMP */}
-                <div className="flex justify-between items-start mb-6">
+                <div className="flex justify-between items-start mb-4">
                   {/* Paid Badge / Stamp */}
                   <div className="pt-2">
                     <div className="inline-flex flex-col items-center border-4 border-emerald-500/80 rounded-xl px-4 py-2 rotate-[-4deg] bg-emerald-50/20">
@@ -931,7 +931,7 @@ export default function CreateReceipt() {
                 </div>
 
                 {/* WORDS */}
-                <div className="bg-gray-50/50 p-3 rounded-lg border border-gray-100/50 mb-8 text-right">
+                <div className="bg-gray-50/50 p-3 rounded-lg border border-gray-100/50 mb-4 text-right">
                   <p className="text-[10px] uppercase text-gray-400 font-black tracking-wide mb-0.5">Amount in Words</p>
                   <p className="text-xs font-bold text-gray-800">{amountInWords}</p>
                 </div>
