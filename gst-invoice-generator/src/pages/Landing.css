@@ -743,49 +743,109 @@ body {
   gap: 0.8rem;
 }
 
-.skeleton-line {
-  height: 10px;
-  background-color: #F3F4F6;
+.mockup-header-title {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--color-text-white);
+  text-align: left;
+}
+
+.mockup-header-subtitle {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  margin-bottom: 0.75rem;
+  text-align: left;
+}
+
+.mockup-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1rem;
+  font-size: 0.8rem;
+}
+
+.mockup-table th {
+  text-align: left;
+  color: var(--color-text-muted);
+  font-weight: 700;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--color-card-border);
+}
+
+.mockup-table td {
+  padding: 0.6rem 0;
+  border-bottom: 1px solid rgba(229, 231, 235, 0.4);
+  font-weight: 600;
+  text-align: left;
+}
+
+.mockup-table tr:last-child td {
+  border-bottom: none;
+}
+
+.mockup-badge {
+  font-size: 0.65rem;
+  font-weight: 800;
+  padding: 0.15rem 0.4rem;
   border-radius: 4px;
+  text-transform: uppercase;
 }
 
-.skeleton-line.title-line {
-  width: 45%;
-  height: 16px;
-  background-color: #E5E7EB;
-  margin-bottom: 0.5rem;
+.mockup-badge.active {
+  background-color: rgba(16, 185, 129, 0.1);
+  color: #059669;
 }
 
-.skeleton-line.w-75 { width: 75%; }
-.skeleton-line.w-90 { width: 90%; }
-.skeleton-line.w-60 { width: 60%; }
+.mockup-badge.pending {
+  background-color: rgba(245, 158, 11, 0.1);
+  color: #D97706;
+}
 
-.skeleton-grid {
+.mockup-badge.paid {
+  background-color: rgba(16, 185, 129, 0.1);
+  color: #059669;
+}
+
+.mockup-badge.trial {
+  background-color: rgba(59, 130, 246, 0.1);
+  color: #2563EB;
+}
+
+.stats-card-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-columns: repeat(3, 1fr);
   gap: 0.75rem;
   margin-top: 0.5rem;
 }
 
-.skeleton-block {
-  height: 50px;
-  background-color: #F9FAFB;
+.stats-card-block {
+  background-color: var(--color-bg-alt);
   border: 1px solid var(--color-card-border);
-  border-radius: 6px;
-  padding: 0.5rem;
+  border-radius: 8px;
+  padding: 0.6rem;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.01);
+  text-align: left;
 }
 
-.skeleton-small-line {
-  height: 6px;
-  background-color: #E5E7EB;
-  border-radius: 3px;
-  width: 50%;
+.stats-card-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.2px;
+  margin-bottom: 0.25rem;
+  text-align: left;
 }
 
-.skeleton-small-line.w-70 { width: 70%; }
+.stats-card-value {
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: #B45309; /* Matches yellow/gold theme */
+  text-align: left;
+}
 
 /* Features Section (Bento Grid) - Tighter padding */
 .features-section {

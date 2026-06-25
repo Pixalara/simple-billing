@@ -79,9 +79,9 @@ export default function Landing() {
         "Integrated self-serve customer portal for downloads"
       ],
       mockupItems: [
-        { label: "Active Subscriptions", value: "1,248 Users" },
-        { label: "MRR", value: "₹4,82,500" },
-        { label: "LTV Average", value: "₹38,200" }
+        { label: "Active Users", value: "1,248 Users" },
+        { label: "Monthly Revenue", value: "₹4,82,500" },
+        { label: "Average LTV", value: "₹38,200" }
       ]
     },
     services: {
@@ -95,8 +95,8 @@ export default function Landing() {
       ],
       mockupItems: [
         { label: "Active Retainers", value: "48 Accounts" },
-        { label: "Outstanding Fees", value: "₹1,85,000" },
-        { label: "Average Pay Days", value: "12 Days" }
+        { label: "Outstanding Dues", value: "₹1,85,000" },
+        { label: "Avg Turnaround", value: "12 Days" }
       ]
     },
     retail: {
@@ -109,9 +109,9 @@ export default function Landing() {
         "Consolidated reports optimized for monthly GST filing"
       ],
       mockupItems: [
-        { label: "Checkout Invoices", value: "18,490 Drafted" },
-        { label: "State Routes Active", value: "28 States" },
-        { label: "HSN Code Catalog", value: "15,000+ Items" }
+        { label: "POS Invoices", value: "18,490 Total" },
+        { label: "Active States", value: "28 States" },
+        { label: "Catalog Size", value: "15,000+ Items" }
       ]
     }
   };
@@ -445,19 +445,109 @@ export default function Landing() {
               <div className="mockup-dot"></div>
             </div>
             <div className="mockup-content-skeleton">
-              <div className="skeleton-line title-line"></div>
-              <div className="skeleton-line w-90"></div>
-              <div className="skeleton-line w-75"></div>
-              <div className="skeleton-line w-60"></div>
+              <div className="mockup-header-title">
+                {activeSegment === 'saas' && "SaaS Subscription Ledger"}
+                {activeSegment === 'services' && "Milestone & Retainer Panel"}
+                {activeSegment === 'retail' && "POS Checkout Logs"}
+              </div>
+              <div className="mockup-header-subtitle">
+                {activeSegment === 'saas' && "Real-time subscription logs for June 2026"}
+                {activeSegment === 'services' && "Client billing milestones & invoices"}
+                {activeSegment === 'retail' && "POS high-volume order sales streams"}
+              </div>
+
+              <table className="mockup-table">
+                <thead>
+                  {activeSegment === 'saas' && (
+                    <tr>
+                      <th>Plan Type</th>
+                      <th>Revenue</th>
+                      <th style={{ textAlign: 'right' }}>Status</th>
+                    </tr>
+                  )}
+                  {activeSegment === 'services' && (
+                    <tr>
+                      <th>Milestone Description</th>
+                      <th>Billing Fee</th>
+                      <th style={{ textAlign: 'right' }}>Status</th>
+                    </tr>
+                  )}
+                  {activeSegment === 'retail' && (
+                    <tr>
+                      <th>Invoice ID</th>
+                      <th>Location / Customer</th>
+                      <th style={{ textAlign: 'right' }}>Total</th>
+                    </tr>
+                  )}
+                </thead>
+                <tbody>
+                  {activeSegment === 'saas' && (
+                    <>
+                      <tr>
+                        <td>Google Workspace seats</td>
+                        <td>₹4,990/mo</td>
+                        <td style={{ textAlign: 'right' }}><span className="mockup-badge active">Active</span></td>
+                      </tr>
+                      <tr>
+                        <td>Cloud Infra Support</td>
+                        <td>₹12,500/mo</td>
+                        <td style={{ textAlign: 'right' }}><span className="mockup-badge active">Active</span></td>
+                      </tr>
+                      <tr>
+                        <td>Custom Pipeline Add-on</td>
+                        <td>₹2,400/mo</td>
+                        <td style={{ textAlign: 'right' }}><span className="mockup-badge trial">Trial</span></td>
+                      </tr>
+                    </>
+                  )}
+                  {activeSegment === 'services' && (
+                    <>
+                      <tr>
+                        <td>UI/UX Redesign - Phase 2</td>
+                        <td>₹85,000</td>
+                        <td style={{ textAlign: 'right' }}><span className="mockup-badge pending">Pending</span></td>
+                      </tr>
+                      <tr>
+                        <td>AWS DevOps Consultancy</td>
+                        <td>₹18,000</td>
+                        <td style={{ textAlign: 'right' }}><span className="mockup-badge paid">Paid</span></td>
+                      </tr>
+                      <tr>
+                        <td>Weekly Strategy Retainer</td>
+                        <td>₹82,000</td>
+                        <td style={{ textAlign: 'right' }}><span className="mockup-badge paid">Paid</span></td>
+                      </tr>
+                    </>
+                  )}
+                  {activeSegment === 'retail' && (
+                    <>
+                      <tr>
+                        <td>INV-2026-08422</td>
+                        <td>Acme Stores Pune</td>
+                        <td style={{ textAlign: 'right' }}>₹4,890</td>
+                      </tr>
+                      <tr>
+                        <td>INV-2026-08423</td>
+                        <td>Maharashtra Retail</td>
+                        <td style={{ textAlign: 'right' }}>₹14,200</td>
+                      </tr>
+                      <tr>
+                        <td>INV-2026-08424</td>
+                        <td>Bengaluru Outlet</td>
+                        <td style={{ textAlign: 'right' }}>₹8,990</td>
+                      </tr>
+                    </>
+                  )}
+                </tbody>
+              </table>
               
-              <div className="skeleton-grid">
+              <div className="stats-card-grid">
                 {segments[activeSegment].mockupItems.map((item, idx) => (
-                  <div key={idx} className="skeleton-block">
-                    <div className="skeleton-small-line w-70"></div>
-                    <span style={{ fontSize: '0.9rem', fontWeight: '800', color: 'var(--color-primary)' }}>
+                  <div key={idx} className="stats-card-block">
+                    <span className="stats-card-label">{item.label}</span>
+                    <span className="stats-card-value">
                       {item.value}
                     </span>
-                    <div className="skeleton-small-line"></div>
                   </div>
                 ))}
               </div>
