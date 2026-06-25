@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import './Landing.css';
+const rollingTexts = ['subscription engine', 'milestone billing', 'retail checkouts'];
 
 export default function Landing() {
   const navigate = useNavigate();
@@ -24,6 +25,16 @@ export default function Landing() {
   const [clientState, setClientState] = useState('Maharashtra'); // Maharashtra = Intra-state, Karnataka = Inter-state, US = Export
   const [isGenerating, setIsGenerating] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+
+  const [rollIdx, setRollIdx] = useState(0);
+
+  // Auto-rotate the feature names in the hero section header
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setRollIdx(prev => (prev + 1) % rollingTexts.length);
+    }, 2500);
+    return () => clearInterval(timer);
+  }, []);
 
   // Scroll handler for sticky navbar styling
   useEffect(() => {
@@ -265,7 +276,11 @@ export default function Landing() {
           </div>
           <h1>
             Complete invoicing & <br />
-            <span>subscription engine</span>
+            <span className="rolling-text-wrapper">
+              <span key={rollIdx} className="rolling-text-item">
+                {rollingTexts[rollIdx]}
+              </span>
+            </span>
           </h1>
           <p className="hero-desc">
             An elite billing software engineered for modern Indian enterprises, SaaS companies, and service agencies. 

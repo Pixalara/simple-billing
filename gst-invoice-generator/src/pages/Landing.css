@@ -347,7 +347,7 @@ body {
   100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(217, 119, 6, 0); }
 }
 
-landing-hero h1 {
+.landing-hero h1 {
   font-size: clamp(2.25rem, 6.5vw, 3.75rem);
   font-weight: 850;
   line-height: 1.15;
@@ -360,6 +360,35 @@ landing-hero h1 {
   background: linear-gradient(135deg, #B45309 0%, #D97706 50%, #FFC700 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+}
+
+/* Rolling Text Header Carousel Effect */
+.rolling-text-wrapper {
+  display: inline-flex;
+  position: relative;
+  overflow: hidden;
+  height: 1.2em;
+  vertical-align: bottom;
+  align-items: center;
+}
+
+.rolling-text-item {
+  display: inline-block;
+  background: linear-gradient(135deg, #B45309 0%, #D97706 50%, #FFC700 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: rollIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes rollIn {
+  0% {
+    transform: translateY(80%);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
 .landing-hero p.hero-desc {
