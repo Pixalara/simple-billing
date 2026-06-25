@@ -803,7 +803,11 @@ export default function CreateInvoice() {
                         if (cust) {
                           setValue('customerId', cust.customer_id)
                           setValue('buyer_name', cust.name.toUpperCase())
-                          setValue('buyer_address', cust.address)
+                          const fullAddr = [cust.address, cust.city].filter(Boolean).join(', ')
+                          setValue('buyer_address', fullAddr)
+                          if (cust.state) {
+                            setValue('buyer_state', cust.state)
+                          }
                         }
                       }}
                       value={formData.customerId || ''}

@@ -670,7 +670,8 @@ export default function CreateReceipt() {
                         setValue('customerId', cust.customer_id)
                         setValue('buyer_name', cust.name)
                         setValue('buyer_email', cust.email)
-                        setValue('buyer_address', cust.address)
+                        const fullAddr = [cust.address, cust.city, cust.state].filter(Boolean).join(', ')
+                        setValue('buyer_address', fullAddr)
                         if (cust.product) {
                           setValue('productName', cust.product)
                         }

@@ -107,6 +107,8 @@ function CustomerFormModal({ customerNode, onClose, onSave, allCustomers }) {
     email: '',
     phone: '',
     address: '',
+    city: '',
+    state: '',
     product: ''
   })
   
@@ -118,6 +120,8 @@ function CustomerFormModal({ customerNode, onClose, onSave, allCustomers }) {
         email: customerNode.invoice_data?.email || '',
         phone: customerNode.invoice_data?.phone || '',
         address: customerNode.invoice_data?.address || '',
+        city: customerNode.invoice_data?.city || '',
+        state: customerNode.invoice_data?.state || '',
         product: customerNode.invoice_data?.product || ''
       })
     } else {
@@ -152,6 +156,8 @@ function CustomerFormModal({ customerNode, onClose, onSave, allCustomers }) {
           email: fields.email,
           phone: fields.phone,
           address: fields.address,
+          city: fields.city,
+          state: fields.state,
           product: fields.product
         },
         total_amount: 0
@@ -174,93 +180,128 @@ function CustomerFormModal({ customerNode, onClose, onSave, allCustomers }) {
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4 animate-in fade-in duration-200">
-      <div className="bg-white rounded-xl max-w-md w-full p-6 shadow-2xl space-y-4">
-        <div className="flex justify-between items-center border-b pb-2">
+      <div className="bg-white rounded-xl max-w-md w-full shadow-2xl flex flex-col max-h-[90vh] overflow-hidden">
+        {/* Modal Header */}
+        <div className="flex justify-between items-center border-b p-5">
           <h3 className="text-lg font-bold text-gray-950">{isEdit ? 'Edit Customer' : 'Add New Customer'}</h3>
           <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-650 font-bold text-lg">×</button>
         </div>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="text-[10px] uppercase font-bold text-gray-400 mb-1 block">Customer ID</label>
-            <input 
-              type="text" 
-              value={fields.customer_id} 
-              onChange={e => setFields({...fields, customer_id: e.target.value})} 
-              className="w-full p-2 border rounded text-sm bg-white focus:ring-2 focus:ring-blue-100 outline-none font-mono"
-              required 
-            />
-          </div>
-          <div>
-            <label className="text-[10px] uppercase font-bold text-gray-400 mb-1 block">Name</label>
-            <input 
-              type="text" 
-              value={fields.name} 
-              onChange={e => setFields({...fields, name: e.target.value})} 
-              placeholder="e.g. Acme Corporation"
-              className="w-full p-2 border rounded text-sm bg-white focus:ring-2 focus:ring-blue-100 outline-none"
-              required 
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-2">
+        
+        {/* Modal Body (Scrollable) */}
+        <div className="flex-1 overflow-y-auto p-5">
+          <form id="customer-form" onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="text-[10px] uppercase font-bold text-gray-400 mb-1 block">Email</label>
+              <label className="text-[10px] uppercase font-bold text-gray-400 mb-1 block">Customer ID *</label>
               <input 
-                type="email" 
-                value={fields.email} 
-                onChange={e => setFields({...fields, email: e.target.value})} 
-                placeholder="e.g. info@acme.com"
-                className="w-full p-2 border rounded text-sm bg-white focus:ring-2 focus:ring-blue-100 outline-none"
+                type="text" 
+                value={fields.customer_id} 
+                onChange={e => setFields({...fields, customer_id: e.target.value})} 
+                className="w-full p-2 border rounded text-sm bg-white focus:ring-2 focus:ring-blue-100 outline-none font-mono"
                 required 
               />
             </div>
             <div>
-              <label className="text-[10px] uppercase font-bold text-gray-400 mb-1 block">Phone</label>
+              <label className="text-[10px] uppercase font-bold text-gray-400 mb-1 block">Name *</label>
               <input 
                 type="text" 
-                value={fields.phone} 
-                onChange={e => setFields({...fields, phone: e.target.value})} 
-                placeholder="e.g. 9876543210"
+                value={fields.name} 
+                onChange={e => setFields({...fields, name: e.target.value})} 
+                placeholder="e.g. Acme Corporation"
+                className="w-full p-2 border rounded text-sm bg-white focus:ring-2 focus:ring-blue-100 outline-none"
+                required 
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-[10px] uppercase font-bold text-gray-400 mb-1 block">Email *</label>
+                <input 
+                  type="email" 
+                  value={fields.email} 
+                  onChange={e => setFields({...fields, email: e.target.value})} 
+                  placeholder="e.g. info@acme.com"
+                  className="w-full p-2 border rounded text-sm bg-white focus:ring-2 focus:ring-blue-100 outline-none"
+                  required 
+                />
+              </div>
+              <div>
+                <label className="text-[10px] uppercase font-bold text-gray-400 mb-1 block">Phone *</label>
+                <input 
+                  type="text" 
+                  value={fields.phone} 
+                  onChange={e => setFields({...fields, phone: e.target.value})} 
+                  placeholder="e.g. 9876543210"
+                  className="w-full p-2 border rounded text-sm bg-white focus:ring-2 focus:ring-blue-100 outline-none"
+                  required
+                />
+              </div>
+            </div>
+            <div>
+              <label className="text-[10px] uppercase font-bold text-gray-400 mb-1 block">Billing Address *</label>
+              <textarea 
+                value={fields.address} 
+                onChange={e => setFields({...fields, address: e.target.value})} 
+                placeholder="Street Address..."
+                className="w-full p-2 border rounded text-sm bg-white focus:ring-2 focus:ring-blue-100 outline-none"
+                rows="2"
+                required
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-[10px] uppercase font-bold text-gray-400 mb-1 block">City *</label>
+                <input 
+                  type="text" 
+                  value={fields.city} 
+                  onChange={e => setFields({...fields, city: e.target.value})} 
+                  placeholder="e.g. Vadodara"
+                  className="w-full p-2 border rounded text-sm bg-white focus:ring-2 focus:ring-blue-100 outline-none"
+                  required 
+                />
+              </div>
+              <div>
+                <label className="text-[10px] uppercase font-bold text-gray-400 mb-1 block">State *</label>
+                <select
+                  value={fields.state}
+                  onChange={e => setFields({...fields, state: e.target.value})}
+                  className="w-full p-2 border rounded text-sm bg-white focus:ring-2 focus:ring-blue-100 outline-none"
+                  required
+                >
+                  <option value="">Select State</option>
+                  {INDIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
+            </div>
+            <div>
+              <label className="text-[10px] uppercase font-bold text-gray-400 mb-1 block">Product / Subscription Plan</label>
+              <input 
+                type="text" 
+                value={fields.product} 
+                onChange={e => setFields({...fields, product: e.target.value})} 
+                placeholder="e.g. SaaS Premium Plan"
                 className="w-full p-2 border rounded text-sm bg-white focus:ring-2 focus:ring-blue-100 outline-none"
               />
             </div>
-          </div>
-          <div>
-            <label className="text-[10px] uppercase font-bold text-gray-400 mb-1 block">Billing Address</label>
-            <textarea 
-              value={fields.address} 
-              onChange={e => setFields({...fields, address: e.target.value})} 
-              placeholder="Street, City, ZIP..."
-              className="w-full p-2 border rounded text-sm bg-white focus:ring-2 focus:ring-blue-100 outline-none"
-              rows="2"
-            />
-          </div>
-          <div>
-            <label className="text-[10px] uppercase font-bold text-gray-400 mb-1 block">Product / Subscription Plan</label>
-            <input 
-              type="text" 
-              value={fields.product} 
-              onChange={e => setFields({...fields, product: e.target.value})} 
-              placeholder="e.g. SaaS Premium Plan"
-              className="w-full p-2 border rounded text-sm bg-white focus:ring-2 focus:ring-blue-100 outline-none"
-            />
-          </div>
-          <div className="flex gap-2 justify-end pt-4 border-t">
-            <button 
-              type="button" 
-              onClick={onClose}
-              className="px-4 py-2 border rounded-lg text-xs font-bold text-gray-500 hover:bg-gray-50"
-            >
-              Cancel
-            </button>
-            <button 
-              type="submit" 
-              disabled={loading}
-              className="px-4 py-2 bg-purple-650 text-white rounded-lg text-xs font-bold hover:bg-purple-750 disabled:opacity-50"
-            >
-              {loading ? 'Saving...' : 'Save Customer'}
-            </button>
-          </div>
-        </form>
+          </form>
+        </div>
+
+        {/* Modal Footer (Sticky) */}
+        <div className="flex gap-2 justify-end p-5 border-t bg-gray-50 rounded-b-xl">
+          <button 
+            type="button" 
+            onClick={onClose}
+            className="px-4 py-2 border rounded-lg text-xs font-bold text-gray-500 hover:bg-gray-50 bg-white"
+          >
+            Cancel
+          </button>
+          <button 
+            type="submit" 
+            form="customer-form"
+            disabled={loading}
+            className="px-4 py-2 bg-purple-650 text-white rounded-lg text-xs font-bold hover:bg-purple-750 disabled:opacity-50"
+          >
+            {loading ? 'Saving...' : 'Save Customer'}
+          </button>
+        </div>
       </div>
     </div>
   )
