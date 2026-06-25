@@ -179,6 +179,7 @@ export default function CreateReceipt() {
               address: doc.invoice_data?.address || '',
               city: doc.invoice_data?.city || '',
               state: doc.invoice_data?.state || '',
+              pincode: doc.invoice_data?.pincode || '',
             }))
           setCustomers(custs)
 
@@ -689,7 +690,8 @@ export default function CreateReceipt() {
                         setValue('customerId', cust.customer_id)
                         setValue('buyer_name', cust.name)
                         setValue('buyer_email', cust.email)
-                        const fullAddr = [cust.address, cust.city, cust.state].filter(Boolean).join(', ')
+                        const statePin = cust.state && cust.pincode ? `${cust.state} - ${cust.pincode}` : (cust.state || cust.pincode)
+                        const fullAddr = [cust.address, cust.city, statePin].filter(Boolean).join(', ')
                         setValue('buyer_address', fullAddr)
                       }
                     }}

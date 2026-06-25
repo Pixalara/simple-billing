@@ -159,6 +159,7 @@ export default function CreateInvoice() {
               address: doc.invoice_data?.address || '',
               city: doc.invoice_data?.city || '',
               state: doc.invoice_data?.state || '',
+              pincode: doc.invoice_data?.pincode || '',
             }))
           setCustomers(custs)
 
@@ -809,7 +810,7 @@ export default function CreateInvoice() {
                         if (cust) {
                           setValue('customerId', cust.customer_id)
                           setValue('buyer_name', cust.name.toUpperCase())
-                          const fullAddr = [cust.address, cust.city].filter(Boolean).join(', ')
+                          const fullAddr = [cust.address, cust.city, cust.pincode].filter(Boolean).join(', ')
                           setValue('buyer_address', fullAddr)
                           if (cust.state) {
                             setValue('buyer_state', cust.state)

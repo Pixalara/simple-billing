@@ -108,7 +108,8 @@ function CustomerFormModal({ customerNode, onClose, onSave, allCustomers }) {
     phone: '',
     address: '',
     city: '',
-    state: ''
+    state: '',
+    pincode: ''
   })
   
   useEffect(() => {
@@ -120,7 +121,8 @@ function CustomerFormModal({ customerNode, onClose, onSave, allCustomers }) {
         phone: customerNode.invoice_data?.phone || '',
         address: customerNode.invoice_data?.address || '',
         city: customerNode.invoice_data?.city || '',
-        state: customerNode.invoice_data?.state || ''
+        state: customerNode.invoice_data?.state || '',
+        pincode: customerNode.invoice_data?.pincode || ''
       })
     } else {
       // Auto-generate customer ID
@@ -155,7 +157,8 @@ function CustomerFormModal({ customerNode, onClose, onSave, allCustomers }) {
           phone: fields.phone,
           address: fields.address,
           city: fields.city,
-          state: fields.state
+          state: fields.state,
+          pincode: fields.pincode
         },
         total_amount: 0
       }
@@ -267,6 +270,17 @@ function CustomerFormModal({ customerNode, onClose, onSave, allCustomers }) {
                   {INDIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
               </div>
+            </div>
+            <div>
+              <label className="text-[10px] uppercase font-bold text-gray-400 mb-1 block">Pincode *</label>
+              <input 
+                type="text" 
+                value={fields.pincode} 
+                onChange={e => setFields({...fields, pincode: e.target.value})} 
+                placeholder="e.g. 390007"
+                className="w-full p-2 border rounded text-sm bg-white focus:ring-2 focus:ring-blue-100 outline-none"
+                required 
+              />
             </div>
           </form>
         </div>
