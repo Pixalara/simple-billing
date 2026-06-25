@@ -121,18 +121,18 @@ export default function Login() {
             
             {/* Badge */}
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-600/10 border border-blue-500/30 backdrop-blur-md mx-auto lg:mx-0">
-                <span className="text-xs font-bold text-cyan-300 tracking-widest uppercase">Free GST Invoice Generator for Indian Businesses</span>
+                <span className="text-xs font-bold text-cyan-300 tracking-widest uppercase">GST Invoice & Billing Software for Businesses</span>
             </div>
 
             {/* Headline */}
             <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold text-white leading-tight tracking-tight">
                 Professional GST Invoicing. <br className="hidden lg:block"/>
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500">Zero Cost.</span>
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500">₹99/Month.</span>
             </h1>
 
             {/* Sub-headline */}
             <p className="text-slate-300 text-lg md:text-xl leading-relaxed max-w-2xl mx-auto lg:mx-0 font-light">
-                Create unlimited tax invoices with no trial period, no hidden fees, and no credit card required.
+                The most affordable billing software to empower businesses to generate and track every transaction they make.
             </p>
 
             {/* Feature Bullets */}
@@ -145,7 +145,7 @@ export default function Login() {
             {/* Built by Pixalara Message */}
             <div className="pt-8 border-t border-white/5 w-full">
                 <p className="text-slate-400 font-medium text-sm leading-relaxed tracking-wide">
-                    Built by <span className="text-white font-bold">Pixalara</span> to support small traders and freelancers - <span className="text-cyan-400 font-semibold">at zero cost</span>
+                    Built by <span className="text-white font-bold">Pixalara</span> to support small traders and freelancers - <span className="text-cyan-400 font-semibold">at just ₹99/month</span>
                 </p>
             </div>
         </div>
@@ -158,7 +158,7 @@ export default function Login() {
                 <div className="text-center mb-8 relative z-10">
                     <h2 className="text-3xl font-bold text-white mb-2">
                         {view === 'LOGIN' && 'Welcome Back'}
-                        {view === 'SIGNUP' && 'Get Started Free'}
+                        {view === 'SIGNUP' && 'Get Started'}
                         {view === 'FORGOT_PASS' && 'Reset Password'}
                         {view === 'OTP_VERIFY' && 'Verify It\'s You'}
                         {view === 'RESET_PASS' && 'New Password'}
@@ -178,7 +178,7 @@ export default function Login() {
                         <InputField label="Password" type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} required />
                         <div className="text-right -mt-3 mb-8"><button type="button" onClick={() => setView('FORGOT_PASS')} className="text-sm font-semibold text-blue-400 hover:text-blue-300 transition-colors">Forgot Password?</button></div>
                         <button type="submit" disabled={loading} className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-lg py-4 rounded-xl shadow-lg shadow-blue-500/20 transform transition active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed">{loading ? 'Signing In...' : 'Sign In to Dashboard'}</button>
-                        <div className="mt-8 pt-6 border-t border-white/10 text-center"><p className="text-sm text-slate-400">Don't have an account? <button type="button" onClick={() => setView('SIGNUP')} className="text-blue-400 font-bold hover:text-blue-300 ml-1">Sign Up Free</button></p></div>
+                        <div className="mt-8 pt-6 border-t border-white/10 text-center"><p className="text-sm text-slate-400">Don't have an account? <button type="button" onClick={() => setView('SIGNUP')} className="text-blue-400 font-bold hover:text-blue-300 ml-1">Sign Up</button></p></div>
                     </form>
                 )}
 
@@ -187,7 +187,7 @@ export default function Login() {
                         <InputField label="Business Email" type="email" placeholder="name@company.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
                         <InputField label="Create Password" type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
                         <InputField label="Confirm Password" type="password" placeholder="••••••••" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required minLength={6} />
-                        <button type="submit" disabled={loading} className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-lg py-4 rounded-xl shadow-lg shadow-blue-500/20 transform transition active:scale-[0.98] mt-4">{loading ? 'Processing...' : 'Create Free Account'}</button>
+                        <button type="submit" disabled={loading} className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-lg py-4 rounded-xl shadow-lg shadow-blue-500/20 transform transition active:scale-[0.98] mt-4">{loading ? 'Processing...' : 'Create Account'}</button>
                         <div className="mt-8 pt-6 border-t border-white/10 text-center"><p className="text-sm text-slate-400">Already have an account? <button type="button" onClick={() => setView('LOGIN')} className="text-blue-400 font-bold hover:text-blue-300 ml-1">Sign In</button></p></div>
                     </form>
                 )}
