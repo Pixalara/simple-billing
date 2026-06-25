@@ -448,7 +448,7 @@ export default function CreateReceipt() {
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
         await navigator.share({
           files: [file],
-          title: 'SaaS Payment Receipt',
+          title: 'Payment Receipt',
           text: `Payment Receipt from ${sellerProfile?.business_name || 'Business'}`
         })
       } else {
@@ -519,7 +519,7 @@ export default function CreateReceipt() {
           </button>
           <div className="h-6 w-[1px] bg-gray-200"></div>
           <h1 className="text-base sm:text-lg font-bold text-gray-800 flex items-center gap-2">
-            📄 {id ? 'Edit' : 'Create'} SaaS Receipt
+            📄 {id ? 'Edit' : 'Create'} Receipt
           </h1>
         </div>
         
@@ -722,7 +722,7 @@ export default function CreateReceipt() {
 
             {/* Subscription details */}
             <div className="space-y-4 pt-4 border-t">
-              <h3 className="text-xs uppercase font-bold text-gray-400 tracking-wider">SaaS Subscription</h3>
+              <h3 className="text-xs uppercase font-bold text-gray-400 tracking-wider">Subscription Details</h3>
               <div>
                 <label className="text-xs font-bold text-gray-700 block mb-1">Product Name</label>
                 <input 
@@ -946,7 +946,7 @@ export default function CreateReceipt() {
                       <tr>
                         <td className="py-4">
                           <p className="text-sm font-bold text-gray-800">{formData.productName || 'Product'} - {formData.planName || 'Plan'}</p>
-                          <p className="text-xs text-gray-400 font-semibold mt-0.5">SaaS Subscription Access</p>
+                          <p className="text-xs text-gray-400 font-semibold mt-0.5">Subscription / Service Access</p>
                         </td>
                         <td className="py-4 text-center text-xs font-bold text-gray-700">
                           {formData.planDuration} {formData.planType === 'yearly' ? 'Year' : 'Month'}{parseInt(formData.planDuration) > 1 ? 's' : ''} ({formData.planType})

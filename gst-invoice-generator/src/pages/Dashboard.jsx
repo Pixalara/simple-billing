@@ -277,7 +277,7 @@ function CustomerFormModal({ customerNode, onClose, onSave, allCustomers }) {
                 type="text" 
                 value={fields.product} 
                 onChange={e => setFields({...fields, product: e.target.value})} 
-                placeholder="e.g. SaaS Premium Plan"
+                placeholder="e.g. Premium Plan"
                 className="w-full p-2 border rounded text-sm bg-white focus:ring-2 focus:ring-blue-100 outline-none"
               />
             </div>
@@ -440,7 +440,7 @@ export default function Dashboard() {
     ]
 
     if (saasTax > 0) {
-      data.push({ name: 'SaaS Tax (Receipts)', value: parseFloat(saasTax.toFixed(2)), color: '#10b981' })
+      data.push({ name: 'Receipt Tax (Receipts)', value: parseFloat(saasTax.toFixed(2)), color: '#10b981' })
     }
 
     return data.filter(item => item.value > 0)
@@ -846,18 +846,18 @@ export default function Dashboard() {
             
             <div className="bg-white p-4 sm:p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between">
                 <div>
-                    <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Total SaaS Receipts</p>
+                    <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Total Receipts</p>
                     <p className="text-2xl font-bold text-gray-900 mt-1">{receiptsStats.count}</p>
                 </div>
                 <div className="mt-2 text-xs text-gray-400 font-semibold border-t pt-1.5 flex justify-between items-center">
-                    <span>SaaS Transactions</span>
-                    <span className="text-[10px] bg-emerald-50 text-emerald-600 px-1.5 py-0.5 rounded font-bold border border-emerald-100">SaaS</span>
+                    <span>Receipt Transactions</span>
+                    <span className="text-[10px] bg-emerald-50 text-emerald-600 px-1.5 py-0.5 rounded font-bold border border-emerald-100">Receipt</span>
                 </div>
             </div>
             
             <div className="bg-white p-4 sm:p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between">
                 <div>
-                    <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Realized SaaS Revenue</p>
+                    <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Realized Revenue</p>
                     <div className="mt-1 flex flex-col gap-0.5">
                         {Object.keys(receiptsStats.totalsByCurrency).length === 0 ? (
                             <p className="text-2xl font-bold text-emerald-600">$0.00</p>
@@ -872,7 +872,7 @@ export default function Dashboard() {
                     </div>
                 </div>
                 <div className="mt-2 text-xs text-gray-400 font-semibold border-t pt-1.5 flex justify-between items-center">
-                    <span>SaaS realized income</span>
+                    <span>Receipts realized income</span>
                     <span className="text-[10px] bg-emerald-50 text-emerald-600 px-1.5 py-0.5 rounded font-bold border border-emerald-100">Income</span>
                 </div>
             </div>
@@ -908,7 +908,7 @@ export default function Dashboard() {
 
             {/* Chart 2: Product-wise SaaS Revenue Breakdown */}
             <div className="bg-white p-4 sm:p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col h-[350px]">
-                <h3 className="text-xs font-bold text-gray-455 uppercase tracking-wider mb-4">Product-wise SaaS Revenue (INR Equiv.)</h3>
+                <h3 className="text-xs font-bold text-gray-455 uppercase tracking-wider mb-4">Product-wise Revenue (INR Equiv.)</h3>
                 {productRevenueData.length > 0 ? (
                     <div className="w-full flex-1 min-h-0 flex flex-row items-center">
                         <div className="w-1/2 h-full">
@@ -939,7 +939,7 @@ export default function Dashboard() {
                     </div>
                 ) : (
                     <div className="flex-1 flex flex-col items-center justify-center opacity-40">
-                        <p className="text-xs font-medium">No SaaS receipt data available</p>
+                        <p className="text-xs font-medium">No receipt data available</p>
                     </div>
                 )}
             </div>
@@ -1068,7 +1068,7 @@ export default function Dashboard() {
                         onClick={() => setSettingsTab('saas')} 
                         className={`flex-1 pb-2 text-[11px] font-bold uppercase tracking-wider text-center border-b-2 transition-all ${settingsTab === 'saas' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-400 hover:text-gray-600'}`}
                     >
-                        SaaS Receipts
+                        Receipt Defaults
                     </button>
                 </div>
 
@@ -1076,7 +1076,7 @@ export default function Dashboard() {
                     <form onSubmit={(e) => {
                         e.preventDefault();
                         localStorage.setItem('saas_receipt_settings', JSON.stringify(saasSettings));
-                        showPopup('Saved', 'SaaS Receipt Defaults saved successfully!', 'success');
+                        showPopup('Saved', 'Receipt Defaults saved successfully!', 'success');
                     }} className="space-y-3">
                         <div>
                             <label className="text-[10px] uppercase font-bold text-gray-400 mb-1 block">Product Name</label>
@@ -1159,7 +1159,7 @@ export default function Dashboard() {
                                 <label htmlFor="is_sys_gen" className="text-xs font-bold text-gray-700 cursor-pointer">Show "System Generated" Notice</label>
                             </div>
                         </div>
-                        <button type="submit" className="w-full bg-blue-600 text-white py-2 rounded-lg font-bold text-sm shadow hover:bg-blue-700 mt-4">Save SaaS Defaults</button>
+                        <button type="submit" className="w-full bg-blue-600 text-white py-2 rounded-lg font-bold text-sm shadow hover:bg-blue-700 mt-4">Save Receipt Defaults</button>
                     </form>
                 ) : (
                     <>
@@ -1228,7 +1228,7 @@ export default function Dashboard() {
                         <span className="text-xl">+</span> Create GST Invoice
                     </button>
                     <button onClick={() => navigate('/create-receipt')} className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 text-white py-4 rounded-xl font-bold shadow-lg flex items-center justify-center gap-2 transform active:scale-95 transition-all">
-                        <span className="text-xl">+</span> Generate SaaS Receipt
+                        <span className="text-xl">+</span> Generate Receipt
                     </button>
                 </div>
                 
@@ -1246,7 +1246,7 @@ export default function Dashboard() {
                                 onClick={() => { setActiveTab('receipts'); setSearchTerm(''); }}
                                 className={`pb-2 px-4 text-xs font-bold uppercase tracking-wider transition-all border-b-2 ${activeTab === 'receipts' ? 'border-emerald-600 text-emerald-600' : 'border-transparent text-gray-400 hover:text-gray-600'}`}
                             >
-                                SaaS Receipts ({allReceipts.length})
+                                Receipts ({allReceipts.length})
                             </button>
                             <button 
                                 onClick={() => { setActiveTab('customers'); setSearchTerm(''); }}
