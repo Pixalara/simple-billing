@@ -191,12 +191,12 @@ function CustomerFormModal({ customerNode, onClose, onSave, allCustomers }) {
         <div className="flex-1 overflow-y-auto p-5">
           <form id="customer-form" onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="text-[10px] uppercase font-bold text-gray-400 mb-1 block">Customer ID *</label>
+              <label className="text-[10px] uppercase font-bold text-gray-400 mb-1 block">Customer ID (Auto-Generated)</label>
               <input 
                 type="text" 
                 value={fields.customer_id} 
-                onChange={e => setFields({...fields, customer_id: e.target.value})} 
-                className="w-full p-2 border rounded text-sm bg-white focus:ring-2 focus:ring-blue-100 outline-none font-mono"
+                disabled 
+                className="w-full p-2 border rounded text-sm bg-gray-50 text-gray-500 border-gray-200 cursor-not-allowed outline-none font-mono font-bold"
                 required 
               />
             </div>
