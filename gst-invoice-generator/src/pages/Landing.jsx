@@ -14,7 +14,7 @@ export default function Landing() {
             <rect width="24" height="24" rx="6" fill="#FFC700" />
             <path d="M7 17V7L17 17V7" stroke="#0A0A0A" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
-          NexoBill
+          Pixalara Bill
         </Link>
         <div className="landing-nav-links">
           <a href="#features" className="landing-nav-link">Features</a>
@@ -89,6 +89,30 @@ export default function Landing() {
             <h3>Track Transactions</h3>
             <p>Monitor your cash flow with real-time insights. Track every payment, outstanding balance, and overall revenue easily.</p>
           </div>
+          <div className="feature-card">
+            <div className="feature-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="4" width="18" height="16" rx="2" ry="2"/>
+                <line x1="16" y1="2" x2="16" y2="6"/>
+                <line x1="8" y1="2" x2="8" y2="6"/>
+                <line x1="3" y1="10" x2="21" y2="10"/>
+              </svg>
+            </div>
+            <h3>Receipt Generation</h3>
+            <p>Generate clean, professional payment receipts for subscription and SaaS models instantly with accurate calculations.</p>
+          </div>
+          <div className="feature-card">
+            <div className="feature-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="20" x2="18" y2="10"/>
+                <line x1="12" y1="20" x2="12" y2="4"/>
+                <line x1="6" y1="20" x2="6" y2="14"/>
+                <path d="M3 3v18h18"/>
+              </svg>
+            </div>
+            <h3>Revenue Analytics</h3>
+            <p>Understand your business health with basic visual reporting, monthly sales metrics, and transaction trend tracking.</p>
+          </div>
         </div>
       </section>
 
@@ -140,9 +164,9 @@ export default function Landing() {
       {/* Footer */}
       <footer className="landing-footer">
         <div className="footer-content">
-          <div className="footer-logo">NexoBill</div>
+          <div className="footer-logo">Pixalara Bill</div>
           <div className="footer-text">
-            © {new Date().getFullYear()} NexoBill. Empowering businesses worldwide.
+            © {new Date().getFullYear()} Pixalara Bill. Empowering businesses worldwide.
           </div>
         </div>
       </footer>
