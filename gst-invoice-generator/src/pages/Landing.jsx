@@ -10,8 +10,8 @@ export default function Landing() {
       {/* Navbar */}
       <nav className="landing-navbar">
         <Link to="/" className="landing-logo">
-          <img src="/billing-favicon.svg" alt="Pixalara Bill Logo" />
-          Pixalara Bill
+          <img src="/billing-favicon.svg" alt="Pixalara Smart Billing Logo" />
+          Pixalara Smart Billing
         </Link>
         <div className="landing-nav-links">
           <a href="#features" className="landing-nav-link">Features</a>
@@ -161,9 +161,9 @@ export default function Landing() {
       {/* Footer */}
       <footer className="landing-footer">
         <div className="footer-content">
-          <div className="footer-logo">Pixalara Bill</div>
+          <div className="footer-logo">Pixalara Smart Billing</div>
           <div className="footer-text">
-            © {new Date().getFullYear()} Pixalara Bill. Empowering businesses worldwide.
+            © {new Date().getFullYear()} Pixalara Smart Billing. Empowering businesses worldwide.
           </div>
         </div>
       </footer>
