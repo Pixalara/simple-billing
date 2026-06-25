@@ -992,7 +992,10 @@ export default function CreateReceipt() {
                     <tbody className="divide-y divide-gray-100">
                       <tr>
                         <td className="py-4">
-                          <p className="text-sm font-bold text-gray-800">{formData.productName || 'Product'} - {formData.planName || 'Plan'}</p>
+                          <p className="text-sm font-bold text-gray-800">
+                            {formData.productName || 'Product'}
+                            {formData.planName && formData.planName !== formData.productName ? ` - ${formData.planName}` : ''}
+                          </p>
                           <p className="text-xs text-gray-400 font-semibold mt-0.5">Subscription / Service Access</p>
                         </td>
                         <td className="py-4 text-center text-xs font-bold text-gray-700">
