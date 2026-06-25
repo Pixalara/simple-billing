@@ -422,7 +422,7 @@ export default function Landing() {
           </button>
         </div>
 
-        <div className="segment-display-panel">
+        <div className="segment-display-panel" key={activeSegment}>
           <div className="segment-details">
             <h3>{segments[activeSegment].title}</h3>
             <p className="segment-intro">{segments[activeSegment].intro}</p>
@@ -567,7 +567,7 @@ export default function Landing() {
 
         <div className="bento-grid">
           {/* GST Engine card (col-span-2) */}
-          <div className="bento-card col-span-2">
+          <div className="bento-card col-span-2 gst-compliance-card">
             <div className="card-top">
               <div className="feature-icon-box">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -626,7 +626,7 @@ export default function Landing() {
           </div>
 
           {/* Customer Portal Card (col-span-2) */}
-          <div className="bento-card col-span-2">
+          <div className="bento-card col-span-2 customer-portal-card">
             <div className="card-top">
               <div className="feature-icon-box">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
