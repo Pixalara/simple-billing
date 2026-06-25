@@ -113,6 +113,7 @@ export default function CreateReceipt() {
     defaultValues: {
       receipt_no: '',
       receiptDate: new Date().toISOString().split('T')[0],
+      issueDate: new Date().toISOString().split('T')[0],
       buyer_name: '',
       buyer_email: '',
       buyer_address: '',
@@ -200,6 +201,9 @@ export default function CreateReceipt() {
         if (receipt && receipt.invoice_data?.type === 'receipt') {
           reset(receipt.invoice_data)
           setValue('receipt_no', receipt.invoice_no)
+          if (!receipt.invoice_data.issueDate) {
+            setValue('issueDate', receipt.invoice_data.receiptDate || new Date().toISOString().split('T')[0])
+          }
           if (receipt.invoice_data.theme) {
             const foundTheme = THEMES.find(t => t.hex === receipt.invoice_data.theme)
             if (foundTheme) setTheme(foundTheme)
@@ -590,13 +594,22 @@ export default function CreateReceipt() {
             {/* Receipt Meta Details */}
             <div className="space-y-4">
               <h3 className="text-xs uppercase font-bold text-gray-400 tracking-wider">Receipt Metadata</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
                   <label className="text-xs font-bold text-gray-700 block mb-1">Receipt Number</label>
                   <input 
                     type="text" 
                     {...register('receipt_no')} 
                     placeholder="REC-XXXXXXXXXX" 
+                    className="w-full p-2 border rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-100 outline-none" 
+                    required 
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-gray-700 block mb-1">Receipt Date</label>
+                  <input 
+                    type="date" 
+                    {...register('issueDate')} 
                     className="w-full p-2 border rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-100 outline-none" 
                     required 
                   />
@@ -915,6 +928,9 @@ export default function CreateReceipt() {
                   <div className="text-right">
                     <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Payment Details</h4>
                     <div className="inline-grid grid-cols-[auto_auto] gap-x-3 gap-y-1 justify-end items-baseline text-xs text-gray-600">
+                      <span className="text-gray-400 font-medium">Receipt Date:</span>
+                      <span className="font-bold text-gray-800">{formatDate(formData.issueDate || formData.receiptDate)}</span>
+
                       <span className="text-gray-400 font-medium">Payment Date:</span>
                       <span className="font-bold text-gray-800">{formatDate(formData.receiptDate)}</span>
                       
