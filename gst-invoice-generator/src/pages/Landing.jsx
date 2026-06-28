@@ -222,7 +222,7 @@ export default function Landing() {
 
         <div className="landing-nav-actions">
           <Link to="/login" className="btn-login">Log In</Link>
-          <button onClick={() => navigate('/login')} className="btn-primary">
+          <button onClick={() => navigate('/login', { state: { initialView: 'SIGNUP' } })} className="btn-primary">
             Get Started
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -260,7 +260,7 @@ export default function Landing() {
           <div className="mobile-nav-actions">
             <Link to="/login" className="btn-login" onClick={() => setMobileMenuOpen(false)}>Log In</Link>
             <button 
-              onClick={() => { setMobileMenuOpen(false); navigate('/login'); }} 
+              onClick={() => { setMobileMenuOpen(false); navigate('/login', { state: { initialView: 'SIGNUP' } }); }} 
               className="btn-primary"
             >
               Get Started
@@ -289,7 +289,7 @@ export default function Landing() {
             Automate tax calculations, generate professional receipts, and track receivables on autopilot.
           </p>
           <div className="hero-actions">
-            <button onClick={() => navigate('/login')} className="btn-primary">
+            <button onClick={() => navigate('/login', { state: { initialView: 'SIGNUP' } })} className="btn-primary">
               Start Free Trial
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -884,7 +884,7 @@ export default function Landing() {
                 <span>Unlimited users</span>
               </li>
             </ul>
-            <button onClick={() => navigate('/login')} className="btn-secondary">
+            <button onClick={() => navigate('/login', { state: { initialView: 'SIGNUP' } })} className="btn-secondary">
               Get Started
             </button>
           </div>
@@ -933,7 +933,7 @@ export default function Landing() {
                 <span>24/7 Priority support channel</span>
               </li>
             </ul>
-            <button onClick={() => navigate('/login')} className="btn-primary">
+            <button onClick={() => navigate('/login', { state: { initialView: 'SIGNUP' } })} className="btn-primary">
               Subscribe Now
             </button>
           </div>
@@ -979,7 +979,7 @@ export default function Landing() {
                 <span>Custom SLAs & integrations</span>
               </li>
             </ul>
-            <button onClick={() => navigate('/login')} className="btn-secondary">
+            <button onClick={() => navigate('/login', { state: { initialView: 'SIGNUP' } })} className="btn-secondary">
               Contact Enterprise
             </button>
           </div>

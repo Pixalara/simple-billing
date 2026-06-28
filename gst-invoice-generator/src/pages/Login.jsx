@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { supabase } from '../supabaseClient'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 
 // --- COMPONENTS MOVED OUTSIDE TO FIX TYPING BUG ---
 
@@ -29,7 +29,9 @@ const InputField = ({ label, type, placeholder, value, onChange, className, ...p
 
 export default function Login() {
   const navigate = useNavigate()
-  const [view, setView] = useState('LOGIN')
+  const location = useLocation()
+  const initialView = location.state?.initialView || 'LOGIN'
+  const [view, setView] = useState(initialView)
   const [loading, setLoading] = useState(false)
   const [otpContext, setOtpContext] = useState('') 
   const [email, setEmail] = useState('')
