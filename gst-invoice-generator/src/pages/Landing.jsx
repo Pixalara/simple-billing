@@ -12,7 +12,7 @@ export default function Landing() {
   const [activeSegment, setActiveSegment] = useState('saas');
 
   // Pricing state
-  const [billingInterval, setBillingInterval] = useState('monthly'); // 'monthly' or 'yearly'
+  const billingInterval = 'yearly';
 
   // FAQ accordion state
   const [faqActiveIndex, setFaqActiveIndex] = useState(null);
@@ -836,25 +836,7 @@ export default function Landing() {
           </p>
         </div>
 
-        <div className="pricing-switch-container reveal-on-scroll delay-1">
-          <span 
-            className={`pricing-switch-label ${billingInterval === 'monthly' ? 'active' : ''}`}
-            onClick={() => setBillingInterval('monthly')}
-          >
-            Monthly
-          </span>
-          <div 
-            className={`pricing-switch ${billingInterval === 'yearly' ? 'yearly' : ''}`}
-            onClick={() => setBillingInterval(billingInterval === 'monthly' ? 'yearly' : 'monthly')}
-          ></div>
-          <span 
-            className={`pricing-switch-label ${billingInterval === 'yearly' ? 'active' : ''}`}
-            onClick={() => setBillingInterval('yearly')}
-          >
-            Yearly
-          </span>
-          <span className="discount-badge">Save 20%</span>
-        </div>
+        {/* Pricing toggle removed since plans are paid yearly only */}
 
         <div className="pricing-grid">
           {/* Starter Plan */}
