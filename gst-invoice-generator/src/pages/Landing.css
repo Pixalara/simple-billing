@@ -2,6 +2,8 @@
 
 html {
   scroll-behavior: smooth;
+  overflow-x: hidden;
+  width: 100%;
 }
 
 :root {
@@ -78,6 +80,8 @@ body {
   flex-direction: column;
   position: relative;
   background-color: var(--color-bg);
+  overflow-x: hidden;
+  width: 100%;
 }
 
 /* Page load animations */
