@@ -194,9 +194,8 @@ body {
   transition: transform 0.3s ease;
 }
 
-.landing-logo:hover .logo-icon-wrapper,
 .landing-logo:hover .logo-image {
-  transform: rotate(-3deg) scale(1.05);
+  transform: scale(1.02); /* Logo scales slightly but does not rotate, sitting statically */
 }
 
 .landing-nav-links {
@@ -213,6 +212,7 @@ body {
   transition: color 0.25s ease;
   position: relative;
   padding: 0.25rem 0;
+  white-space: nowrap; /* Prevent menu link wrapping */
 }
 
 .landing-nav-link::after {
@@ -246,6 +246,7 @@ body {
   font-weight: 700;
   font-size: 0.95rem;
   transition: opacity 0.2s ease;
+  white-space: nowrap; /* Prevent log in link wrapping */
 }
 
 .btn-login:hover {
