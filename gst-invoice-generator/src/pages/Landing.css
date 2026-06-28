@@ -1710,6 +1710,22 @@ body {
 
 /* Responsiveness - Flawless mobile & tablet query sets */
 @media (max-width: 1024px) {
+  .landing-navbar {
+    padding: 1rem 5%;
+  }
+
+  .landing-nav-links {
+    display: none;
+  }
+  
+  .landing-nav-actions {
+    display: none;
+  }
+  
+  .mobile-menu-toggle {
+    display: block;
+  }
+
   .landing-hero {
     grid-template-columns: 1fr;
     gap: 3rem;
@@ -1774,22 +1790,6 @@ body {
 }
 
 @media (max-width: 768px) {
-  .landing-navbar {
-    padding: 1rem 5%;
-  }
-  
-  .landing-nav-links {
-    display: none;
-  }
-  
-  .landing-nav-actions {
-    display: none;
-  }
-  
-  .mobile-menu-toggle {
-    display: block;
-  }
-  
   .landing-hero h1 {
     font-size: clamp(2rem, 7vw, 2.75rem);
     letter-spacing: -1px;
@@ -1927,7 +1927,7 @@ body {
 /* Mobile dropdown navigation menu */
 .mobile-nav-menu {
   position: fixed;
-  top: 73px;
+  top: 80px;
   left: 0;
   right: 0;
   bottom: 0;
