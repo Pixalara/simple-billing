@@ -824,7 +824,7 @@ export default function Landing() {
             <div className="plan-price-box">
               <span className="price-currency">₹</span>
               <span key={billingInterval} className="price-amount">0</span>
-              <span className="price-period">/ month</span>
+              <span className="price-period">{billingInterval === 'monthly' ? '/ month' : '/ month, paid yearly'}</span>
             </div>
             <ul className="plan-features-list">
               <li className="plan-feature-line">
@@ -873,7 +873,7 @@ export default function Landing() {
             <div className="plan-price-box">
               <span className="price-currency">₹</span>
               <span key={billingInterval} className="price-amount">{billingInterval === 'monthly' ? '99' : '79'}</span>
-              <span className="price-period">/ month</span>
+              <span className="price-period">{billingInterval === 'monthly' ? '/ month' : '/ month, paid yearly'}</span>
             </div>
             <ul className="plan-features-list">
               <li className="plan-feature-line">
