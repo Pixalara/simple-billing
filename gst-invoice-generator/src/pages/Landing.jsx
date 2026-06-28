@@ -11,8 +11,7 @@ export default function Landing() {
   // Business segment selection state
   const [activeSegment, setActiveSegment] = useState('saas');
 
-  // Pricing state
-  const billingInterval = 'yearly';
+
 
   // FAQ accordion state
   const [faqActiveIndex, setFaqActiveIndex] = useState(null);
@@ -847,8 +846,8 @@ export default function Landing() {
             </div>
             <div className="plan-price-box">
               <span className="price-currency">₹</span>
-              <span key={billingInterval} className="price-amount">0</span>
-              <span className="price-period">{billingInterval === 'monthly' ? '/ month' : '/ month, paid yearly'}</span>
+              <span className="price-amount">0</span>
+              <span className="price-period">/ month, paid yearly</span>
             </div>
             <ul className="plan-features-list">
               <li className="plan-feature-line">
@@ -896,8 +895,8 @@ export default function Landing() {
             </div>
             <div className="plan-price-box">
               <span className="price-currency">₹</span>
-              <span key={billingInterval} className="price-amount">{billingInterval === 'monthly' ? '99' : '79'}</span>
-              <span className="price-period">{billingInterval === 'monthly' ? '/ month' : '/ month, paid yearly'}</span>
+              <span className="price-amount">199</span>
+              <span className="price-period">/ month, paid yearly</span>
             </div>
             <ul className="plan-features-list">
               <li className="plan-feature-line">
@@ -943,7 +942,7 @@ export default function Landing() {
               <p className="plan-description">For large organizations requiring customized reports and API keys.</p>
             </div>
             <div className="plan-price-box">
-              <span key={billingInterval} className="price-amount" style={{ fontSize: '2.5rem' }}>Custom</span>
+              <span className="price-amount" style={{ fontSize: '2.5rem' }}>Custom</span>
             </div>
             <ul className="plan-features-list">
               <li className="plan-feature-line">
