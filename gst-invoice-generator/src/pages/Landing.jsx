@@ -1074,7 +1074,12 @@ export default function Landing() {
         </div>
 
         <div className="footer-bottom">
-          <span>&copy; {new Date().getFullYear()} Pixalara Smart Billing. All rights reserved.</span>
+          <div className="footer-bottom-left">
+            <span>&copy; {new Date().getFullYear()} Pixalara Smart Billing. All rights reserved.</span>
+            <span className="footer-attribution">
+              Crafted with ❤️ by <a href="https://pixalara.com/" target="_blank" rel="noopener noreferrer" className="footer-backlink">Pixalara LLP</a> - A DPIIT Recognized Technology Company by Govt. of India
+            </span>
+          </div>
           <div className="footer-bottom-links">
             <span className="footer-bottom-link" style={{ cursor: 'default' }}>Tax Rules Compliant</span>
             <span className="footer-bottom-link" style={{ cursor: 'default' }}>Secure Data Encrypted</span>
