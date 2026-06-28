@@ -207,7 +207,7 @@ export default function Landing() {
       <nav className={`landing-navbar ${scrolled ? 'scrolled' : ''}`}>
         <Link to="/" className="landing-logo">
           <div className="logo-icon-wrapper">P</div>
-          <span>Pixalara Billing</span>
+          <span>Smart Billing Software for Indian Businesses</span>
         </Link>
 
         <div className="landing-nav-links">
@@ -1022,7 +1022,7 @@ export default function Landing() {
           <div className="footer-branding">
             <Link to="/" className="landing-logo">
               <div className="logo-icon-wrapper">P</div>
-              <span>Pixalara Billing</span>
+              <span>Smart Billing Software for Indian Businesses</span>
             </Link>
             <p className="footer-desc">
               State-of-the-art billing, ledger tracking, and automated GST routing infrastructure designed for modern Indian enterprises.
