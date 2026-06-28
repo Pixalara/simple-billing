@@ -9,10 +9,10 @@ html {
   --color-primary-hover: #E5B300; /* Muted/darker yellow hover */
   --color-primary-glow: rgba(255, 199, 0, 0.15);
   --color-bg: #FFFFFF; /* Pure White background */
-  --color-bg-alt: #F9FAFB; /* Soft light-grey background */
+  --color-bg-alt: #FFF5F5; /* Soft light-red background for white & red combination */
   --color-card-bg: #FFFFFF; /* Pristine White cards */
-  --color-card-border: #E5E7EB; /* Light grey borders */
-  --color-card-hover-border: #FFC700;
+  --color-card-border: #FEE2E2; /* Light red borders for premium visual */
+  --color-card-hover-border: #EF4444; /* Red hover border */
   --color-text-white: #111827; /* Dark charcoal/black for primary text */
   --color-text-muted: #4B5563; /* Slate grey for descriptions */
   --color-text-dim: #9CA3AF; /* Cool grey for labels */
@@ -39,13 +39,13 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Background glows in warm yellow */
+/* Background glows in soft red */
 .glow-bg {
   position: absolute;
   width: 600px;
   height: 600px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(255, 199, 0, 0.08) 0%, rgba(255, 199, 0, 0) 70%);
+  background: radial-gradient(circle, rgba(239, 68, 68, 0.05) 0%, rgba(239, 68, 68, 0) 70%);
   pointer-events: none;
   z-index: 0;
   filter: blur(80px);
@@ -67,7 +67,7 @@ body {
   transform: translate(-50%, -50%);
   width: 800px;
   height: 800px;
-  background: radial-gradient(circle, rgba(255, 199, 0, 0.05) 0%, rgba(255, 199, 0, 0) 70%);
+  background: radial-gradient(circle, rgba(239, 68, 68, 0.03) 0%, rgba(239, 68, 68, 0) 70%);
 }
 
 .landing-container {
@@ -317,8 +317,8 @@ body {
 }
 
 .hero-badge {
-  background-color: rgba(255, 199, 0, 0.12);
-  color: #B45309; /* Dark Amber for high contrast */
+  background-color: rgba(239, 68, 68, 0.08);
+  color: #DC2626; /* Deep red for contrast */
   padding: 0.5rem 1.25rem;
   border-radius: 30px;
   font-size: 0.85rem;
@@ -327,7 +327,7 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  border: 1px solid rgba(255, 199, 0, 0.3);
+  border: 1px solid rgba(239, 68, 68, 0.25);
   letter-spacing: 0.5px;
   text-transform: uppercase;
 }
@@ -336,15 +336,15 @@ body {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background-color: #D97706;
-  box-shadow: 0 0 8px #D97706;
-  animation: pulse-dot 2s infinite;
+  background-color: #EF4444;
+  box-shadow: 0 0 8px #EF4444;
+  animation: pulse-dot-red 2s infinite;
 }
 
-@keyframes pulse-dot {
-  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(217, 119, 6, 0.7); }
-  70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(217, 119, 6, 0); }
-  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(217, 119, 6, 0); }
+@keyframes pulse-dot-red {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+  70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
 }
 
 .landing-hero h1 {
@@ -439,8 +439,8 @@ body {
 
 .invoice-simulator-card:hover {
   transform: rotateY(0deg) rotateX(0deg);
-  border-color: var(--color-primary-hover);
-  box-shadow: 0 25px 60px rgba(255, 199, 0, 0.25);
+  border-color: #EF4444;
+  box-shadow: 0 25px 60px rgba(239, 68, 68, 0.12);
 }
 
 .simulator-header {
@@ -465,18 +465,18 @@ body {
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background-color: var(--color-primary);
-  border: 1px solid #D97706;
+  background-color: #EF4444;
+  border: 1px solid #B91C1C;
 }
 
 .sim-badge-paid {
   font-size: 0.75rem;
   font-weight: 800;
-  background-color: rgba(255, 199, 0, 0.1);
-  color: #B45309;
+  background-color: rgba(239, 68, 68, 0.08);
+  color: #DC2626;
   padding: 0.25rem 0.6rem;
   border-radius: 4px;
-  border: 1px solid rgba(255, 199, 0, 0.25);
+  border: 1px solid rgba(239, 68, 68, 0.2);
   letter-spacing: 0.5px;
   text-transform: uppercase;
 }
@@ -738,12 +738,12 @@ body {
   bottom: 4px;
   left: var(--active-tab-left, 4px);
   width: var(--active-tab-width, 0px);
-  background: linear-gradient(135deg, var(--color-primary) 0%, #F5A623 100%);
+  background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
   border-radius: 100px;
-  box-shadow: 0 4px 12px rgba(255, 199, 0, 0.35);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25);
   transition: left 0.35s cubic-bezier(0.16, 1, 0.3, 1), width 0.35s cubic-bezier(0.16, 1, 0.3, 1);
   z-index: 0;
-  border: 1px solid #D97706;
+  border: 1px solid #B91C1C;
 }
 
 .segment-tab-btn {
@@ -764,7 +764,7 @@ body {
 }
 
 .segment-tab-btn.active {
-  color: #111827 !important;
+  color: #FFFFFF !important;
   background: none !important;
   box-shadow: none !important;
 }
@@ -810,7 +810,7 @@ body {
 }
 
 .segment-feature-item svg {
-  color: #D97706; /* Dark gold checkmarks for contrast */
+  color: #EF4444; /* Premium red checkmarks */
   flex-shrink: 0;
   margin-top: 0.15rem;
 }
@@ -1034,9 +1034,9 @@ body {
   width: 48px;
   height: 48px;
   border-radius: 12px;
-  background-color: rgba(255, 199, 0, 0.12);
-  border: 1px solid rgba(255, 199, 0, 0.25);
-  color: #B45309;
+  background-color: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  color: #EF4444;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1233,9 +1233,9 @@ body {
 }
 
 .pricing-card.featured {
-  border-color: var(--color-primary);
+  border-color: #EF4444;
   border-width: 2px;
-  box-shadow: 0 15px 35px rgba(255, 199, 0, 0.15);
+  box-shadow: 0 15px 35px rgba(239, 68, 68, 0.12);
 }
 
 .featured-tag {
@@ -1243,15 +1243,15 @@ body {
   top: -15px;
   left: 50%;
   transform: translateX(-50%);
-  background: linear-gradient(135deg, var(--color-primary) 0%, #F5A623 100%);
-  color: #111827;
+  background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+  color: #FFFFFF;
   font-size: 0.75rem;
   font-weight: 800;
   padding: 0.4rem 1.25rem;
   border-radius: 30px;
   letter-spacing: 0.5px;
   text-transform: uppercase;
-  box-shadow: 0 4px 10px rgba(255, 199, 0, 0.3);
+  box-shadow: 0 4px 10px rgba(239, 68, 68, 0.25);
 }
 
 .pricing-card-header {
@@ -1435,12 +1435,12 @@ body {
 
 /* Premium Dark Footer */
 .landing-footer {
-  background-color: #0A0F0D; /* Rich deep charcoal green */
-  border-top: 1px solid #1E2E2A;
+  background-color: #FFFFFF; /* Pure White background */
+  border-top: 2px solid #EF4444; /* Bold Red top border */
   padding: 5rem 6% 3rem;
   position: relative;
   z-index: 1;
-  color: #E5E7EB;
+  color: var(--color-text-white);
 }
 
 .footer-grid {
@@ -1459,11 +1459,11 @@ body {
 
 .footer-branding .landing-logo {
   font-size: 1.25rem;
-  color: #FFFFFF;
+  color: var(--color-text-white);
 }
 
 .footer-desc {
-  color: #9CA3AF;
+  color: var(--color-text-muted);
   font-size: 0.875rem;
   line-height: 1.6;
   max-width: 260px;
@@ -1472,7 +1472,7 @@ body {
 .footer-col h4 {
   font-size: 0.95rem;
   font-weight: 800;
-  color: #FFFFFF;
+  color: var(--color-text-white);
   margin-bottom: 1.5rem;
   letter-spacing: 0.5px;
   text-transform: uppercase;
@@ -1486,26 +1486,26 @@ body {
 }
 
 .footer-link {
-  color: #9CA3AF;
+  color: var(--color-text-muted);
   text-decoration: none;
   font-size: 0.9rem;
   transition: color 0.2s ease;
 }
 
 .footer-link:hover {
-  color: var(--color-primary);
+  color: #EF4444;
 }
 
 .footer-bottom {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-top: 1px solid #1E2E2A;
+  border-top: 1px solid #FEE2E2;
   padding-top: 2rem;
   max-width: 1200px;
   margin: 0 auto;
   font-size: 0.85rem;
-  color: #6B7280;
+  color: var(--color-text-dim);
 }
 
 .footer-bottom-links {
@@ -1514,13 +1514,13 @@ body {
 }
 
 .footer-bottom-link {
-  color: #6B7280;
+  color: var(--color-text-dim);
   text-decoration: none;
   transition: color 0.2s ease;
 }
 
 .footer-bottom-link:hover {
-  color: #FFFFFF;
+  color: #EF4444;
 }
 
 /* Responsiveness - Flawless mobile & tablet query sets */
