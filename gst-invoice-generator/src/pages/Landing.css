@@ -184,8 +184,17 @@ body {
   transition: transform 0.3s ease;
 }
 
-.landing-logo:hover .logo-icon-wrapper {
-  transform: rotate(-5deg) scale(1.05);
+.logo-image {
+  height: 38px;
+  width: auto;
+  object-fit: contain;
+  border-radius: 4px;
+  transition: transform 0.3s ease;
+}
+
+.landing-logo:hover .logo-icon-wrapper,
+.landing-logo:hover .logo-image {
+  transform: rotate(-3deg) scale(1.05);
 }
 
 .landing-nav-links {

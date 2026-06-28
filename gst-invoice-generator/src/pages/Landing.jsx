@@ -206,7 +206,7 @@ export default function Landing() {
       {/* Sticky Header */}
       <nav className={`landing-navbar ${scrolled ? 'scrolled' : ''}`}>
         <Link to="/" className="landing-logo">
-          <div className="logo-icon-wrapper">P</div>
+          <img src="/logo.png" alt="Smart Billing Logo" className="logo-image" />
           <span>Smart Billing Software for Indian Businesses</span>
         </Link>
 
@@ -1021,7 +1021,7 @@ export default function Landing() {
         <div className="footer-grid">
           <div className="footer-branding">
             <Link to="/" className="landing-logo">
-              <div className="logo-icon-wrapper">P</div>
+              <img src="/logo.png" alt="Smart Billing Logo" className="logo-image" />
               <span>Smart Billing Software for Indian Businesses</span>
             </Link>
             <p className="footer-desc">
