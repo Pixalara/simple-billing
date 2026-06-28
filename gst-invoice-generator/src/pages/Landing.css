@@ -1635,6 +1635,18 @@ body {
   color: var(--color-text-white);
 }
 
+.footer-branding .logo-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1rem;
+}
+
+.footer-branding .logo-text .text-smart-billing {
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
 .footer-desc {
   color: var(--color-text-muted);
   font-size: 0.875rem;
