@@ -222,13 +222,7 @@ export default function Login() {
                     <span className="text-[11px] text-slate-500 font-medium tracking-wide">256-bit SSL Encrypted • Trusted by 10,000+ Businesses</span>
                 </div>
             </div>
-            
-            {/* Footer */}
-            <div className="mt-12 text-center relative z-10">
-                <p className="text-sm font-semibold text-slate-500 tracking-wide">
-                    Powered by <a href="https://pixalara.com" target="_blank" rel="noreferrer" className="text-lg font-extrabold text-[#0066FE] hover:text-[#0052CC] transition-all duration-300 ml-1">pixalara.com</a>
-                </p>
-            </div>
+
         </div>
       </div>
     </div>
