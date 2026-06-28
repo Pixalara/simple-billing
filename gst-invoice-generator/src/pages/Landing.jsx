@@ -207,6 +207,10 @@ export default function Landing() {
       <nav className={`landing-navbar ${scrolled ? 'scrolled' : ''}`}>
         <Link to="/" className="landing-logo">
           <img src="/logo.png" alt="Smart Billing Logo" className="logo-image" />
+          <span className="logo-text">
+            <span className="text-pixalara">Pixalara</span>
+            <span className="text-smart-billing">Smart Billing</span>
+          </span>
         </Link>
 
         <div className="landing-nav-links">
@@ -1021,6 +1025,10 @@ export default function Landing() {
           <div className="footer-branding">
             <Link to="/" className="landing-logo">
               <img src="/logo.png" alt="Smart Billing Logo" className="logo-image" />
+              <span className="logo-text">
+                <span className="text-pixalara">Pixalara</span>
+                <span className="text-smart-billing">Smart Billing</span>
+              </span>
             </Link>
             <p className="footer-desc">
               State-of-the-art billing, ledger tracking, and automated GST routing infrastructure designed for modern Indian enterprises.
