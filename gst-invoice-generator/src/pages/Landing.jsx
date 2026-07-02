@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import './Landing.css';
-const rollingTexts = ['subscription engine', 'milestone billing', 'retail checkouts'];
+const rollingTexts = ['GST-compliant invoicing', 'instant PDF generation', 'automated tax calculations'];
 
 export default function Landing() {
   const navigate = useNavigate();
@@ -285,8 +285,9 @@ export default function Landing() {
             </span>
           </h1>
           <p className="hero-desc">
-            An elite billing software engineered for modern Indian enterprises, SaaS companies, and service agencies. 
-            Automate tax calculations, generate professional receipts, and track receivables on autopilot.
+            Professional GST invoicing software for Indian businesses. Generate
+            compliant invoices with automatic tax calculations, download PDFs,
+            and manage customers & products efficiently.
           </p>
           <div className="hero-actions">
             <button onClick={() => navigate('/login', { state: { initialView: 'SIGNUP' } })} className="btn-primary">
@@ -763,7 +764,7 @@ export default function Landing() {
             </div>
           </div>
 
-          {/* Recurring Billing Card */}
+          {/* Invoice Generation & Sharing Card */}
           <div className="bento-card reveal-on-scroll delay-1">
             <div className="card-top">
               <div className="feature-icon-box">
@@ -771,9 +772,9 @@ export default function Landing() {
                   <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path>
                 </svg>
               </div>
-              <h3>Subscription Engine</h3>
+              <h3>Professional Invoice Generation</h3>
               <p>
-                Process weekly, monthly, and yearly cycles. Auto-generate subsequent invoices and calculate prorated fees on upgrades.
+                Generate GST-compliant PDF invoices with one-click download, email sharing, and WhatsApp sharing. Supports original, duplicate, and triplicate copies.
               </p>
             </div>
           </div>
@@ -811,7 +812,7 @@ export default function Landing() {
             </div>
           </div>
 
-          {/* API Integrations Card */}
+          {/* Business Profile Customization Card */}
           <div className="bento-card reveal-on-scroll delay-1">
             <div className="card-top">
               <div className="feature-icon-box">
@@ -820,9 +821,9 @@ export default function Landing() {
                   <polyline points="8 6 2 12 8 18"></polyline>
                 </svg>
               </div>
-              <h3>Webhooks & Developer APIs</h3>
+              <h3>Complete Business Profile</h3>
               <p>
-                Trigger actions on external systems when invoices are created, payments fail, or customer profiles change.
+                Configure your business details including GSTIN, address, bank information, and contact settings for professional invoices.
               </p>
             </div>
           </div>
