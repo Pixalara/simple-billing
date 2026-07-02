@@ -404,9 +404,10 @@ body {
   display: inline-flex;
   position: relative;
   overflow: hidden;
-  height: 1.2em;
+  height: 1.4em;
   vertical-align: bottom;
   align-items: center;
+  margin-top: 0.2rem;
 }
 
 .rolling-text-item {
