@@ -2,8 +2,9 @@ import { useState, useEffect, useRef } from 'react'
 import { useForm, useFieldArray } from 'react-hook-form'
 import { supabase } from '../supabaseClient'
 import { useNavigate, useParams } from 'react-router-dom'
-import { INDIAN_STATES, HSN_CODES } from '../constants'
+import { INDIAN_STATES, HSN_CODES, BILLING_KINDS, normalizeBillingKind, isServiceKind, taxCodeLabel } from '../constants'
 import SearchableSelect from '../components/SearchableSelect'
+import BillingKindSelector from '../components/BillingKindSelector'
 import html2pdf from 'html2pdf.js'
 import BrandingFooter from '../components/BrandingFooter'
 
@@ -120,6 +121,7 @@ export default function CreateInvoice() {
       invoiceDate: new Date().toISOString().split('T')[0],
       dueDate: '',
       customerId: '',
+      billingKind: BILLING_KINDS.SAAS,
       items: [{ description: '', hsn: '', quantity: 1, price: 0, gstRate: 18 }],
       terms: '1. Payment must be made within 7 days from the invoice date.\n2. Goods once sold will not be taken back.\n3. Interest @ 18% p.a. will be charged if payment is delayed.',
     }
@@ -127,6 +129,11 @@ export default function CreateInvoice() {
 
   const formData = watch()
   const { fields, append, remove } = useFieldArray({ control, name: 'items' })
+
+  // Drives SAC vs HSN labelling and the wording of the line-item table.
+  const billingKind = normalizeBillingKind(formData.billingKind)
+  const isServiceInvoice = isServiceKind(billingKind)
+  const codeLabel = taxCodeLabel(billingKind)
 
   useEffect(() => {
     const loadData = async () => {
@@ -627,7 +634,7 @@ export default function CreateInvoice() {
           const payload = { 
               user_id: user.id, 
               invoice_no: data.invoice_no, 
-              invoice_data: { ...data, totals, theme: theme.hex, includeGST }, 
+              invoice_data: { ...data, billingKind, totals, theme: theme.hex, includeGST }, 
               total_amount: totals.grandTotal 
           }; 
           
@@ -764,6 +771,15 @@ export default function CreateInvoice() {
                 </div>
             </fieldset>
 
+            <input type="hidden" {...register('billingKind')} />
+            <BillingKindSelector
+                name="invoice-billing-kind"
+                value={billingKind}
+                onChange={(kind) => setValue('billingKind', kind)}
+                legend="Billing For"
+                accent={theme.hex}
+            />
+
             <div className="grid grid-cols-2 gap-3">
                 <div>
                 <label className="text-xs text-gray-500 flex items-center gap-1">
@@ -868,7 +884,9 @@ export default function CreateInvoice() {
             </div>
 
             <div>
-                <h3 className="text-sm font-semibold mb-2 text-gray-700">Items</h3>
+                <h3 className="text-sm font-semibold mb-2 text-gray-700">
+                    {isServiceInvoice ? 'Services' : 'Items'}
+                </h3>
                 {fields.map((item, index) => (
                 <div key={item.id} className="flex flex-col gap-2 mb-4 p-3 bg-gray-50 rounded border">
                     {products.length > 0 && (
@@ -885,12 +903,19 @@ export default function CreateInvoice() {
                               setValue(`items.${index}.hsn`, prod.invoice_data.hsn_sac || '')
                               setValue(`items.${index}.price`, prod.invoice_data.price)
                               setValue(`items.${index}.gstRate`, prod.invoice_data.tax_rate || 18)
+                              // Only the first line sets the document type. Later
+                              // lines don't override it, since an invoice can mix
+                              // products and services.
+                              if (index === 0) {
+                                setValue('billingKind', normalizeBillingKind(prod.invoice_data.kind))
+                              }
                             }
                           }}
                         >
                           <option value="">-- Choose Product/Service --</option>
                           {products.map(p => (
                             <option key={p.id} value={p.invoice_no}>
+                              {isServiceKind(p.invoice_data.kind) ? '🛠 ' : '☁ '}
                               {p.invoice_data.name} (₹{p.invoice_data.price})
                             </option>
                           ))}
@@ -898,7 +923,9 @@ export default function CreateInvoice() {
                       </div>
                     )}
                     <div className="w-full">
-                        <label className="text-xs text-gray-500 font-bold">Search Item / Description</label>
+                        <label className="text-xs text-gray-500 font-bold">
+                            {isServiceInvoice ? 'Search Service / Description' : 'Search Item / Description'}
+                        </label>
                         <SearchableSelect 
                             options={HSN_CODES} 
                             value={formData.items[index]?.description}
@@ -908,16 +935,16 @@ export default function CreateInvoice() {
                     </div>
                     <div className="grid grid-cols-12 gap-2 mt-2">
                         <div className="col-span-3">
-                            <label className="text-xs text-gray-500">HSN Code</label>
+                            <label className="text-xs text-gray-500">{codeLabel} Code</label>
                             <input 
                                 {...register(`items.${index}.hsn`)} 
-                                placeholder="HSN" 
+                                placeholder={codeLabel} 
                                 className={`w-full p-2 border rounded text-sm ${!includeGST ? DISABLED_FIELD_CLASSES : ''}`}
                                 disabled={!includeGST}
                             />
                         </div>
                         <div className="col-span-4">
-                            <label className="text-xs text-gray-500">Price</label>
+                            <label className="text-xs text-gray-500">{isServiceInvoice ? 'Rate' : 'Price'}</label>
                             <input {...register(`items.${index}.price`)} type="number" className="w-full p-2 border rounded text-sm" />
                         </div>
                         <div className="col-span-2">
@@ -939,11 +966,13 @@ export default function CreateInvoice() {
                             </select>
                         </div>
                     </div>
-                    <button type="button" onClick={() => remove(index)} className="text-red-500 text-xs text-right hover:underline mt-1">Remove Item</button>
+                    <button type="button" onClick={() => remove(index)} className="text-red-500 text-xs text-right hover:underline mt-1">
+                        {isServiceInvoice ? 'Remove Service' : 'Remove Item'}
+                    </button>
                 </div>
                 ))}
                 <button type="button" onClick={() => append({ description: '', hsn: '', quantity: 1, price: 0, gstRate: 18 })} className="text-blue-600 text-sm font-bold p-1">
-                + Add Item
+                {isServiceInvoice ? '+ Add Service' : '+ Add Item'}
                 </button>
             </div>
 
@@ -1059,11 +1088,11 @@ export default function CreateInvoice() {
                                         color: theme.text,
                                         padding: '8px 12px'
                                     }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', height: '100%', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }}>ITEM</div>
+                                        <div style={{ display: 'flex', alignItems: 'center', height: '100%', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }}>{isServiceInvoice ? 'SERVICE' : 'ITEM'}</div>
                                     </th>
                                     {includeGST && (
                                         <th style={{ width: '15%', height: '35px', overflow: 'hidden', verticalAlign: 'middle', backgroundColor: theme.hex, color: theme.text, padding: '8px 12px' }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', height: '100%', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }}>HSN</div>
+                                            <div style={{ display: 'flex', alignItems: 'center', height: '100%', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase' }}>{codeLabel}</div>
                                         </th>
                                     )}
                                     <th style={{ width: '10%', height: '35px', overflow: 'hidden', verticalAlign: 'middle', backgroundColor: theme.hex, color: theme.text, padding: '8px 12px', textAlign: 'center' }}>

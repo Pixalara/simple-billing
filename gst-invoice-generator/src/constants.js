@@ -116,3 +116,40 @@ export const HSN_CODES = [
   { code: '8421', description: 'Water Purifiers', rate: 18, category: 'Machinery' },
   { code: '8501', description: 'Electric Motors', rate: 18, category: 'Machinery' }
 ];
+
+// --- BILLING KINDS -----------------------------------------------------------
+// Two distinct ways of billing, which drive which fields a document shows:
+//   saas    -> recurring subscription. Has a plan name, duration and billing cycle.
+//   service -> one-off / project work (web design, digital marketing, SEO...).
+//              Deliberately has NO plan, duration or billing cycle.
+export const BILLING_KINDS = {
+  SAAS: 'saas',
+  SERVICE: 'service',
+}
+
+export const BILLING_KIND_OPTIONS = [
+  {
+    value: BILLING_KINDS.SAAS,
+    label: 'SaaS Product',
+    hint: 'Subscription with a plan & billing cycle',
+    example: 'e.g. Pixalara Pro — Growth Plan',
+  },
+  {
+    value: BILLING_KINDS.SERVICE,
+    label: 'Service',
+    hint: 'One-time / project work. No plan or duration.',
+    example: 'e.g. Web Design & Development, Digital Marketing',
+  },
+]
+
+// Records saved before this feature existed have no `kind`, so anything that is
+// not explicitly a service is treated as SaaS to preserve their stored meaning.
+export const normalizeBillingKind = (kind) =>
+  kind === BILLING_KINDS.SERVICE ? BILLING_KINDS.SERVICE : BILLING_KINDS.SAAS
+
+export const isServiceKind = (kind) => normalizeBillingKind(kind) === BILLING_KINDS.SERVICE
+
+export const billingKindLabel = (kind) => (isServiceKind(kind) ? 'Service' : 'SaaS Product')
+
+// Services are classified under SAC codes, goods under HSN.
+export const taxCodeLabel = (kind) => (isServiceKind(kind) ? 'SAC' : 'HSN')

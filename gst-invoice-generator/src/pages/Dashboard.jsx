@@ -2,7 +2,8 @@ import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '../supabaseClient'
 import { useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
-import { INDIAN_STATES } from '../constants'
+import { INDIAN_STATES, BILLING_KINDS, normalizeBillingKind, isServiceKind, billingKindLabel } from '../constants'
+import BillingKindSelector from '../components/BillingKindSelector'
 import DatePicker from "react-datepicker"
 import "react-datepicker/dist/react-datepicker.css"
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, Bar, Line, XAxis, YAxis, CartesianGrid, ComposedChart } from 'recharts'
@@ -313,16 +314,20 @@ function ProductFormModal({ productNode, onClose, onSave, allProducts }) {
   const isEdit = !!productNode;
   const [fields, setFields] = useState({
     product_id: '',
+    kind: BILLING_KINDS.SAAS,
     name: '',
     price: '',
     hsn_sac: '',
     tax_rate: '18'
   })
+
+  const isServiceItem = isServiceKind(fields.kind)
   
   useEffect(() => {
     if (isEdit && productNode) {
       setFields({
         product_id: productNode.invoice_no,
+        kind: normalizeBillingKind(productNode.invoice_data?.kind),
         name: productNode.invoice_data?.name || '',
         price: productNode.invoice_data?.price || '',
         hsn_sac: productNode.invoice_data?.hsn_sac || '',
@@ -356,6 +361,7 @@ function ProductFormModal({ productNode, onClose, onSave, allProducts }) {
         invoice_data: {
           type: 'product',
           product_id: fields.product_id,
+          kind: normalizeBillingKind(fields.kind),
           name: fields.name,
           price: parseFloat(fields.price || 0),
           hsn_sac: fields.hsn_sac,
@@ -401,36 +407,49 @@ function ProductFormModal({ productNode, onClose, onSave, allProducts }) {
                 required 
               />
             </div>
+            <BillingKindSelector
+              name="product-kind"
+              value={fields.kind}
+              onChange={(kind) => setFields({ ...fields, kind })}
+              legend="Type *"
+              accent="#d97706"
+            />
             <div>
-              <label className="text-[10px] uppercase font-bold text-gray-400 mb-1 block">Name *</label>
+              <label className="text-[10px] uppercase font-bold text-gray-400 mb-1 block">
+                {isServiceItem ? 'Service Name *' : 'Product Name *'}
+              </label>
               <input 
                 type="text" 
                 value={fields.name} 
                 onChange={e => setFields({...fields, name: e.target.value})} 
-                placeholder="e.g. Software Consulting"
+                placeholder={isServiceItem ? 'e.g. Web Design and Development' : 'e.g. Pixalara Pro'}
                 className="w-full p-2 border rounded text-sm bg-white focus:ring-2 focus:ring-blue-100 outline-none"
                 required 
               />
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="text-[10px] uppercase font-bold text-gray-400 mb-1 block">Price / Rate (INR) *</label>
+                <label className="text-[10px] uppercase font-bold text-gray-400 mb-1 block">
+                  {isServiceItem ? 'Service Fee (INR) *' : 'Plan Price (INR) *'}
+                </label>
                 <input 
                   type="number" 
                   value={fields.price} 
                   onChange={e => setFields({...fields, price: e.target.value})} 
-                  placeholder="e.g. 5000"
+                  placeholder="e.g. 15000"
                   className="w-full p-2 border rounded text-sm bg-white focus:ring-2 focus:ring-blue-100 outline-none"
                   required 
                 />
               </div>
               <div>
-                <label className="text-[10px] uppercase font-bold text-gray-400 mb-1 block">HSN/SAC Code</label>
+                <label className="text-[10px] uppercase font-bold text-gray-400 mb-1 block">
+                  {isServiceItem ? 'SAC Code' : 'HSN/SAC Code'}
+                </label>
                 <input 
                   type="text" 
                   value={fields.hsn_sac} 
                   onChange={e => setFields({...fields, hsn_sac: e.target.value})} 
-                  placeholder="e.g. 998311"
+                  placeholder={isServiceItem ? 'e.g. 998314' : 'e.g. 998311'}
                   className="w-full p-2 border rounded text-sm bg-white focus:ring-2 focus:ring-blue-100 outline-none"
                 />
               </div>
@@ -491,8 +510,8 @@ export default function Dashboard() {
   const [isEditingProfile, setIsEditingProfile] = useState(false)
   const [settingsTab, setSettingsTab] = useState('business')
   const [saasSettings, setSaasSettings] = useState(() => {
-    const saved = localStorage.getItem('saas_receipt_settings')
-    return saved ? JSON.parse(saved) : {
+    const defaults = {
+      billingKind: BILLING_KINDS.SAAS,
       productName: '',
       planName: '',
       amount: '',
@@ -501,7 +520,16 @@ export default function Dashboard() {
       removeSignatureStamp: true,
       isSystemGenerated: true
     }
+    const saved = localStorage.getItem('saas_receipt_settings')
+    if (!saved) return defaults
+    try {
+      const parsed = JSON.parse(saved)
+      return { ...defaults, ...parsed, billingKind: normalizeBillingKind(parsed.billingKind) }
+    } catch {
+      return defaults
+    }
   })
+  const saasIsService = isServiceKind(saasSettings.billingKind)
   
   const [invoices, setInvoices] = useState([]) 
   const [activeTab, setActiveTab] = useState('invoices') // 'invoices', 'receipts', 'customers', 'products'
@@ -1306,20 +1334,34 @@ export default function Dashboard() {
                 {settingsTab === 'saas' ? (
                     <form onSubmit={(e) => {
                         e.preventDefault();
-                        localStorage.setItem('saas_receipt_settings', JSON.stringify(saasSettings));
+                        // A service default must never carry subscription fields.
+                        const toSave = saasIsService
+                            ? { ...saasSettings, planName: '', planDuration: '', planType: '' }
+                            : saasSettings;
+                        localStorage.setItem('saas_receipt_settings', JSON.stringify(toSave));
                         showPopup('Saved', 'Receipt Defaults saved successfully!', 'success');
                     }} className="space-y-3">
+                        <BillingKindSelector
+                            name="saas-defaults-kind"
+                            value={saasSettings.billingKind}
+                            onChange={(billingKind) => setSaasSettings({ ...saasSettings, billingKind })}
+                            legend="Default Billing Type"
+                        />
                         <div>
-                            <label className="text-[10px] uppercase font-bold text-gray-400 mb-1 block">Product Name</label>
+                            <label className="text-[10px] uppercase font-bold text-gray-400 mb-1 block">
+                                {saasIsService ? 'Service Name' : 'Product Name'}
+                            </label>
                             <input 
                                 type="text" 
                                 value={saasSettings.productName} 
                                 onChange={(e) => setSaasSettings({...saasSettings, productName: e.target.value})} 
-                                placeholder="e.g. Pixalara" 
+                                placeholder={saasIsService ? 'e.g. Web Design and Development' : 'e.g. Pixalara'} 
                                 className="w-full p-2 border rounded text-sm bg-white focus:ring-2 focus:ring-blue-100 outline-none" 
                                 required 
                             />
                         </div>
+                        {!saasIsService && (
+                        <>
                         <div>
                             <label className="text-[10px] uppercase font-bold text-gray-400 mb-1 block">Plan Name</label>
                             <input 
@@ -1356,8 +1398,12 @@ export default function Dashboard() {
                                 </select>
                             </div>
                         </div>
+                        </>
+                        )}
                         <div>
-                            <label className="text-[10px] uppercase font-bold text-gray-400 mb-1 block">Default Amount</label>
+                            <label className="text-[10px] uppercase font-bold text-gray-400 mb-1 block">
+                                {saasIsService ? 'Default Service Fee' : 'Default Amount'}
+                            </label>
                             <input 
                                 type="number" 
                                 step="0.01" 
@@ -1653,6 +1699,7 @@ export default function Dashboard() {
                                         <tr>
                                             <th className="px-5 py-3">ID</th>
                                             <th className="px-5 py-3">Name</th>
+                                            <th className="px-5 py-3 text-center">Type</th>
                                             <th className="px-5 py-3 text-right">Price (₹)</th>
                                             <th className="px-5 py-3 text-center">HSN/SAC</th>
                                             <th className="px-5 py-3 text-center">Tax Rate</th>
@@ -1666,6 +1713,11 @@ export default function Dashboard() {
                                                 <tr key={inv.id} className="hover:bg-amber-50 transition-colors">
                                                     <td className="px-5 py-3 font-bold text-amber-600 font-mono">{inv.invoice_no}</td>
                                                     <td className="px-5 py-3 font-bold text-gray-800">{p.name}</td>
+                                                    <td className="px-5 py-3 text-center">
+                                                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold border uppercase tracking-wide ${isServiceKind(p.kind) ? 'bg-violet-100 text-violet-800 border-violet-200' : 'bg-sky-100 text-sky-800 border-sky-200'}`}>
+                                                            {billingKindLabel(p.kind)}
+                                                        </span>
+                                                    </td>
                                                     <td className="px-5 py-3 text-right font-bold text-gray-900">₹{p.price?.toFixed(2)}</td>
                                                     <td className="px-5 py-3 text-center text-gray-600 font-mono">{p.hsn_sac || '-'}</td>
                                                     <td className="px-5 py-3 text-center">
@@ -1800,8 +1852,11 @@ export default function Dashboard() {
                                                 <div className="flex justify-between items-end">
                                                     <div className="flex flex-col gap-0.5">
                                                         <span className="text-sm font-bold text-gray-800">{p.name}</span>
+                                                        <span className={`self-start text-[9px] px-1.5 py-0.5 rounded font-bold border uppercase tracking-wide ${isServiceKind(p.kind) ? 'bg-violet-100 text-violet-800 border-violet-200' : 'bg-sky-100 text-sky-800 border-sky-200'}`}>
+                                                            {billingKindLabel(p.kind)}
+                                                        </span>
                                                         <span className="text-xs text-gray-900 font-bold">₹{p.price?.toFixed(2)}</span>
-                                                        {p.hsn_sac && <span className="text-[10px] text-gray-500 font-mono mt-0.5">HSN/SAC: {p.hsn_sac}</span>}
+                                                        {p.hsn_sac && <span className="text-[10px] text-gray-500 font-mono mt-0.5">{isServiceKind(p.kind) ? 'SAC' : 'HSN/SAC'}: {p.hsn_sac}</span>}
                                                     </div>
                                                     <div className="flex items-center gap-3">
                                                         <button 

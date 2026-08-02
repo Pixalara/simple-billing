@@ -3,6 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { supabase } from '../supabaseClient'
 import BrandingFooter from '../components/BrandingFooter'
+import BillingKindSelector from '../components/BillingKindSelector'
+import { BILLING_KINDS, normalizeBillingKind, isServiceKind } from '../constants'
 import html2pdf from 'html2pdf.js'
 
 // PDF Generation Constants
@@ -110,7 +112,7 @@ export default function CreateReceipt() {
   const closePopup = () => setPopup({ ...popup, isOpen: false })
 
   // Initialize form
-  const { register, handleSubmit, setValue, reset, watch } = useForm({
+  const { register, handleSubmit, setValue, reset, watch, getValues } = useForm({
     defaultValues: {
       receipt_no: '',
       receiptDate: new Date().toISOString().split('T')[0],
@@ -119,7 +121,9 @@ export default function CreateReceipt() {
       buyer_email: '',
       buyer_address: '',
       customerId: '',
+      billingKind: BILLING_KINDS.SAAS,
       productName: '',
+      serviceDescription: '',
       planName: '',
       amount: '',
       planDuration: '1',
@@ -135,6 +139,11 @@ export default function CreateReceipt() {
   })
 
   const formData = watch()
+
+  // A receipt is either a SaaS subscription (plan + duration + cycle) or a
+  // one-off service. Services deliberately carry no plan or duration.
+  const billingKind = normalizeBillingKind(formData.billingKind)
+  const isService = isServiceKind(billingKind)
 
   // Calculate totals
   const price = parseFloat(formData.amount || 0)
@@ -220,11 +229,16 @@ export default function CreateReceipt() {
         }
       } else {
         // Creating new receipt, apply defaults
+        const defaultKind = normalizeBillingKind(savedDefaults.billingKind)
+        setValue('billingKind', defaultKind)
         if (savedDefaults.productName) setValue('productName', savedDefaults.productName)
-        if (savedDefaults.planName) setValue('planName', savedDefaults.planName)
         if (savedDefaults.amount) setValue('amount', savedDefaults.amount)
-        if (savedDefaults.planDuration) setValue('planDuration', savedDefaults.planDuration)
-        if (savedDefaults.planType) setValue('planType', savedDefaults.planType)
+        // Plan fields only ever apply to a SaaS subscription.
+        if (defaultKind !== BILLING_KINDS.SERVICE) {
+          if (savedDefaults.planName) setValue('planName', savedDefaults.planName)
+          if (savedDefaults.planDuration) setValue('planDuration', savedDefaults.planDuration)
+          if (savedDefaults.planType) setValue('planType', savedDefaults.planType)
+        }
         if (savedDefaults.removeSignatureStamp !== undefined) setValue('removeSignatureStamp', savedDefaults.removeSignatureStamp)
         if (savedDefaults.isSystemGenerated !== undefined) setValue('isSystemGenerated', savedDefaults.isSystemGenerated)
 
@@ -262,6 +276,21 @@ export default function CreateReceipt() {
     }
     loadData()
   }, [id, navigate, reset, setValue])
+
+  // Keep the two billing types mutually exclusive: a service receipt must never
+  // retain subscription fields, and a SaaS receipt has no service description.
+  useEffect(() => {
+    if (isService) {
+      setValue('planName', '')
+      setValue('planDuration', '')
+      setValue('planType', '')
+    } else {
+      setValue('serviceDescription', '')
+      // Switching back into a subscription needs a usable cycle again.
+      if (!getValues('planDuration')) setValue('planDuration', '1')
+      if (!getValues('planType')) setValue('planType', 'monthly')
+    }
+  }, [isService, setValue, getValues])
 
   // Scale preview for screen size
   useEffect(() => {
@@ -479,12 +508,19 @@ export default function CreateReceipt() {
     setLoading(true)
     try {
       const { data: { user } } = await supabase.auth.getUser()
+      // Never persist subscription fields on a service receipt.
+      const kindFields = isService
+        ? { planName: '', planDuration: '', planType: '' }
+        : { serviceDescription: '' }
+
       const payload = {
         user_id: user.id,
         invoice_no: data.receipt_no,
         invoice_data: {
           ...data,
+          ...kindFields,
           type: 'receipt', // Mark document type
+          billingKind,
           subtotal,
           taxAmount,
           grandTotal,
@@ -670,7 +706,9 @@ export default function CreateReceipt() {
 
             {/* Subscriber Info */}
             <div className="space-y-4 pt-4 border-t">
-              <h3 className="text-xs uppercase font-bold text-gray-400 tracking-wider">Subscriber Details</h3>
+              <h3 className="text-xs uppercase font-bold text-gray-400 tracking-wider">
+                {isService ? 'Client Details' : 'Subscriber Details'}
+              </h3>
               
               <input type="hidden" {...register('customerId')} />
 
@@ -738,9 +776,20 @@ export default function CreateReceipt() {
               </div>
             </div>
 
-            {/* Subscription details */}
+            {/* Subscription / Service details */}
             <div className="space-y-4 pt-4 border-t">
-              <h3 className="text-xs uppercase font-bold text-gray-400 tracking-wider">Subscription Details</h3>
+              <h3 className="text-xs uppercase font-bold text-gray-400 tracking-wider">
+                {isService ? 'Service Details' : 'Subscription Details'}
+              </h3>
+
+              <input type="hidden" {...register('billingKind')} />
+              <BillingKindSelector
+                name="receipt-billing-kind"
+                value={billingKind}
+                onChange={(kind) => setValue('billingKind', kind)}
+                legend="What are you billing for?"
+                accent={theme.hex}
+              />
               
               {products.length > 0 && (
                 <div>
@@ -752,8 +801,12 @@ export default function CreateReceipt() {
                       if (val === '') return
                       const prod = products.find(p => p.invoice_no === val)
                       if (prod) {
+                        // The saved item decides whether this is a subscription
+                        // or a service, so the right fields show up.
+                        const prodKind = normalizeBillingKind(prod.invoice_data.kind)
+                        setValue('billingKind', prodKind)
                         setValue('productName', prod.invoice_data.name)
-                        setValue('planName', prod.invoice_data.name)
+                        setValue('planName', prodKind === BILLING_KINDS.SERVICE ? '' : prod.invoice_data.name)
                         setValue('amount', prod.invoice_data.price)
                         setValue('taxRate', prod.invoice_data.tax_rate || 0)
                       }
@@ -762,6 +815,7 @@ export default function CreateReceipt() {
                     <option value="">-- Choose Product/Service --</option>
                     {products.map(p => (
                       <option key={p.id} value={p.invoice_no}>
+                        {isServiceKind(p.invoice_data.kind) ? '🛠 ' : '☁ '}
                         {p.invoice_data.name} (₹{p.invoice_data.price})
                       </option>
                     ))}
@@ -770,53 +824,72 @@ export default function CreateReceipt() {
               )}
 
               <div>
-                <label className="text-xs font-bold text-gray-700 block mb-1">Product Name</label>
+                <label className="text-xs font-bold text-gray-700 block mb-1">
+                  {isService ? 'Service Name' : 'Product Name'}
+                </label>
                 <input 
                   type="text" 
                   {...register('productName')} 
-                  placeholder="e.g. Pixalara" 
+                  placeholder={isService ? 'e.g. Web Design and Development' : 'e.g. Pixalara'} 
                   className="w-full p-2 border rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-100 outline-none" 
                   required 
                 />
               </div>
-              <div>
-                <label className="text-xs font-bold text-gray-700 block mb-1">Plan Name</label>
-                <input 
-                  type="text" 
-                  {...register('planName')} 
-                  placeholder="e.g. Premium Growth Plan" 
-                  className="w-full p-2 border rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-100 outline-none" 
-                  required 
-                />
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
+
+              {isService ? (
                 <div>
-                  <label className="text-xs font-bold text-gray-700 block mb-1">Plan Duration</label>
-                  <input 
-                    type="number" 
-                    {...register('planDuration')} 
-                    placeholder="e.g. 1" 
-                    min="1"
+                  <label className="text-xs font-bold text-gray-700 block mb-1">Work Description (Optional)</label>
+                  <textarea 
+                    {...register('serviceDescription')} 
+                    rows="2"
+                    placeholder="e.g. 5-page responsive website, SEO setup and 1 month support" 
                     className="w-full p-2 border rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-100 outline-none" 
-                    required 
                   />
                 </div>
-                <div>
-                  <label className="text-xs font-bold text-gray-700 block mb-1">Billing Cycle</label>
-                  <select 
-                    {...register('planType')} 
-                    className="w-full p-2 border rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-100 outline-none"
-                  >
-                    <option value="monthly">Monthly</option>
-                    <option value="yearly">Yearly</option>
-                  </select>
-                </div>
-              </div>
+              ) : (
+                <>
+                  <div>
+                    <label className="text-xs font-bold text-gray-700 block mb-1">Plan Name</label>
+                    <input 
+                      type="text" 
+                      {...register('planName')} 
+                      placeholder="e.g. Premium Growth Plan" 
+                      className="w-full p-2 border rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-100 outline-none" 
+                      required 
+                    />
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-xs font-bold text-gray-700 block mb-1">Plan Duration</label>
+                      <input 
+                        type="number" 
+                        {...register('planDuration')} 
+                        placeholder="e.g. 1" 
+                        min="1"
+                        className="w-full p-2 border rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-100 outline-none" 
+                        required 
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-bold text-gray-700 block mb-1">Billing Cycle</label>
+                      <select 
+                        {...register('planType')} 
+                        className="w-full p-2 border rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-100 outline-none"
+                      >
+                        <option value="monthly">Monthly</option>
+                        <option value="yearly">Yearly</option>
+                      </select>
+                    </div>
+                  </div>
+                </>
+              )}
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-xs font-bold text-gray-700 block mb-1">Plan Price / Amount</label>
+                  <label className="text-xs font-bold text-gray-700 block mb-1">
+                    {isService ? 'Service Fee / Amount' : 'Plan Price / Amount'}
+                  </label>
                   <input 
                     type="number" 
                     step="0.01"
@@ -985,8 +1058,10 @@ export default function CreateReceipt() {
                   <table className="w-full text-left border-collapse">
                     <thead>
                       <tr className="text-[10px] font-bold uppercase tracking-wider text-gray-500 border-b border-gray-100">
-                        <th className="py-2.5 pb-2">Description / Subscription</th>
-                        <th className="py-2.5 pb-2 text-center" style={{ width: '120px' }}>Billing Cycle</th>
+                        <th className="py-2.5 pb-2">{isService ? 'Description / Service' : 'Description / Subscription'}</th>
+                        {!isService && (
+                          <th className="py-2.5 pb-2 text-center" style={{ width: '120px' }}>Billing Cycle</th>
+                        )}
                         <th className="py-2.5 pb-2 text-right" style={{ width: '120px' }}>Amount</th>
                         <th className="py-2.5 pb-2 text-right" style={{ width: '120px' }}>Total</th>
                       </tr>
@@ -995,14 +1070,26 @@ export default function CreateReceipt() {
                       <tr>
                         <td className="py-4">
                           <p className="text-sm font-bold text-gray-800">
-                            {formData.productName || 'Product'}
-                            {formData.planName && formData.planName !== formData.productName ? ` - ${formData.planName}` : ''}
+                            {formData.productName || (isService ? 'Service' : 'Product')}
+                            {!isService && formData.planName && formData.planName !== formData.productName ? ` - ${formData.planName}` : ''}
                           </p>
-                          <p className="text-xs text-gray-400 font-semibold mt-0.5">Subscription / Service Access</p>
+                          {isService ? (
+                            formData.serviceDescription ? (
+                              <p className="text-xs text-gray-500 font-medium mt-0.5 whitespace-pre-wrap leading-snug max-w-[92%]">
+                                {formData.serviceDescription}
+                              </p>
+                            ) : (
+                              <p className="text-xs text-gray-400 font-semibold mt-0.5">Professional Services</p>
+                            )
+                          ) : (
+                            <p className="text-xs text-gray-400 font-semibold mt-0.5">Subscription / Service Access</p>
+                          )}
                         </td>
-                        <td className="py-4 text-center text-xs font-bold text-gray-700">
-                          {formData.planDuration} {formData.planType === 'yearly' ? 'Year' : 'Month'}{parseInt(formData.planDuration) > 1 ? 's' : ''} ({formData.planType})
-                        </td>
+                        {!isService && (
+                          <td className="py-4 text-center text-xs font-bold text-gray-700">
+                            {formData.planDuration} {formData.planType === 'yearly' ? 'Year' : 'Month'}{parseInt(formData.planDuration) > 1 ? 's' : ''} ({formData.planType})
+                          </td>
+                        )}
                         <td className="py-4 text-right text-xs font-bold text-gray-700 font-mono">
                           {currencySymbol}{price.toFixed(2)}
                         </td>
