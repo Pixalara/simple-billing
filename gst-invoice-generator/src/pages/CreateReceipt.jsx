@@ -146,8 +146,8 @@ export default function CreateReceipt() {
   const billingKind = normalizeBillingKind(formData.billingKind)
   const isService = isServiceKind(billingKind)
 
-  // Only saved SaaS plans are offered as a prefill. Services are always typed.
-  const saasProducts = products.filter(p => !isServiceKind(p.invoice_data?.kind))
+  // Saved master records are products only, so all of them can prefill. Service
+  // work is typed per receipt because its scope changes for every customer.
 
   // Calculate totals
   const price = parseFloat(formData.amount || 0)
@@ -796,17 +796,17 @@ export default function CreateReceipt() {
                 accent={theme.hex}
               />
               
-              {/* Saved-item auto-fill applies to SaaS plans only. Service work is
-                  scoped per customer, so it is always typed in fresh. */}
-              {!isService && saasProducts.length > 0 && (
+              {/* Prefill is offered for subscriptions only. Service receipts are
+                  typed in fresh, since the scope changes per customer. */}
+              {!isService && products.length > 0 && (
                 <div>
-                  <label className="text-xs font-bold text-gray-700 block mb-1">Select Saved Plan (Auto-fill)</label>
+                  <label className="text-xs font-bold text-gray-700 block mb-1">Select Saved Product (Auto-fill)</label>
                   <select
                     className="w-full p-2 border rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-100 outline-none font-medium text-gray-700"
                     onChange={(e) => {
                       const val = e.target.value
                       if (val === '') return
-                      const prod = saasProducts.find(p => p.invoice_no === val)
+                      const prod = products.find(p => p.invoice_no === val)
                       if (prod) {
                         setValue('productName', prod.invoice_data.name)
                         setValue('planName', prod.invoice_data.name)
@@ -815,8 +815,8 @@ export default function CreateReceipt() {
                       }
                     }}
                   >
-                    <option value="">-- Choose a Saved Plan --</option>
-                    {saasProducts.map(p => (
+                    <option value="">-- Choose a Saved Product --</option>
+                    {products.map(p => (
                       <option key={p.id} value={p.invoice_no}>
                         {p.invoice_data.name} (₹{p.invoice_data.price})
                       </option>

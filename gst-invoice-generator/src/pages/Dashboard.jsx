@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '../supabaseClient'
 import { useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
-import { INDIAN_STATES, BILLING_KINDS, normalizeBillingKind, isServiceKind, billingKindLabel } from '../constants'
+import { INDIAN_STATES, BILLING_KINDS, normalizeBillingKind, isServiceKind } from '../constants'
 import BillingKindSelector from '../components/BillingKindSelector'
 import DatePicker from "react-datepicker"
 import "react-datepicker/dist/react-datepicker.css"
@@ -312,22 +312,21 @@ function CustomerFormModal({ customerNode, onClose, onSave, allCustomers }) {
 function ProductFormModal({ productNode, onClose, onSave, allProducts }) {
   const [loading, setLoading] = useState(false)
   const isEdit = !!productNode;
+  // Master records are products/plans only. Service work is described per
+  // document because its scope changes for every customer, so there is nothing
+  // stable to save here.
   const [fields, setFields] = useState({
     product_id: '',
-    kind: BILLING_KINDS.SAAS,
     name: '',
     price: '',
     hsn_sac: '',
     tax_rate: '18'
   })
 
-  const isServiceItem = isServiceKind(fields.kind)
-  
   useEffect(() => {
     if (isEdit && productNode) {
       setFields({
         product_id: productNode.invoice_no,
-        kind: normalizeBillingKind(productNode.invoice_data?.kind),
         name: productNode.invoice_data?.name || '',
         price: productNode.invoice_data?.price || '',
         hsn_sac: productNode.invoice_data?.hsn_sac || '',
@@ -361,7 +360,6 @@ function ProductFormModal({ productNode, onClose, onSave, allProducts }) {
         invoice_data: {
           type: 'product',
           product_id: fields.product_id,
-          kind: normalizeBillingKind(fields.kind),
           name: fields.name,
           price: parseFloat(fields.price || 0),
           hsn_sac: fields.hsn_sac,
@@ -379,7 +377,7 @@ function ProductFormModal({ productNode, onClose, onSave, allProducts }) {
       }
       onSave()
     } catch (err) {
-      alert("Error saving product/service: " + err.message)
+      alert("Error saving product: " + err.message)
     } finally {
       setLoading(false)
     }
@@ -390,7 +388,7 @@ function ProductFormModal({ productNode, onClose, onSave, allProducts }) {
       <div className="bg-white rounded-xl max-w-md w-full shadow-2xl flex flex-col max-h-[90vh] overflow-hidden">
         {/* Modal Header */}
         <div className="flex justify-between items-center border-b p-5">
-          <h3 className="text-lg font-bold text-gray-950">{isEdit ? 'Edit Product/Service' : 'Add New Product/Service'}</h3>
+          <h3 className="text-lg font-bold text-gray-950">{isEdit ? 'Edit Product' : 'Add New Product'}</h3>
           <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600 font-bold text-lg">×</button>
         </div>
         
@@ -407,22 +405,15 @@ function ProductFormModal({ productNode, onClose, onSave, allProducts }) {
                 required 
               />
             </div>
-            <BillingKindSelector
-              name="product-kind"
-              value={fields.kind}
-              onChange={(kind) => setFields({ ...fields, kind })}
-              legend="Type *"
-              accent="#d97706"
-            />
             <div>
               <label className="text-[10px] uppercase font-bold text-gray-400 mb-1 block">
-                {isServiceItem ? 'Service Name *' : 'Product Name *'}
+                Product Name *
               </label>
               <input 
                 type="text" 
                 value={fields.name} 
                 onChange={e => setFields({...fields, name: e.target.value})} 
-                placeholder={isServiceItem ? 'e.g. Web Design and Development' : 'e.g. Pixalara Pro'}
+                placeholder="e.g. Pixalara Pro"
                 className="w-full p-2 border rounded text-sm bg-white focus:ring-2 focus:ring-blue-100 outline-none"
                 required 
               />
@@ -430,7 +421,7 @@ function ProductFormModal({ productNode, onClose, onSave, allProducts }) {
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className="text-[10px] uppercase font-bold text-gray-400 mb-1 block">
-                  {isServiceItem ? 'Service Fee (INR) *' : 'Plan Price (INR) *'}
+                  Price (INR) *
                 </label>
                 <input 
                   type="number" 
@@ -443,13 +434,13 @@ function ProductFormModal({ productNode, onClose, onSave, allProducts }) {
               </div>
               <div>
                 <label className="text-[10px] uppercase font-bold text-gray-400 mb-1 block">
-                  {isServiceItem ? 'SAC Code' : 'HSN/SAC Code'}
+                  HSN/SAC Code
                 </label>
                 <input 
                   type="text" 
                   value={fields.hsn_sac} 
                   onChange={e => setFields({...fields, hsn_sac: e.target.value})} 
-                  placeholder={isServiceItem ? 'e.g. 998314' : 'e.g. 998311'}
+                  placeholder="e.g. 998311"
                   className="w-full p-2 border rounded text-sm bg-white focus:ring-2 focus:ring-blue-100 outline-none"
                 />
               </div>
@@ -487,7 +478,7 @@ function ProductFormModal({ productNode, onClose, onSave, allProducts }) {
             disabled={loading}
             className="px-4 py-2 bg-amber-600 text-white rounded-lg text-xs font-bold hover:bg-amber-700 disabled:opacity-50"
           >
-            {loading ? 'Saving...' : 'Save Product/Service'}
+            {loading ? 'Saving...' : 'Save Product'}
           </button>
         </div>
       </div>
@@ -1541,13 +1532,13 @@ export default function Dashboard() {
                                 onClick={() => { setActiveTab('products'); setSearchTerm(''); }}
                                 className={`pb-2 px-4 text-xs font-bold uppercase tracking-wider transition-all border-b-2 ${activeTab === 'products' ? 'border-amber-600 text-amber-600' : 'border-transparent text-gray-400 hover:text-gray-600'}`}
                             >
-                                Products / Services ({allProducts.length})
+                                Products ({allProducts.length})
                             </button>
                         </div>
 
                         <div className="flex flex-col md:flex-row gap-3 justify-between items-start md:items-center">
                             <h3 className="font-bold text-gray-700 text-sm">
-                                {activeTab === 'invoices' ? 'All Invoices' : activeTab === 'receipts' ? 'All Receipts' : activeTab === 'customers' ? 'All Customers' : 'Products & Services'} ({filteredInvoices.length})
+                                {activeTab === 'invoices' ? 'All Invoices' : activeTab === 'receipts' ? 'All Receipts' : activeTab === 'customers' ? 'All Customers' : 'All Products'} ({filteredInvoices.length})
                             </h3>
                             <div className="flex gap-2 w-full md:w-auto">
                                 <div className="relative flex-1 md:w-64">
@@ -1699,7 +1690,6 @@ export default function Dashboard() {
                                         <tr>
                                             <th className="px-5 py-3">ID</th>
                                             <th className="px-5 py-3">Name</th>
-                                            <th className="px-5 py-3 text-center">Type</th>
                                             <th className="px-5 py-3 text-right">Price (₹)</th>
                                             <th className="px-5 py-3 text-center">HSN/SAC</th>
                                             <th className="px-5 py-3 text-center">Tax Rate</th>
@@ -1713,11 +1703,6 @@ export default function Dashboard() {
                                                 <tr key={inv.id} className="hover:bg-amber-50 transition-colors">
                                                     <td className="px-5 py-3 font-bold text-amber-600 font-mono">{inv.invoice_no}</td>
                                                     <td className="px-5 py-3 font-bold text-gray-800">{p.name}</td>
-                                                    <td className="px-5 py-3 text-center">
-                                                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold border uppercase tracking-wide ${isServiceKind(p.kind) ? 'bg-violet-100 text-violet-800 border-violet-200' : 'bg-sky-100 text-sky-800 border-sky-200'}`}>
-                                                            {billingKindLabel(p.kind)}
-                                                        </span>
-                                                    </td>
                                                     <td className="px-5 py-3 text-right font-bold text-gray-900">₹{p.price?.toFixed(2)}</td>
                                                     <td className="px-5 py-3 text-center text-gray-600 font-mono">{p.hsn_sac || '-'}</td>
                                                     <td className="px-5 py-3 text-center">
@@ -1852,11 +1837,8 @@ export default function Dashboard() {
                                                 <div className="flex justify-between items-end">
                                                     <div className="flex flex-col gap-0.5">
                                                         <span className="text-sm font-bold text-gray-800">{p.name}</span>
-                                                        <span className={`self-start text-[9px] px-1.5 py-0.5 rounded font-bold border uppercase tracking-wide ${isServiceKind(p.kind) ? 'bg-violet-100 text-violet-800 border-violet-200' : 'bg-sky-100 text-sky-800 border-sky-200'}`}>
-                                                            {billingKindLabel(p.kind)}
-                                                        </span>
                                                         <span className="text-xs text-gray-900 font-bold">₹{p.price?.toFixed(2)}</span>
-                                                        {p.hsn_sac && <span className="text-[10px] text-gray-500 font-mono mt-0.5">{isServiceKind(p.kind) ? 'SAC' : 'HSN/SAC'}: {p.hsn_sac}</span>}
+                                                        {p.hsn_sac && <span className="text-[10px] text-gray-500 font-mono mt-0.5">HSN/SAC: {p.hsn_sac}</span>}
                                                     </div>
                                                     <div className="flex items-center gap-3">
                                                         <button 

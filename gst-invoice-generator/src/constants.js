@@ -118,10 +118,15 @@ export const HSN_CODES = [
 ];
 
 // --- BILLING KINDS -----------------------------------------------------------
-// Two distinct ways of billing, which drive which fields a document shows:
+// Applies to DOCUMENTS (invoices and receipts) only. Two ways of billing, which
+// drive which fields a document shows:
 //   saas    -> recurring subscription. Has a plan name, duration and billing cycle.
 //   service -> one-off / project work (web design, digital marketing, SEO...).
 //              Deliberately has NO plan, duration or billing cycle.
+//
+// Saved master records are products/plans only and carry no kind: service scope
+// changes for every customer, so there is nothing stable to save. Service work
+// is described directly on the document each time.
 export const BILLING_KINDS = {
   SAAS: 'saas',
   SERVICE: 'service',
@@ -148,8 +153,6 @@ export const normalizeBillingKind = (kind) =>
   kind === BILLING_KINDS.SERVICE ? BILLING_KINDS.SERVICE : BILLING_KINDS.SAAS
 
 export const isServiceKind = (kind) => normalizeBillingKind(kind) === BILLING_KINDS.SERVICE
-
-export const billingKindLabel = (kind) => (isServiceKind(kind) ? 'Service' : 'SaaS Product')
 
 // Services are classified under SAC codes, goods under HSN.
 export const taxCodeLabel = (kind) => (isServiceKind(kind) ? 'SAC' : 'HSN')

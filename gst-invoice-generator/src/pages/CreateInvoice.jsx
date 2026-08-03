@@ -135,8 +135,8 @@ export default function CreateInvoice() {
   const isServiceInvoice = isServiceKind(billingKind)
   const codeLabel = taxCodeLabel(billingKind)
 
-  // Only saved products are offered as a prefill. Services are always typed.
-  const saasProducts = products.filter(p => !isServiceKind(p.invoice_data?.kind))
+  // Saved master records are products only, so all of them can prefill a line.
+  // Service lines are typed per invoice because their scope changes per customer.
 
   useEffect(() => {
     const loadData = async () => {
@@ -894,7 +894,7 @@ export default function CreateInvoice() {
                 <div key={item.id} className="flex flex-col gap-2 mb-4 p-3 bg-gray-50 rounded border">
                     {/* Saved-item auto-fill is for products only. Service scope is
                         agreed per customer, so it is typed in fresh each time. */}
-                    {!isServiceInvoice && saasProducts.length > 0 && (
+                    {!isServiceInvoice && products.length > 0 && (
                       <div className="w-full">
                         <label className="text-xs text-gray-500 font-bold block mb-1">Select Saved Product (Auto-fill)</label>
                         <select
@@ -902,7 +902,7 @@ export default function CreateInvoice() {
                           onChange={(e) => {
                             const val = e.target.value
                             if (val === '') return
-                            const prod = saasProducts.find(p => p.invoice_no === val)
+                            const prod = products.find(p => p.invoice_no === val)
                             if (prod) {
                               setValue(`items.${index}.description`, prod.invoice_data.name)
                               setValue(`items.${index}.hsn`, prod.invoice_data.hsn_sac || '')
@@ -912,7 +912,7 @@ export default function CreateInvoice() {
                           }}
                         >
                           <option value="">-- Choose a Saved Product --</option>
-                          {saasProducts.map(p => (
+                          {products.map(p => (
                             <option key={p.id} value={p.invoice_no}>
                               {p.invoice_data.name} (₹{p.invoice_data.price})
                             </option>
