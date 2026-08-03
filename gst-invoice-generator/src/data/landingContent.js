@@ -81,7 +81,7 @@ export const FEATURES = [
     status: 'live',
   },
   {
-    icon: 'sparkles',
+    icon: 'split',
     title: 'Two billing modes',
     body: 'SaaS subscriptions carry a plan and cycle. Services are free text with no plan fields at all. The form changes to match the work.',
     status: 'live',
@@ -152,6 +152,7 @@ export const DELIVERY_CHANNELS = [
     status: 'soon',
     tagline: 'Coming soon',
     body: 'Send the invoice to a saved customer number with a prefilled message, straight from the invoice screen. No share sheet detour.',
+    bullets: ['One tap from the invoice', 'Message template you control'],
   },
   {
     id: 'email',
@@ -160,6 +161,7 @@ export const DELIVERY_CHANNELS = [
     status: 'soon',
     tagline: 'Coming soon',
     body: 'Email the PDF to your customer as a real attachment, from your business address, with delivery status on the invoice.',
+    bullets: ['Real PDF attachment', 'Sent, opened and bounced status'],
   },
   {
     id: 'sms',
@@ -168,6 +170,7 @@ export const DELIVERY_CHANNELS = [
     status: 'soon',
     tagline: 'Coming soon',
     body: 'A short SMS with the amount, due date and a secure link to the invoice — for customers who do not use WhatsApp.',
+    bullets: ['Works without a smartphone', 'Secure single-invoice link'],
   },
   {
     id: 'reminders',
@@ -176,7 +179,16 @@ export const DELIVERY_CHANNELS = [
     status: 'soon',
     tagline: 'Coming soon',
     body: 'Automatic nudges on overdue invoices across WhatsApp and email, so you stop chasing payments by hand.',
+    bullets: ['Fires on your schedule', 'Stops the moment they pay'],
   },
+]
+
+/** Short labels for the closing CTA, so the roadmap is visible at the decision point. */
+export const UPCOMING_HIGHLIGHTS = [
+  { icon: 'whatsapp', label: 'WhatsApp send' },
+  { icon: 'mail', label: 'Email delivery' },
+  { icon: 'sms', label: 'SMS alerts' },
+  { icon: 'bell', label: 'Auto reminders' },
 ]
 
 /* --- Pricing ------------------------------------------------------------

@@ -1,6 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { Button, Container, Icon, Reveal } from './ui'
-import { FOOTER_COLUMNS } from '../../data/landingContent'
+import { FOOTER_COLUMNS, UPCOMING_HIGHLIGHTS } from '../../data/landingContent'
 
 export default function Footer() {
   const navigate = useNavigate()
@@ -36,6 +36,30 @@ export default function Footer() {
               <Button as={Link} to="/login" variant="outlineLight" size="lg">
                 Log in
               </Button>
+            </div>
+
+            {/* Roadmap at the decision point: what lands next, included free. */}
+            <div className="mx-auto mt-10 max-w-xl rounded-2xl bg-gradient-to-b from-white/[0.12] to-white/[0.04] p-px">
+              <div className="rounded-2xl bg-ink-950/70 px-5 py-5 backdrop-blur">
+                <p className="flex items-center justify-center gap-2 text-eyebrow uppercase text-mint-300">
+                  <Icon name="zap" className="h-3.5 w-3.5" />
+                  Coming soon, included in your plan
+                </p>
+                <ul className="mt-4 flex flex-wrap items-center justify-center gap-2">
+                  {UPCOMING_HIGHLIGHTS.map((item) => (
+                    <li
+                      key={item.label}
+                      className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.08] px-3 py-1.5 text-[11px] font-semibold text-white ring-1 ring-white/15"
+                    >
+                      <Icon name={item.icon} className="h-3.5 w-3.5 text-mint-300" />
+                      {item.label}
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-3.5 text-micro text-ink-400">
+                  Join now and each one switches on for you the day it ships — no upgrade needed.
+                </p>
+              </div>
             </div>
           </Reveal>
         </Container>

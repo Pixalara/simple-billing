@@ -178,7 +178,8 @@ export function Reveal({ as = 'div', delay = 0, className = '', children, ...res
  */
 const PATHS = {
   receipt: <><path d="M5 3h14a1 1 0 0 1 1 1v16l-3-2-3 2-3-2-3 2V4a1 1 0 0 1 1-1Z" /><path d="M9 8h6M9 12h6" /></>,
-  sparkles: <><path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6L12 3Z" /><path d="M18 15l.8 2.2L21 18l-2.2.8L18 21l-.8-2.2L15 18l2.2-.8L18 15Z" /></>,
+  // One input branching into two routes — reads as "two billing modes".
+  split: <><path d="M4 12h4" /><path d="M8 12l4-5.5h5" /><path d="M8 12l4 5.5h5" /><path d="M14.5 4L17 6.5L14.5 9" /><path d="M14.5 15L17 17.5L14.5 20" /></>,
   palette: <><circle cx="12" cy="12" r="9" /><circle cx="9" cy="9.5" r="1.2" /><circle cx="15" cy="9.5" r="1.2" /><circle cx="9.5" cy="15" r="1.2" /></>,
   users: <><path d="M16 20v-1.5a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4V20" /><circle cx="9.5" cy="7.5" r="3.5" /><path d="M16.5 4.2a3.5 3.5 0 0 1 0 6.6" /><path d="M18 20v-1.5a4 4 0 0 0-2-3.4" /></>,
   chart: <><path d="M4 20h16" /><path d="M7 20v-6M12 20V6M17 20v-9" /></>,
