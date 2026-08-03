@@ -40,7 +40,10 @@ const PATHS = {
   info: <><circle cx="12" cy="12" r="8.5" /><path d="M12 11v5.5M12 7.75v.5" /></>,
   clock: <><circle cx="12" cy="12" r="8.5" /><path d="M12 7.5V12l3 2" /></>,
   tag: <><path d="M4 11.5V5a1 1 0 0 1 1-1h6.5L20 12.5 12.5 20 4 11.5Z" /><circle cx="8" cy="8" r="1.3" /></>,
-  pie: <><path d="M12 3v9h9a9 9 0 1 0-9-9Z" /><path d="M21 12a9 9 0 0 1-9 9" /></>,
+  // Circle plus two radii = a pie with a slice marked out. The previous version
+  // used arc flags that only read correctly when filled; stroked, it collapsed
+  // into a hook shape.
+  pie: <><circle cx="12" cy="12" r="8.5" /><path d="M12 3.5V12h8.5" /></>,
   scale: <><path d="M12 4v16M7 20h10" /><path d="M12 6.5L4.5 9M12 6.5L19.5 9" /><path d="M4.5 9L2.5 14a3 3 0 0 0 4 0L4.5 9Z" /><path d="M19.5 9L17.5 14a3 3 0 0 0 4 0L19.5 9Z" /></>,
   arrowUpRight: <><path d="M7 17L17 7" /><path d="M9 7h8v8" /></>,
   arrowDownRight: <><path d="M7 7l10 10" /><path d="M17 9v8H9" /></>,

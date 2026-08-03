@@ -1110,8 +1110,8 @@ export default function Dashboard() {
               className="bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900 text-white font-bold px-5 py-3 rounded-xl shadow-md hover:shadow-lg hover:shadow-blue-500/20 transition-all duration-200 transform hover:scale-[1.02] active:scale-95 flex items-center gap-2 text-sm md:text-base shrink-0 border border-blue-500/10"
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 3v9h9a9 9 0 1 0-9-9Z" />
-                <path d="M21 12a9 9 0 0 1-9 9" />
+                <circle cx="12" cy="12" r="8.5" />
+                <path d="M12 3.5V12h8.5" />
               </svg>
               Analytics
             </button>
