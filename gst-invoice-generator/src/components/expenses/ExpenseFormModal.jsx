@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../../supabaseClient'
 import Icon from './icons'
 import {
+  AMOUNT_MODES,
   EXPENSE_CATEGORIES,
   EXPENSE_TYPE,
   GST_RATES,
@@ -11,6 +12,7 @@ import {
   emptyExpense,
   formatINR,
   getCategory,
+  isNoGst,
   nextExpenseId,
 } from '../../data/expenses'
 
@@ -72,16 +74,34 @@ export default function ExpenseFormModal({ expenseNode, allExpenses = [], onClos
 
   const totals = computeExpenseTotals(fields)
   const category = getCategory(fields.category)
+  const noGst = isNoGst(fields.amountMode)
 
-  /** Selecting a category prefills SAC and the usual rate, but never overwrites
-   *  values the user has already typed. */
+  /** Selecting a category prefills SAC, the usual rate, and — for spend that is
+   *  outside GST by nature, like salaries — the No GST treatment. Never
+   *  overwrites values the user has already typed. */
   const pickCategory = (id) => {
     const c = getCategory(id)
+    const untouched = !fields.amount
     set({
       category: id,
       sac: fields.sac ? fields.sac : c.sac,
-      gstRate: fields.amount ? fields.gstRate : c.gst,
+      gstRate: untouched ? c.gst : fields.gstRate,
+      amountMode: untouched ? (c.noGst ? 'none' : 'exclusive') : fields.amountMode,
     })
+  }
+
+  /** Switching to No GST clears the rate and any ITC claim, since neither
+   *  applies. Switching back restores the category's usual rate. */
+  const pickAmountMode = (mode) => {
+    if (isNoGst(mode)) {
+      set({ amountMode: mode, gstRate: 0, itcEligible: false })
+    } else {
+      set({
+        amountMode: mode,
+        gstRate: fields.gstRate || category.gst || 18,
+        itcEligible: true,
+      })
+    }
   }
 
   const handleSubmit = async (e) => {
@@ -96,11 +116,18 @@ export default function ExpenseFormModal({ expenseNode, allExpenses = [], onClos
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Your session expired. Please sign in again.')
 
+      // A No-GST expense must never persist a rate or an ITC claim, whatever
+      // was left in state before the mode was switched.
+      const gstFields = noGst
+        ? { gstRate: 0, itcEligible: false }
+        : { gstRate: fields.gstRate, itcEligible: fields.itcEligible }
+
       const payload = {
         user_id: user.id,
         invoice_no: fields.expense_id,
         invoice_data: {
           ...fields,
+          ...gstFields,
           type: EXPENSE_TYPE,
           taxableValue: totals.taxableValue,
           gstAmount: totals.gstAmount,
@@ -247,31 +274,33 @@ export default function ExpenseFormModal({ expenseNode, allExpenses = [], onClos
                     required
                   />
                 </div>
-                <div className="xs:w-32">
-                  <label className={LABEL} htmlFor="exp-gst">GST rate</label>
-                  <select
-                    id="exp-gst"
-                    className={FIELD}
-                    value={fields.gstRate}
-                    onChange={(e) => set({ gstRate: parseFloat(e.target.value) })}
-                  >
-                    {GST_RATES.map((r) => (
-                      <option key={r} value={r}>{r}%</option>
-                    ))}
-                  </select>
-                </div>
+                {/* No rate to choose when the spend is outside GST. */}
+                {!noGst && (
+                  <div className="xs:w-32">
+                    <label className={LABEL} htmlFor="exp-gst">GST rate</label>
+                    <select
+                      id="exp-gst"
+                      className={FIELD}
+                      value={fields.gstRate}
+                      onChange={(e) => set({ gstRate: parseFloat(e.target.value) })}
+                    >
+                      {GST_RATES.map((r) => (
+                        <option key={r} value={r}>{r}%</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
               </div>
 
-              {/* Bills are quoted both ways, so let the user say which. */}
+              {/* Bills are quoted both ways, and plenty of spend carries no GST
+                  at all, so the user says which rather than us guessing. */}
               <fieldset className="mt-3">
-                <legend className="sr-only">Is the amount inclusive of GST?</legend>
-                <div className="inline-flex rounded-lg bg-white p-0.5 ring-1 ring-ink-200">
-                  {[
-                    { id: 'exclusive', label: '+ GST on top' },
-                    { id: 'inclusive', label: 'GST included' },
-                  ].map((opt) => (
+                <legend className="sr-only">How should this amount be treated for GST?</legend>
+                <div className="inline-flex flex-wrap gap-0.5 rounded-lg bg-white p-0.5 ring-1 ring-ink-200">
+                  {AMOUNT_MODES.map((opt) => (
                     <label
                       key={opt.id}
+                      title={opt.hint}
                       className={`focus-ring cursor-pointer rounded-md px-3 py-1.5 text-[11px] font-bold transition ${
                         fields.amountMode === opt.id
                           ? 'bg-ink-900 text-white'
@@ -283,32 +312,57 @@ export default function ExpenseFormModal({ expenseNode, allExpenses = [], onClos
                         name="amountMode"
                         className="sr-only"
                         checked={fields.amountMode === opt.id}
-                        onChange={() => set({ amountMode: opt.id })}
+                        onChange={() => pickAmountMode(opt.id)}
                       />
                       {opt.label}
                     </label>
                   ))}
                 </div>
+                <p className="mt-1.5 text-[10px] font-medium text-ink-400">
+                  {AMOUNT_MODES.find((m) => m.id === fields.amountMode)?.hint}
+                </p>
               </fieldset>
 
               {/* Derived figures, so there is no doubt what gets saved. */}
               <dl className="mt-4 space-y-1.5 border-t border-ink-200/70 pt-3" aria-live="polite">
-                <div className="flex justify-between text-xs">
-                  <dt className="text-ink-500">Taxable value</dt>
-                  <dd className="tnum font-semibold text-ink-700">{formatINR(totals.taxableValue)}</dd>
-                </div>
-                <div className="flex justify-between text-xs">
-                  <dt className="text-ink-500">GST ({fields.gstRate}%)</dt>
-                  <dd className="tnum font-semibold text-ink-700">{formatINR(totals.gstAmount)}</dd>
-                </div>
-                <div className="flex items-baseline justify-between border-t border-ink-200/70 pt-2">
-                  <dt className="text-[11px] font-bold uppercase tracking-wide text-ink-900">Total</dt>
-                  <dd className="tnum text-lg font-extrabold text-ink-900">{formatINR(totals.grandTotal)}</dd>
-                </div>
+                {noGst ? (
+                  <div className="flex items-baseline justify-between">
+                    <dt className="text-[11px] font-bold uppercase tracking-wide text-ink-900">
+                      Total
+                    </dt>
+                    <dd className="tnum text-lg font-extrabold text-ink-900">
+                      {formatINR(totals.grandTotal)}
+                    </dd>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex justify-between text-xs">
+                      <dt className="text-ink-500">Taxable value</dt>
+                      <dd className="tnum font-semibold text-ink-700">{formatINR(totals.taxableValue)}</dd>
+                    </div>
+                    <div className="flex justify-between text-xs">
+                      <dt className="text-ink-500">GST ({fields.gstRate}%)</dt>
+                      <dd className="tnum font-semibold text-ink-700">{formatINR(totals.gstAmount)}</dd>
+                    </div>
+                    <div className="flex items-baseline justify-between border-t border-ink-200/70 pt-2">
+                      <dt className="text-[11px] font-bold uppercase tracking-wide text-ink-900">Total</dt>
+                      <dd className="tnum text-lg font-extrabold text-ink-900">{formatINR(totals.grandTotal)}</dd>
+                    </div>
+                  </>
+                )}
               </dl>
+
+              {noGst && (
+                <p className="mt-2.5 flex items-start gap-2 rounded-lg bg-white px-3 py-2 text-[10px] font-medium leading-snug text-ink-500 ring-1 ring-ink-200">
+                  <Icon name="info" className="mt-px h-3.5 w-3.5 shrink-0 text-ink-400" />
+                  Recorded outside GST, so no input tax credit is claimed on this expense.
+                </p>
+              )}
             </div>
 
-            {/* GST / ITC */}
+            {/* GST / ITC — irrelevant when the expense is outside GST, so the
+                whole block stands down rather than showing dead fields. */}
+            {!noGst && (
             <div className="space-y-4">
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
@@ -362,6 +416,7 @@ export default function ExpenseFormModal({ expenseNode, allExpenses = [], onClos
                 </span>
               </label>
             </div>
+            )}
 
             {/* Payment */}
             <div className="grid gap-4 sm:grid-cols-2">

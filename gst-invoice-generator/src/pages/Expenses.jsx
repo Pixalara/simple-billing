@@ -27,6 +27,7 @@ import {
   getCategory,
   getExpenseDate,
   getFinancialYear,
+  isNoGst,
   isWithinRange,
   resolveDateRange,
 } from '../data/expenses'
@@ -282,6 +283,7 @@ export default function Expenses() {
       { header: 'Vendor GSTIN', key: 'gstin', width: 18 },
       { header: 'HSN/SAC', key: 'sac', width: 12 },
       { header: 'Bill No', key: 'bill', width: 16 },
+      { header: 'GST Treatment', key: 'treatment', width: 15 },
       { header: 'Taxable Value', key: 'taxable', width: 15 },
       { header: 'GST Rate %', key: 'rate', width: 11 },
       { header: 'GST Amount', key: 'gst', width: 14 },
@@ -305,11 +307,16 @@ export default function Expenses() {
         gstin: d.vendorGstin || '',
         sac: d.sac || '',
         bill: d.billNo || '',
+        treatment: isNoGst(d.amountMode)
+          ? 'No GST'
+          : d.amountMode === 'inclusive'
+            ? 'GST included'
+            : 'GST on top',
         taxable: parseFloat(d.taxableValue || 0),
-        rate: parseFloat(d.gstRate || 0),
+        rate: isNoGst(d.amountMode) ? '' : parseFloat(d.gstRate || 0),
         gst: parseFloat(d.gstAmount || 0),
         total: parseFloat(r.total_amount || 0),
-        itc: d.itcEligible ? 'Yes' : 'No',
+        itc: isNoGst(d.amountMode) ? 'N/A' : d.itcEligible ? 'Yes' : 'No',
         method: d.paymentMethod || '',
         status: (r.status || d.paymentStatus) === 'PENDING' ? 'Unpaid' : 'Paid',
         notes: d.notes || '',
@@ -696,13 +703,21 @@ export default function Expenses() {
                           {formatINR(d.taxableValue)}
                         </td>
                         <td className="px-4 py-3 text-right">
-                          <span className="tnum block text-xs font-semibold text-ink-600">
-                            {formatINR(d.gstAmount)}
-                          </span>
-                          {d.itcEligible && parseFloat(d.gstAmount || 0) > 0 && (
-                            <span className="text-[9px] font-bold uppercase tracking-wide text-mint-600">
-                              ITC
+                          {isNoGst(d.amountMode) ? (
+                            <span className="text-[10px] font-bold uppercase tracking-wide text-ink-400">
+                              No GST
                             </span>
+                          ) : (
+                            <>
+                              <span className="tnum block text-xs font-semibold text-ink-600">
+                                {formatINR(d.gstAmount)}
+                              </span>
+                              {d.itcEligible && parseFloat(d.gstAmount || 0) > 0 && (
+                                <span className="text-[9px] font-bold uppercase tracking-wide text-mint-600">
+                                  ITC
+                                </span>
+                              )}
+                            </>
                           )}
                         </td>
                         <td className="tnum px-4 py-3 text-right text-sm font-extrabold text-ink-900">

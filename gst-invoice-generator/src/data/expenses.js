@@ -24,7 +24,8 @@ export const EXPENSE_TYPE = 'expense'
  */
 export const EXPENSE_CATEGORIES = [
   { id: 'rent', label: 'Rent & Premises', icon: 'building', color: '#2563eb', sac: '997212', gst: 18 },
-  { id: 'salaries', label: 'Salaries & Wages', icon: 'users', color: '#0891b2', sac: '', gst: 0 },
+  // noGst: spend that sits outside GST by nature, so the form defaults to it.
+  { id: 'salaries', label: 'Salaries & Wages', icon: 'users', color: '#0891b2', sac: '', gst: 0, noGst: true },
   { id: 'contractors', label: 'Contractors & Freelancers', icon: 'userPlus', color: '#0d9488', sac: '998519', gst: 18 },
   { id: 'software', label: 'Software & Subscriptions', icon: 'cloud', color: '#7c3aed', sac: '997331', gst: 18 },
   { id: 'marketing', label: 'Marketing & Advertising', icon: 'megaphone', color: '#db2777', sac: '998361', gst: 18 },
@@ -34,7 +35,7 @@ export const EXPENSE_CATEGORIES = [
   { id: 'office', label: 'Office Supplies', icon: 'box', color: '#65a30d', sac: '', gst: 18 },
   { id: 'equipment', label: 'Equipment & Assets', icon: 'monitor', color: '#475569', sac: '', gst: 18 },
   { id: 'bank', label: 'Bank & Payment Fees', icon: 'bank', color: '#b45309', sac: '997119', gst: 18 },
-  { id: 'taxes', label: 'Taxes & Statutory', icon: 'receipt', color: '#be123c', sac: '', gst: 0 },
+  { id: 'taxes', label: 'Taxes & Statutory', icon: 'receipt', color: '#be123c', sac: '', gst: 0, noGst: true },
   { id: 'other', label: 'Other', icon: 'dots', color: '#6b7280', sac: '', gst: 18 },
 ]
 
@@ -65,6 +66,20 @@ export const EXPENSE_STATUSES = [
 
 export const GST_RATES = [0, 5, 12, 18, 28]
 
+/* --- How the entered amount should be read ------------------------------
+ * 'none' is not the same as 'exclusive' at 0%. Plenty of real spend sits
+ * outside GST entirely — salaries, statutory payments, purchases from
+ * unregistered vendors — and recording that explicitly is different data from
+ * someone forgetting to set a rate. It also means no ITC can be claimed.
+ */
+export const AMOUNT_MODES = [
+  { id: 'exclusive', label: '+ GST on top', hint: 'Amount is before GST' },
+  { id: 'inclusive', label: 'GST included', hint: 'Amount is the bill total' },
+  { id: 'none', label: 'No GST', hint: 'Outside GST entirely' },
+]
+
+export const isNoGst = (mode) => mode === 'none'
+
 /* --- Money --------------------------------------------------------------
  * Bills are quoted both ways in practice, so the amount entered can be read
  * as exclusive or inclusive of GST and we derive the rest. Doing this in one
@@ -78,7 +93,12 @@ export const computeExpenseTotals = ({ amount, gstRate, amountMode = 'exclusive'
   let gstAmount
   let grandTotal
 
-  if (amountMode === 'inclusive') {
+  if (amountMode === 'none') {
+    // No GST at all: the rate is ignored rather than merely zero.
+    taxableValue = a
+    gstAmount = 0
+    grandTotal = a
+  } else if (amountMode === 'inclusive') {
     grandTotal = a
     taxableValue = r > 0 ? a / (1 + r / 100) : a
     gstAmount = grandTotal - taxableValue
