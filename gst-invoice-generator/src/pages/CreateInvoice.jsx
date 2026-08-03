@@ -135,6 +135,9 @@ export default function CreateInvoice() {
   const isServiceInvoice = isServiceKind(billingKind)
   const codeLabel = taxCodeLabel(billingKind)
 
+  // Only saved products are offered as a prefill. Services are always typed.
+  const saasProducts = products.filter(p => !isServiceKind(p.invoice_data?.kind))
+
   useEffect(() => {
     const loadData = async () => {
       const { data: { user } } = await supabase.auth.getUser()
@@ -889,50 +892,58 @@ export default function CreateInvoice() {
                 </h3>
                 {fields.map((item, index) => (
                 <div key={item.id} className="flex flex-col gap-2 mb-4 p-3 bg-gray-50 rounded border">
-                    {products.length > 0 && (
+                    {/* Saved-item auto-fill is for products only. Service scope is
+                        agreed per customer, so it is typed in fresh each time. */}
+                    {!isServiceInvoice && saasProducts.length > 0 && (
                       <div className="w-full">
-                        <label className="text-xs text-gray-500 font-bold block mb-1">Select Custom Product / Service (Auto-fill)</label>
+                        <label className="text-xs text-gray-500 font-bold block mb-1">Select Saved Product (Auto-fill)</label>
                         <select
                           className="w-full p-2 border rounded text-sm bg-white focus:ring-2 focus:ring-blue-100 outline-none"
                           onChange={(e) => {
                             const val = e.target.value
                             if (val === '') return
-                            const prod = products.find(p => p.invoice_no === val)
+                            const prod = saasProducts.find(p => p.invoice_no === val)
                             if (prod) {
                               setValue(`items.${index}.description`, prod.invoice_data.name)
                               setValue(`items.${index}.hsn`, prod.invoice_data.hsn_sac || '')
                               setValue(`items.${index}.price`, prod.invoice_data.price)
                               setValue(`items.${index}.gstRate`, prod.invoice_data.tax_rate || 18)
-                              // Only the first line sets the document type. Later
-                              // lines don't override it, since an invoice can mix
-                              // products and services.
-                              if (index === 0) {
-                                setValue('billingKind', normalizeBillingKind(prod.invoice_data.kind))
-                              }
                             }
                           }}
                         >
-                          <option value="">-- Choose Product/Service --</option>
-                          {products.map(p => (
+                          <option value="">-- Choose a Saved Product --</option>
+                          {saasProducts.map(p => (
                             <option key={p.id} value={p.invoice_no}>
-                              {isServiceKind(p.invoice_data.kind) ? '🛠 ' : '☁ '}
                               {p.invoice_data.name} (₹{p.invoice_data.price})
                             </option>
                           ))}
                         </select>
                       </div>
                     )}
-                    <div className="w-full">
-                        <label className="text-xs text-gray-500 font-bold">
-                            {isServiceInvoice ? 'Search Service / Description' : 'Search Item / Description'}
-                        </label>
-                        <SearchableSelect 
-                            options={HSN_CODES} 
-                            value={formData.items[index]?.description}
-                            placeholder="Start typing..."
-                            onChange={(selected) => handleItemSelect(index, selected)}
-                        />
-                    </div>
+                    {isServiceInvoice ? (
+                      <div className="w-full">
+                          <label className="text-xs text-gray-500 font-bold">Service Description</label>
+                          <textarea 
+                              {...register(`items.${index}.description`)} 
+                              rows="2"
+                              placeholder="e.g. Web design and development - 5 page responsive site with SEO setup" 
+                              className="w-full p-2 border rounded text-sm mt-1"
+                          />
+                          <p className="text-[10px] text-gray-400 font-medium mt-0.5 leading-snug">
+                              Free text, describe exactly what this customer agreed to.
+                          </p>
+                      </div>
+                    ) : (
+                      <div className="w-full">
+                          <label className="text-xs text-gray-500 font-bold">Search Item / Description</label>
+                          <SearchableSelect 
+                              options={HSN_CODES} 
+                              value={formData.items[index]?.description}
+                              placeholder="Start typing..."
+                              onChange={(selected) => handleItemSelect(index, selected)}
+                          />
+                      </div>
+                    )}
                     <div className="grid grid-cols-12 gap-2 mt-2">
                         <div className="col-span-3">
                             <label className="text-xs text-gray-500">{codeLabel} Code</label>
@@ -1112,7 +1123,7 @@ export default function CreateInvoice() {
                                     return (
                                         <tr key={i} style={{ borderBottom: '1px solid #e5e7eb' }}>
                                             <td style={{ width: includeGST ? '40%' : '55%', padding: '8px 12px', verticalAlign: 'top' }}>
-                                                <p style={{ fontWeight: 600, fontSize: '13px', margin: 0, color: '#1f2937' }}>{item.description}</p>
+                                                <p style={{ fontWeight: 600, fontSize: '13px', margin: 0, color: '#1f2937', whiteSpace: 'pre-wrap' }}>{item.description}</p>
                                             </td>
                                             {includeGST && (
                                                 <td style={{ width: '15%', padding: '8px 12px', verticalAlign: 'top', fontSize: '12px', color: '#4b5563' }}>{item.hsn}</td>

@@ -124,6 +124,7 @@ export default function CreateReceipt() {
       billingKind: BILLING_KINDS.SAAS,
       productName: '',
       serviceDescription: '',
+      servicePeriod: '',
       planName: '',
       amount: '',
       planDuration: '1',
@@ -144,6 +145,9 @@ export default function CreateReceipt() {
   // one-off service. Services deliberately carry no plan or duration.
   const billingKind = normalizeBillingKind(formData.billingKind)
   const isService = isServiceKind(billingKind)
+
+  // Only saved SaaS plans are offered as a prefill. Services are always typed.
+  const saasProducts = products.filter(p => !isServiceKind(p.invoice_data?.kind))
 
   // Calculate totals
   const price = parseFloat(formData.amount || 0)
@@ -286,6 +290,7 @@ export default function CreateReceipt() {
       setValue('planType', '')
     } else {
       setValue('serviceDescription', '')
+      setValue('servicePeriod', '')
       // Switching back into a subscription needs a usable cycle again.
       if (!getValues('planDuration')) setValue('planDuration', '1')
       if (!getValues('planType')) setValue('planType', 'monthly')
@@ -511,7 +516,7 @@ export default function CreateReceipt() {
       // Never persist subscription fields on a service receipt.
       const kindFields = isService
         ? { planName: '', planDuration: '', planType: '' }
-        : { serviceDescription: '' }
+        : { serviceDescription: '', servicePeriod: '' }
 
       const payload = {
         user_id: user.id,
@@ -791,31 +796,28 @@ export default function CreateReceipt() {
                 accent={theme.hex}
               />
               
-              {products.length > 0 && (
+              {/* Saved-item auto-fill applies to SaaS plans only. Service work is
+                  scoped per customer, so it is always typed in fresh. */}
+              {!isService && saasProducts.length > 0 && (
                 <div>
-                  <label className="text-xs font-bold text-gray-700 block mb-1">Select Custom Product / Service (Auto-fill)</label>
+                  <label className="text-xs font-bold text-gray-700 block mb-1">Select Saved Plan (Auto-fill)</label>
                   <select
                     className="w-full p-2 border rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-100 outline-none font-medium text-gray-700"
                     onChange={(e) => {
                       const val = e.target.value
                       if (val === '') return
-                      const prod = products.find(p => p.invoice_no === val)
+                      const prod = saasProducts.find(p => p.invoice_no === val)
                       if (prod) {
-                        // The saved item decides whether this is a subscription
-                        // or a service, so the right fields show up.
-                        const prodKind = normalizeBillingKind(prod.invoice_data.kind)
-                        setValue('billingKind', prodKind)
                         setValue('productName', prod.invoice_data.name)
-                        setValue('planName', prodKind === BILLING_KINDS.SERVICE ? '' : prod.invoice_data.name)
+                        setValue('planName', prod.invoice_data.name)
                         setValue('amount', prod.invoice_data.price)
                         setValue('taxRate', prod.invoice_data.tax_rate || 0)
                       }
                     }}
                   >
-                    <option value="">-- Choose Product/Service --</option>
-                    {products.map(p => (
+                    <option value="">-- Choose a Saved Plan --</option>
+                    {saasProducts.map(p => (
                       <option key={p.id} value={p.invoice_no}>
-                        {isServiceKind(p.invoice_data.kind) ? '🛠 ' : '☁ '}
                         {p.invoice_data.name} (₹{p.invoice_data.price})
                       </option>
                     ))}
@@ -834,18 +836,37 @@ export default function CreateReceipt() {
                   className="w-full p-2 border rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-100 outline-none" 
                   required 
                 />
+                {isService && (
+                  <p className="text-[10px] text-gray-500 font-medium mt-1 leading-snug">
+                    Type whatever this customer agreed to. Nothing is locked to your saved list.
+                  </p>
+                )}
               </div>
 
               {isService ? (
-                <div>
-                  <label className="text-xs font-bold text-gray-700 block mb-1">Work Description (Optional)</label>
-                  <textarea 
-                    {...register('serviceDescription')} 
-                    rows="2"
-                    placeholder="e.g. 5-page responsive website, SEO setup and 1 month support" 
-                    className="w-full p-2 border rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-100 outline-none" 
-                  />
-                </div>
+                <>
+                  <div>
+                    <label className="text-xs font-bold text-gray-700 block mb-1">Scope of Work (Optional)</label>
+                    <textarea 
+                      {...register('serviceDescription')} 
+                      rows="4"
+                      placeholder={"e.g.\n• 5-page responsive website\n• On-page SEO setup\n• 1 month post-launch support"} 
+                      className="w-full p-2 border rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-100 outline-none" 
+                    />
+                    <p className="text-[10px] text-gray-500 font-medium mt-1 leading-snug">
+                      Free text. Line breaks are kept on the receipt, so bullet lists work.
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-gray-700 block mb-1">Service Period (Optional)</label>
+                    <input 
+                      type="text" 
+                      {...register('servicePeriod')} 
+                      placeholder="e.g. Jan 2026 retainer, or 12 Jan – 28 Feb 2026" 
+                      className="w-full p-2 border rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-100 outline-none" 
+                    />
+                  </div>
+                </>
               ) : (
                 <>
                   <div>
@@ -1074,13 +1095,20 @@ export default function CreateReceipt() {
                             {!isService && formData.planName && formData.planName !== formData.productName ? ` - ${formData.planName}` : ''}
                           </p>
                           {isService ? (
-                            formData.serviceDescription ? (
-                              <p className="text-xs text-gray-500 font-medium mt-0.5 whitespace-pre-wrap leading-snug max-w-[92%]">
-                                {formData.serviceDescription}
-                              </p>
-                            ) : (
-                              <p className="text-xs text-gray-400 font-semibold mt-0.5">Professional Services</p>
-                            )
+                            <>
+                              {formData.serviceDescription ? (
+                                <p className="text-xs text-gray-500 font-medium mt-1 whitespace-pre-wrap leading-snug max-w-[92%]">
+                                  {formData.serviceDescription}
+                                </p>
+                              ) : (
+                                <p className="text-xs text-gray-400 font-semibold mt-0.5">Professional Services</p>
+                              )}
+                              {formData.servicePeriod && (
+                                <p className="text-[10px] text-gray-400 font-semibold mt-1.5">
+                                  Service Period: <span className="text-gray-600">{formData.servicePeriod}</span>
+                                </p>
+                              )}
+                            </>
                           ) : (
                             <p className="text-xs text-gray-400 font-semibold mt-0.5">Subscription / Service Access</p>
                           )}
