@@ -15,12 +15,14 @@ export default {
       // A real type scale. Line-heights and tracking are baked in so headings
       // stay optically tight at large sizes and readable at small ones.
       fontSize: {
-        'display-2xl': ['clamp(2.75rem, 6vw, 4.75rem)', { lineHeight: '1.02', letterSpacing: '-0.035em', fontWeight: '800' }],
-        'display-xl': ['clamp(2.25rem, 4.6vw, 3.5rem)', { lineHeight: '1.06', letterSpacing: '-0.03em', fontWeight: '800' }],
-        'display-lg': ['clamp(1.875rem, 3.4vw, 2.75rem)', { lineHeight: '1.12', letterSpacing: '-0.025em', fontWeight: '800' }],
-        'display-md': ['clamp(1.5rem, 2.4vw, 2rem)', { lineHeight: '1.18', letterSpacing: '-0.02em', fontWeight: '700' }],
-        'display-sm': ['1.25rem', { lineHeight: '1.3', letterSpacing: '-0.015em', fontWeight: '700' }],
-        'body-lg': ['1.0625rem', { lineHeight: '1.65' }],
+        // Floors are tuned for a 320px viewport: large enough to hold hierarchy,
+        // small enough that a 3-4 word heading doesn't wrap to five lines.
+        'display-2xl': ['clamp(2.125rem, 7.4vw, 4.75rem)', { lineHeight: '1.06', letterSpacing: '-0.03em', fontWeight: '800' }],
+        'display-xl': ['clamp(1.875rem, 5.4vw, 3.5rem)', { lineHeight: '1.1', letterSpacing: '-0.028em', fontWeight: '800' }],
+        'display-lg': ['clamp(1.625rem, 4.2vw, 2.75rem)', { lineHeight: '1.16', letterSpacing: '-0.022em', fontWeight: '800' }],
+        'display-md': ['clamp(1.3125rem, 3vw, 2rem)', { lineHeight: '1.22', letterSpacing: '-0.018em', fontWeight: '700' }],
+        'display-sm': ['clamp(1.0625rem, 1.6vw, 1.25rem)', { lineHeight: '1.32', letterSpacing: '-0.012em', fontWeight: '700' }],
+        'body-lg': ['clamp(1rem, 1.1vw, 1.0625rem)', { lineHeight: '1.62' }],
         'body': ['0.9375rem', { lineHeight: '1.65' }],
         'body-sm': ['0.875rem', { lineHeight: '1.6' }],
         'micro': ['0.75rem', { lineHeight: '1.5', letterSpacing: '0.02em' }],

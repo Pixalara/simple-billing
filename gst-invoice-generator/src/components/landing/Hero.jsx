@@ -57,9 +57,9 @@ function InvoiceMock() {
       {/* Document accent band */}
       <div className="h-1.5 w-full bg-gradient-to-r from-brand-600 via-brand-500 to-mint-500" />
 
-      <div className="p-5 sm:p-6">
+      <div className="p-4 xs:p-5 sm:p-6">
         {/* Header */}
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex items-start justify-between gap-3 sm:gap-4">
           <div>
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-ink-900 text-[11px] font-bold text-white">
               PX
@@ -71,13 +71,14 @@ function InvoiceMock() {
           </div>
           <div className="text-right">
             <p className="text-body-sm font-bold text-ink-900">Pixalara LLP</p>
-            <p className="text-[10px] leading-relaxed text-ink-400">
+            {/* Address is detail, not signal — dropped on the narrowest screens. */}
+            <p className="hidden text-[10px] leading-relaxed text-ink-400 xs:block">
               KR Puram, Bengaluru
               <br />
               Karnataka — 560049
             </p>
             <p className="tnum mt-1 text-[10px] font-semibold text-ink-500">
-              GSTIN: 29AAXXX1234X1ZX
+              <span className="hidden xs:inline">GSTIN: </span>29AAXXX1234X1ZX
             </p>
           </div>
         </div>
@@ -85,7 +86,7 @@ function InvoiceMock() {
         <div className="my-4 h-px bg-ink-100" />
 
         {/* Parties */}
-        <div className="flex items-start justify-between gap-6">
+        <div className="flex items-start justify-between gap-3 sm:gap-6">
           <div>
             <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-ink-400">
               Billed to
@@ -102,19 +103,30 @@ function InvoiceMock() {
           </div>
         </div>
 
-        {/* Line items */}
-        <div className="mt-5 overflow-hidden rounded-xl ring-1 ring-ink-100">
-          <table className="w-full text-left">
+        {/* Line items.
+            A four-column money table cannot hold its shape at 320px, so SAC and
+            Qty drop out below xs and the description carries the qty inline
+            instead. Nothing is lost, and no horizontal scroll is introduced. */}
+        <div className="mt-4 overflow-hidden rounded-xl ring-1 ring-ink-100 sm:mt-5">
+          <table className="w-full table-fixed text-left">
+            <colgroup>
+              <col />
+              <col className="w-[52px]" span="1" />
+              <col className="w-[40px]" span="1" />
+              <col className="w-[86px] sm:w-[100px]" span="1" />
+            </colgroup>
             <thead>
               <tr className="bg-ink-900 text-white">
-                <th className="px-3 py-2 text-[9px] font-bold uppercase tracking-[0.1em]">
+                <th className="px-2.5 py-2 text-[9px] font-bold uppercase tracking-[0.1em] sm:px-3">
                   Service
                 </th>
-                <th className="px-2 py-2 text-[9px] font-bold uppercase tracking-[0.1em]">SAC</th>
-                <th className="px-2 py-2 text-right text-[9px] font-bold uppercase tracking-[0.1em]">
+                <th className="hidden px-2 py-2 text-[9px] font-bold uppercase tracking-[0.1em] xs:table-cell">
+                  SAC
+                </th>
+                <th className="hidden px-2 py-2 text-right text-[9px] font-bold uppercase tracking-[0.1em] xs:table-cell">
                   Qty
                 </th>
-                <th className="px-3 py-2 text-right text-[9px] font-bold uppercase tracking-[0.1em]">
+                <th className="px-2.5 py-2 text-right text-[9px] font-bold uppercase tracking-[0.1em] sm:px-3">
                   Amount
                 </th>
               </tr>
@@ -122,10 +134,21 @@ function InvoiceMock() {
             <tbody className="divide-y divide-ink-100">
               {lines.map((l) => (
                 <tr key={l.desc}>
-                  <td className="px-3 py-2.5 text-[11px] font-semibold text-ink-800">{l.desc}</td>
-                  <td className="tnum px-2 py-2.5 text-[10px] text-ink-400">{l.sac}</td>
-                  <td className="tnum px-2 py-2.5 text-right text-[10px] text-ink-600">{l.qty}</td>
-                  <td className="tnum px-3 py-2.5 text-right text-[11px] font-semibold text-ink-900">
+                  <td className="px-2.5 py-2.5 align-top text-[11px] font-semibold text-ink-800 sm:px-3">
+                    {l.desc}
+                    {l.qty > 1 && (
+                      <span className="tnum ml-1 font-normal text-ink-400 xs:hidden">
+                        × {l.qty}
+                      </span>
+                    )}
+                  </td>
+                  <td className="tnum hidden px-2 py-2.5 align-top text-[10px] text-ink-400 xs:table-cell">
+                    {l.sac}
+                  </td>
+                  <td className="tnum hidden px-2 py-2.5 text-right align-top text-[10px] text-ink-600 xs:table-cell">
+                    {l.qty}
+                  </td>
+                  <td className="tnum whitespace-nowrap px-2.5 py-2.5 text-right align-top text-[11px] font-semibold text-ink-900 sm:px-3">
                     ₹{inr(l.qty * l.rate)}
                   </td>
                 </tr>
@@ -136,7 +159,7 @@ function InvoiceMock() {
 
         {/* Totals */}
         <div className="mt-4 flex justify-end">
-          <dl className="w-full max-w-[220px] space-y-1.5">
+          <dl className="w-full space-y-1.5 xs:max-w-[220px]">
             <div className="flex justify-between text-[11px]">
               <dt className="text-ink-500">Taxable value</dt>
               <dd className="tnum font-semibold text-ink-700">₹{inr(subtotal)}</dd>
@@ -205,15 +228,24 @@ export default function Hero() {
             </Reveal>
 
             <Reveal delay={210}>
+              {/* Full-bleed buttons on phones give a comfortable thumb target;
+                  they shrink to intrinsic width from xs up. */}
               <div className="mt-8 flex flex-col gap-3 xs:flex-row xs:items-center">
                 <Button
                   size="lg"
+                  className="w-full xs:w-auto"
                   onClick={() => navigate('/login', { state: { initialView: 'SIGNUP' } })}
                 >
                   Start billing free
                   <Icon name="arrowRight" className="h-4.5 w-4.5" />
                 </Button>
-                <Button as={Link} to="/login" variant="secondary" size="lg">
+                <Button
+                  as={Link}
+                  to="/login"
+                  variant="secondary"
+                  size="lg"
+                  className="w-full xs:w-auto"
+                >
                   Log in
                 </Button>
               </div>

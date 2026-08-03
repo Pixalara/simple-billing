@@ -28,12 +28,19 @@ export default function Footer() {
               <Button
                 size="lg"
                 variant="light"
+                className="w-full xs:w-auto"
                 onClick={() => navigate('/login', { state: { initialView: 'SIGNUP' } })}
               >
                 Start billing free
                 <Icon name="arrowRight" className="h-4.5 w-4.5" />
               </Button>
-              <Button as={Link} to="/login" variant="outlineLight" size="lg">
+              <Button
+                as={Link}
+                to="/login"
+                variant="outlineLight"
+                size="lg"
+                className="w-full xs:w-auto"
+              >
                 Log in
               </Button>
             </div>
@@ -69,9 +76,11 @@ export default function Footer() {
       {/* --- Footer --- */}
       <footer className="border-t border-white/8 bg-ink-950 pb-8 pt-16">
         <Container wide>
-          <div className="grid gap-10 lg:grid-cols-[minmax(0,1.4fr)_repeat(3,minmax(0,1fr))]">
+          {/* Tablet gets the brand block full-width with links 3-up beneath it,
+              rather than four stacked columns of two links each. */}
+          <div className="grid gap-10 tab:grid-cols-3 lg:grid-cols-[minmax(0,1.4fr)_repeat(3,minmax(0,1fr))]">
             {/* Brand */}
-            <div className="max-w-sm">
+            <div className="max-w-sm tab:col-span-3 lg:col-span-1">
               <Link to="/" className="focus-ring inline-flex items-center gap-2.5">
                 <img src="/logo.png" alt="" className="h-8 w-8 rounded-lg object-contain" />
                 <span className="flex flex-col leading-none">

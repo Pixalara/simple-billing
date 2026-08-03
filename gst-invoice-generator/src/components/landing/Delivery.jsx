@@ -46,7 +46,7 @@ export default function Delivery() {
           </div>
         </Reveal>
 
-        <div className="mt-5 grid gap-4 sm:grid-cols-2">
+        <div className="mt-5 grid gap-4 xs:grid-cols-2">
           {live.map((channel, i) => (
             <Reveal
               key={channel.id}
@@ -93,7 +93,9 @@ export default function Delivery() {
                 </p>
               </div>
 
-              <div className="relative mt-9 grid gap-4 sm:grid-cols-2">
+              {/* Held at 2-up even on wide screens — four narrow cards could not
+                  carry the heading plus two bullets without feeling cramped. */}
+              <div className="relative mt-9 grid gap-4 xs:grid-cols-2">
                 {soon.map((channel, i) => (
                   <Reveal
                     key={channel.id}

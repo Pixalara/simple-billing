@@ -99,6 +99,33 @@ html {
   font-variant-numeric: tabular-nums;
 }
 
+/* --- Horizontal scrollers ----------------------------------------------
+ * Used by the segment tabs on phones. The track still scrolls by touch and
+ * by keyboard; only the visible bar is suppressed.
+ */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* --- Overflow guard ---------------------------------------------------
+ * Decorative glows are wider than the viewport by design. Their sections
+ * clip them, but this stops any future absolute element from introducing a
+ * sideways scroll on small screens. `clip` (not `hidden`) so it does not
+ * create a scroll container and break position: sticky in the header.
+ */
+.landing-root {
+  overflow-x: clip;
+}
+@supports not (overflow: clip) {
+  .landing-root {
+    overflow-x: hidden;
+  }
+}
+
 /* --- Respect reduced motion -------------------------------------------- */
 @media (prefers-reduced-motion: reduce) {
   html {

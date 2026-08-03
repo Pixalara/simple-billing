@@ -58,13 +58,15 @@ function TaxDemo() {
             <legend className="text-[10px] font-bold uppercase tracking-[0.14em] text-ink-400">
               Where is your customer?
             </legend>
-            <div className="mt-2.5 grid grid-cols-3 gap-2">
+            {/* Stacked on the narrowest phones — "Maharashtra" cannot sit in a
+                third of 280px without truncating. */}
+            <div className="mt-2.5 grid grid-cols-1 gap-2 xs:grid-cols-3">
               {BUYER_STATES.map((s) => {
                 const active = buyerState === s.id
                 return (
                   <label
                     key={s.id}
-                    className={`focus-ring cursor-pointer rounded-xl border-2 p-2.5 text-center transition-all ${
+                    className={`focus-ring flex cursor-pointer items-center justify-between gap-2 rounded-xl border-2 p-2.5 transition-all xs:flex-col xs:justify-center xs:gap-0 xs:text-center ${
                       active
                         ? 'border-brand-500 bg-brand-50/60 shadow-ring-brand'
                         : 'border-ink-200 bg-white hover:border-ink-300'
@@ -85,7 +87,7 @@ function TaxDemo() {
                     >
                       {s.label}
                     </span>
-                    <span className="mt-0.5 block text-[9px] text-ink-400">{s.note}</span>
+                    <span className="block text-[9px] text-ink-400 xs:mt-0.5">{s.note}</span>
                   </label>
                 )
               })}
@@ -214,36 +216,41 @@ export default function Solutions() {
           />
         </Reveal>
 
-        {/* Tabs */}
+        {/* Tabs. On phones this scrolls sideways edge-to-edge (negative margin
+            cancels the container padding) instead of wrapping into three stacked
+            rows, which would read as a list rather than a control. Wraps and
+            centres from sm up. Arrow-key focus scrolls the active tab into view. */}
         <Reveal delay={80} className="mt-10">
-          <div
-            role="tablist"
-            aria-label="Business model"
-            onKeyDown={onKeyDown}
-            className="mx-auto flex w-fit max-w-full flex-wrap justify-center gap-1 rounded-2xl bg-ink-100/70 p-1.5"
-          >
-            {SEGMENTS.map((s, i) => {
-              const selected = s.id === active
-              return (
-                <button
-                  key={s.id}
-                  ref={(el) => (tabRefs.current[i] = el)}
-                  role="tab"
-                  id={`tab-${s.id}`}
-                  aria-selected={selected}
-                  aria-controls={`panel-${s.id}`}
-                  tabIndex={selected ? 0 : -1}
-                  onClick={() => setActive(s.id)}
-                  className={`focus-ring rounded-xl px-4 py-2.5 text-body-sm font-bold transition-all duration-200 ease-out-expo ${
-                    selected
-                      ? 'bg-white text-ink-900 shadow-soft'
-                      : 'text-ink-500 hover:text-ink-800'
-                  }`}
-                >
-                  {s.tab}
-                </button>
-              )
-            })}
+          <div className="-mx-5 overflow-x-auto px-5 sm:mx-0 sm:overflow-visible sm:px-0 no-scrollbar">
+            <div
+              role="tablist"
+              aria-label="Business model"
+              onKeyDown={onKeyDown}
+              className="mx-auto flex w-max min-w-full snap-x snap-mandatory justify-start gap-1 rounded-2xl bg-ink-100/70 p-1.5 sm:w-fit sm:min-w-0 sm:flex-wrap sm:justify-center"
+            >
+              {SEGMENTS.map((s, i) => {
+                const selected = s.id === active
+                return (
+                  <button
+                    key={s.id}
+                    ref={(el) => (tabRefs.current[i] = el)}
+                    role="tab"
+                    id={`tab-${s.id}`}
+                    aria-selected={selected}
+                    aria-controls={`panel-${s.id}`}
+                    tabIndex={selected ? 0 : -1}
+                    onClick={() => setActive(s.id)}
+                    className={`focus-ring shrink-0 snap-start whitespace-nowrap rounded-xl px-3.5 py-2.5 text-body-sm font-bold transition-all duration-200 ease-out-expo sm:px-4 ${
+                      selected
+                        ? 'bg-white text-ink-900 shadow-soft'
+                        : 'text-ink-500 hover:text-ink-800'
+                    }`}
+                  >
+                    {s.tab}
+                  </button>
+                )
+              })}
+            </div>
           </div>
         </Reveal>
 

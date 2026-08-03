@@ -16,7 +16,7 @@ import Footer from '../components/landing/Footer'
  */
 export default function Landing() {
   return (
-    <div className="min-h-screen bg-white font-sans antialiased">
+    <div className="landing-root min-h-screen bg-white font-sans antialiased">
       <Nav />
       <main id="main">
         <Hero />

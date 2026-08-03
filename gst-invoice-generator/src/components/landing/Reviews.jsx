@@ -93,7 +93,7 @@ export default function Reviews() {
 
         {/* Rating summary */}
         <Reveal delay={70} className="mt-10">
-          <div className="mx-auto flex max-w-2xl flex-col items-center gap-5 rounded-3xl bg-cream px-6 py-6 ring-1 ring-ink-900/[0.05] sm:flex-row sm:justify-center sm:gap-8">
+          <div className="mx-auto flex max-w-2xl flex-col items-center gap-5 rounded-3xl bg-cream px-4 py-6 ring-1 ring-ink-900/[0.05] xs:px-6 sm:flex-row sm:justify-center sm:gap-8">
             <div className="flex items-center gap-4">
               <p className="tnum text-display-lg font-display text-ink-900">
                 {reviewStats.average}
@@ -107,7 +107,7 @@ export default function Reviews() {
               </div>
             </div>
             <span className="hidden h-12 w-px bg-ink-200 sm:block" />
-            <dl className="flex gap-6 text-center">
+            <dl className="flex gap-5 text-center xs:gap-6">
               <div>
                 <dt className="text-micro text-ink-500">5-star</dt>
                 <dd className="tnum text-body-lg font-bold text-ink-900">
@@ -139,11 +139,12 @@ export default function Reviews() {
         )}
 
         {/* Filters */}
+        {/* Scrolls sideways on phones; wraps and centres from sm up. */}
         <Reveal delay={110} className="mt-8">
           <div
             role="group"
             aria-label="Filter reviews by business type"
-            className="flex flex-wrap justify-center gap-2"
+            className="no-scrollbar -mx-5 flex snap-x gap-2 overflow-x-auto px-5 pb-1 sm:mx-0 sm:flex-wrap sm:justify-center sm:overflow-visible sm:px-0 sm:pb-0"
           >
             {REVIEW_SEGMENTS.map((s) => {
               const active = segment === s.id
@@ -160,7 +161,7 @@ export default function Reviews() {
                     setExpanded(false)
                   }}
                   aria-pressed={active}
-                  className={`focus-ring inline-flex items-center gap-2 rounded-full px-4 py-2 text-body-sm font-semibold transition-all duration-200 ${
+                  className={`focus-ring inline-flex shrink-0 snap-start items-center gap-2 whitespace-nowrap rounded-full px-4 py-2 text-body-sm font-semibold transition-all duration-200 ${
                     active
                       ? 'bg-ink-900 text-white shadow-soft'
                       : 'bg-ink-50 text-ink-600 ring-1 ring-ink-200 hover:bg-ink-100 hover:text-ink-900'

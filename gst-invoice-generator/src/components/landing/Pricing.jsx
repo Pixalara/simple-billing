@@ -54,7 +54,7 @@ export default function Pricing() {
               className={`relative flex ${plan.featured ? 'lg:-my-3' : ''}`}
             >
               <div
-                className={`relative flex w-full flex-col rounded-3xl p-6 transition-all duration-300 ease-out-expo sm:p-7 ${
+                className={`relative flex w-full flex-col rounded-3xl p-5 transition-all duration-300 ease-out-expo xs:p-6 sm:p-7 ${
                   plan.featured
                     ? 'bg-ink-900 text-white shadow-hero ring-1 ring-ink-900'
                     : 'bg-white shadow-sm-soft ring-1 ring-ink-900/[0.06] hover:shadow-lift'
@@ -71,8 +71,10 @@ export default function Pricing() {
                 >
                   {plan.name}
                 </h3>
+                {/* Fixed min-height only once the cards sit side by side; on a
+                    stacked layout it just adds dead space. */}
                 <p
-                  className={`mt-1.5 min-h-[2.75rem] text-body-sm ${
+                  className={`mt-1.5 text-body-sm lg:min-h-[2.75rem] ${
                     plan.featured ? 'text-ink-300' : 'text-ink-500'
                   }`}
                 >
