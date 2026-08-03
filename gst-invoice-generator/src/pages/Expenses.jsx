@@ -22,8 +22,6 @@ import {
   EXPENSE_CATEGORIES,
   EXPENSE_TYPE,
   PAYMENT_METHODS,
-  formatCompactINR,
-  formatINR,
   getCategory,
   getExpenseDate,
   getFinancialYear,
@@ -31,6 +29,7 @@ import {
   isWithinRange,
   resolveDateRange,
 } from '../data/expenses'
+import { formatCompactINR, formatINR } from '../data/currency'
 
 const CARD =
   'rounded-2xl bg-white ring-1 ring-ink-900/[0.06] shadow-sm-soft'
@@ -373,6 +372,13 @@ export default function Expenses() {
           </div>
 
           <div className="flex gap-2">
+            <button
+              onClick={() => navigate('/analytics')}
+              className="focus-ring inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-ink-200 bg-white px-4 py-2.5 text-xs font-bold text-ink-700 transition hover:bg-ink-50 lg:flex-none"
+            >
+              <Icon name="pie" className="h-4 w-4" />
+              Analytics
+            </button>
             <button
               onClick={handleExport}
               className="focus-ring inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-ink-200 bg-white px-4 py-2.5 text-xs font-bold text-ink-700 transition hover:bg-ink-50 lg:flex-none"

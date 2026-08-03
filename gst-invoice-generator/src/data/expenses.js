@@ -116,22 +116,6 @@ export const computeExpenseTotals = ({ amount, gstRate, amountMode = 'exclusive'
   }
 }
 
-export const formatINR = (n, { decimals = 2 } = {}) =>
-  `₹${(Number(n) || 0).toLocaleString('en-IN', {
-    minimumFractionDigits: decimals,
-    maximumFractionDigits: decimals,
-  })}`
-
-/** Compact form for KPI tiles: ₹1.2L, ₹3.4Cr. */
-export const formatCompactINR = (n) => {
-  const v = Number(n) || 0
-  const abs = Math.abs(v)
-  if (abs >= 1e7) return `₹${(v / 1e7).toFixed(2)}Cr`
-  if (abs >= 1e5) return `₹${(v / 1e5).toFixed(2)}L`
-  if (abs >= 1e3) return `₹${(v / 1e3).toFixed(1)}K`
-  return formatINR(v, { decimals: 0 })
-}
-
 /* --- Financial year (India: 1 April - 31 March) ------------------------ */
 export const getFinancialYear = (date = new Date()) => {
   const d = new Date(date)

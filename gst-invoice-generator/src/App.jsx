@@ -5,6 +5,7 @@ import Dashboard from './pages/Dashboard'
 import CreateInvoice from './pages/CreateInvoice'
 import CreateReceipt from './pages/CreateReceipt'
 import Expenses from './pages/Expenses'
+import Analytics from './pages/Analytics'
 
 export default function App() {
   return (
@@ -28,6 +29,9 @@ export default function App() {
 
         {/* Expenses Manager module */}
         <Route path="/expenses" element={<Expenses />} />
+
+        {/* Analytics: profit & loss across revenue and expenses */}
+        <Route path="/analytics" element={<Analytics />} />
       </Routes>
     </BrowserRouter>
   )

@@ -3,7 +3,8 @@ import { supabase } from '../supabaseClient'
 import { useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { INDIAN_STATES, BILLING_KINDS, normalizeBillingKind, isServiceKind } from '../constants'
-import { EXPENSE_TYPE, formatCompactINR, getExpenseDate } from '../data/expenses'
+import { EXPENSE_TYPE, getExpenseDate } from '../data/expenses'
+import { formatCompactINR, fxToInr } from '../data/currency'
 import BillingKindSelector from '../components/BillingKindSelector'
 import DatePicker from "react-datepicker"
 import "react-datepicker/dist/react-datepicker.css"
@@ -11,18 +12,6 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, Bar, Line, X
 import ExcelJS from 'exceljs'
 import { saveAs } from 'file-saver'
 import BrandingFooter from '../components/BrandingFooter'
-
-/**
- * Indicative FX used to express multi-currency receipts in INR for reporting.
- *
- * Defined once so every chart converts identically — this used to be inlined in
- * three separate memos, which is how they drift apart. Currencies not listed
- * here are counted 1:1, so GBP, CAD and AUD are currently understated; add real
- * rates (ideally fetched, not hardcoded) before relying on these figures for
- * anything beyond a rough trend.
- */
-const FX_TO_INR = { INR: 1, USD: 83, EUR: 90 }
-const fxToInr = (currency) => FX_TO_INR[currency] ?? 1
 
 /**
  * Record types stored in the `invoices` table that are NOT sales invoices.
@@ -1116,6 +1105,16 @@ export default function Dashboard() {
         <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4 mb-6">
           <h1 className="text-2xl md:text-3xl font-extrabold text-gray-950 tracking-tight flex items-center gap-2">Dashboard</h1>
           <div className="flex flex-row items-center gap-3 justify-end">
+            <button
+              onClick={() => navigate('/analytics')}
+              className="bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900 text-white font-bold px-5 py-3 rounded-xl shadow-md hover:shadow-lg hover:shadow-blue-500/20 transition-all duration-200 transform hover:scale-[1.02] active:scale-95 flex items-center gap-2 text-sm md:text-base shrink-0 border border-blue-500/10"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 3v9h9a9 9 0 1 0-9-9Z" />
+                <path d="M21 12a9 9 0 0 1-9 9" />
+              </svg>
+              Analytics
+            </button>
             <button
               onClick={() => navigate('/expenses')}
               className="bg-gradient-to-r from-slate-800 to-slate-950 hover:from-slate-900 hover:to-black text-white font-bold px-5 py-3 rounded-xl shadow-md hover:shadow-lg hover:shadow-slate-900/20 transition-all duration-200 transform hover:scale-[1.02] active:scale-95 flex items-center gap-2 text-sm md:text-base shrink-0 border border-white/10"

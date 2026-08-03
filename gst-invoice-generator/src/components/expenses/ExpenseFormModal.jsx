@@ -10,11 +10,11 @@ import {
   RECURRING_CYCLES,
   computeExpenseTotals,
   emptyExpense,
-  formatINR,
   getCategory,
   isNoGst,
   nextExpenseId,
 } from '../../data/expenses'
+import { formatINR } from '../../data/currency'
 
 const FIELD =
   'w-full rounded-lg border border-ink-200 bg-white px-3 py-2 text-sm text-ink-900 outline-none transition focus:border-brand-400 focus:ring-4 focus:ring-brand-500/10 placeholder:text-ink-300'
