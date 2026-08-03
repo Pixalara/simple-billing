@@ -3,6 +3,7 @@ import { supabase } from '../supabaseClient'
 import { useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { INDIAN_STATES, BILLING_KINDS, normalizeBillingKind, isServiceKind } from '../constants'
+import { EXPENSE_TYPE, formatCompactINR, getExpenseDate } from '../data/expenses'
 import BillingKindSelector from '../components/BillingKindSelector'
 import DatePicker from "react-datepicker"
 import "react-datepicker/dist/react-datepicker.css"
@@ -22,6 +23,15 @@ import BrandingFooter from '../components/BrandingFooter'
  */
 const FX_TO_INR = { INR: 1, USD: 83, EUR: 90 }
 const fxToInr = (currency) => FX_TO_INR[currency] ?? 1
+
+/**
+ * Record types stored in the `invoices` table that are NOT sales invoices.
+ * 'receipt' is a billing document but not an invoice; the rest are ledgers.
+ * Any new type added to this table must be registered here.
+ */
+const NON_BILLING_TYPES = ['receipt', 'customer', 'product', EXPENSE_TYPE]
+/** Types excluded from the combined invoices + receipts view. */
+const NON_BILLING_LEDGER_TYPES = ['customer', 'product', EXPENSE_TYPE]
 
 // --- PREMIUM POPUP COMPONENT ---
 const Popup = ({ isOpen, onClose, title, message, type, actionLabel, onAction, cancelLabel }) => {
@@ -556,17 +566,41 @@ export default function Dashboard() {
   const [customerModal, setCustomerModal] = useState({ isOpen: false, customer: null }) // modal for customer create/edit
   const [productModal, setProductModal] = useState({ isOpen: false, product: null }) // modal for product create/edit
   
-  const allInvoices = useMemo(() => invoices.filter(inv => inv.invoice_data?.type !== 'receipt' && inv.invoice_data?.type !== 'customer' && inv.invoice_data?.type !== 'product'), [invoices]);
+  // `allInvoices` and `billingDocuments` are NEGATIVE filters, so every
+  // non-billing record type must be listed here or it gets counted as revenue.
+  // Adding 'expense' without this would inflate invoice count, invoiced value,
+  // tax collections, top clients and the Excel export.
+  const allInvoices = useMemo(() => invoices.filter(inv => !NON_BILLING_TYPES.includes(inv.invoice_data?.type)), [invoices]);
   const allReceipts = useMemo(() => invoices.filter(inv => inv.invoice_data?.type === 'receipt'), [invoices]);
   const allCustomers = useMemo(() => invoices.filter(inv => inv.invoice_data?.type === 'customer'), [invoices]);
   const allProducts = useMemo(() => invoices.filter(inv => inv.invoice_data?.type === 'product'), [invoices]);
-  const billingDocuments = useMemo(() => invoices.filter(inv => inv.invoice_data?.type !== 'customer' && inv.invoice_data?.type !== 'product'), [invoices]);
+  const allExpenses = useMemo(() => invoices.filter(inv => inv.invoice_data?.type === EXPENSE_TYPE), [invoices]);
+  const billingDocuments = useMemo(() => invoices.filter(inv => !NON_BILLING_LEDGER_TYPES.includes(inv.invoice_data?.type)), [invoices]);
 
   const invoicesStats = useMemo(() => {
     const count = allInvoices.length
     const totalAmount = allInvoices.reduce((acc, curr) => acc + (curr.total_amount || 0), 0)
     return { count, totalAmount }
   }, [allInvoices])
+
+  // Expenses summary for the current financial year, surfaced on the dashboard
+  // so spend is visible next to revenue rather than only inside the module.
+  const expenseStats = useMemo(() => {
+    const fyStart = new Date(
+      new Date().getMonth() >= 3 ? new Date().getFullYear() : new Date().getFullYear() - 1,
+      3, 1
+    )
+    let fyTotal = 0
+    let itc = 0
+    let unpaid = 0
+    allExpenses.forEach(e => {
+      const amount = parseFloat(e.total_amount || 0)
+      if (getExpenseDate(e) >= fyStart) fyTotal += amount
+      if (e.invoice_data?.itcEligible) itc += parseFloat(e.invoice_data?.gstAmount || 0)
+      if ((e.status || e.invoice_data?.paymentStatus) === 'PENDING') unpaid += amount
+    })
+    return { count: allExpenses.length, fyTotal, itc, unpaid }
+  }, [allExpenses])
 
   const receiptsStats = useMemo(() => {
     const count = allReceipts.length
@@ -1082,6 +1116,17 @@ export default function Dashboard() {
         <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4 mb-6">
           <h1 className="text-2xl md:text-3xl font-extrabold text-gray-950 tracking-tight flex items-center gap-2">Dashboard</h1>
           <div className="flex flex-row items-center gap-3 justify-end">
+            <button
+              onClick={() => navigate('/expenses')}
+              className="bg-gradient-to-r from-slate-800 to-slate-950 hover:from-slate-900 hover:to-black text-white font-bold px-5 py-3 rounded-xl shadow-md hover:shadow-lg hover:shadow-slate-900/20 transition-all duration-200 transform hover:scale-[1.02] active:scale-95 flex items-center gap-2 text-sm md:text-base shrink-0 border border-white/10"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                <rect x="3" y="6" width="18" height="13" rx="2.5" />
+                <path d="M3 10.5h18" strokeLinecap="round" />
+                <circle cx="16.5" cy="14.5" r="1.2" />
+              </svg>
+              Expenses
+            </button>
             <button 
               onClick={() => setCustomerModal({ isOpen: true, customer: null })}
               className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold px-5 py-3 rounded-xl shadow-md hover:shadow-lg hover:shadow-indigo-500/20 transition-all duration-200 transform hover:scale-[1.02] active:scale-95 flex items-center gap-2 text-sm md:text-base shrink-0 border border-indigo-500/10"
@@ -1191,6 +1236,55 @@ export default function Dashboard() {
                 </div>
             </div>
         </div>
+
+        {/* Expenses summary strip — spend sits next to revenue instead of being
+            hidden inside the module. Links straight into Expenses Manager. */}
+        <button
+            onClick={() => navigate('/expenses')}
+            className="group w-full mb-6 text-left bg-gradient-to-r from-slate-900 to-slate-800 rounded-2xl p-4 sm:p-5 shadow-lg border border-white/5 transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5"
+        >
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-3">
+                    <span className="w-11 h-11 shrink-0 rounded-xl bg-white/10 flex items-center justify-center text-white group-hover:scale-110 transition-transform duration-300">
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.75">
+                            <rect x="3" y="6" width="18" height="13" rx="2.5" />
+                            <path d="M3 10.5h18" strokeLinecap="round" />
+                            <circle cx="16.5" cy="14.5" r="1.2" />
+                        </svg>
+                    </span>
+                    <div>
+                        <p className="text-[10px] uppercase font-bold tracking-widest text-slate-400">Expenses Manager</p>
+                        <p className="text-sm font-bold text-white">
+                            {expenseStats.count === 0
+                                ? 'Start tracking what your business spends'
+                                : `${expenseStats.count} ${expenseStats.count === 1 ? 'expense' : 'expenses'} recorded`}
+                        </p>
+                    </div>
+                </div>
+
+                <div className="flex items-center gap-5 sm:gap-7">
+                    <div>
+                        <p className="text-[9px] uppercase font-bold tracking-widest text-slate-400">Spent this FY</p>
+                        <p className="text-lg font-extrabold text-white tnum">{formatCompactINR(expenseStats.fyTotal)}</p>
+                    </div>
+                    <div>
+                        <p className="text-[9px] uppercase font-bold tracking-widest text-slate-400">ITC claimable</p>
+                        <p className="text-lg font-extrabold text-emerald-400 tnum">{formatCompactINR(expenseStats.itc)}</p>
+                    </div>
+                    {expenseStats.unpaid > 0 && (
+                        <div className="hidden xs:block">
+                            <p className="text-[9px] uppercase font-bold tracking-widest text-slate-400">Unpaid</p>
+                            <p className="text-lg font-extrabold text-amber-400 tnum">{formatCompactINR(expenseStats.unpaid)}</p>
+                        </div>
+                    )}
+                    <span className="shrink-0 text-slate-400 group-hover:text-white group-hover:translate-x-1 transition-all duration-300">
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M4 12h15m-5.5-5.5L20 12l-6.5 5.5" />
+                        </svg>
+                    </span>
+                </div>
+            </div>
+        </button>
 
         {/* Analytics Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6">

@@ -4,6 +4,7 @@ import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import CreateInvoice from './pages/CreateInvoice'
 import CreateReceipt from './pages/CreateReceipt'
+import Expenses from './pages/Expenses'
 
 export default function App() {
   return (
@@ -24,6 +25,9 @@ export default function App() {
         
         {/* Route for Editing Existing Receipt (Passing the ID) */}
         <Route path="/edit-receipt/:id" element={<CreateReceipt />} />
+
+        {/* Expenses Manager module */}
+        <Route path="/expenses" element={<Expenses />} />
       </Routes>
     </BrowserRouter>
   )

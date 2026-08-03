@@ -85,31 +85,8 @@ html {
   overflow: hidden;
 }
 
-/* --- Focus -------------------------------------------------------------
- * Visible keyboard focus everywhere, without the mouse-click focus ring.
- */
-.focus-ring:focus-visible {
-  outline: 2px solid #3b66f5;
-  outline-offset: 3px;
-  border-radius: 0.5rem;
-}
-
-/* --- Number tabulation for anything money-shaped ----------------------- */
-.tnum {
-  font-variant-numeric: tabular-nums;
-}
-
-/* --- Horizontal scrollers ----------------------------------------------
- * Used by the segment tabs on phones. The track still scrolls by touch and
- * by keyboard; only the visible bar is suppressed.
- */
-.no-scrollbar {
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
-}
+/* .focus-ring, .tnum and .no-scrollbar now live in index.css as app-wide
+   utilities, since the expenses module needs them too. */
 
 /* --- Overflow guard ---------------------------------------------------
  * Decorative glows are wider than the viewport by design. Their sections

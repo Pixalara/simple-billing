@@ -5,3 +5,32 @@
 body {
   background-color: #f3f4f6;
 }
+
+/* =============================================================================
+ * App-wide utilities
+ * -----------------------------------------------------------------------------
+ * These were defined inside Landing.css and only worked elsewhere because Vite
+ * bundles all imported CSS together. Promoted here so every module can rely on
+ * them explicitly rather than by accident.
+ * ========================================================================== */
+
+/* Visible keyboard focus, without the ring on mouse clicks. */
+.focus-ring:focus-visible {
+  outline: 2px solid #3b66f5;
+  outline-offset: 3px;
+  border-radius: 0.5rem;
+}
+
+/* Tabular figures so money columns align vertically. */
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Horizontal scrollers: still scrollable, just no visible bar. */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
