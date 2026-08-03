@@ -128,11 +128,6 @@ export default {
           '0%': { transform: 'translateX(-120%)' },
           '60%, 100%': { transform: 'translateX(220%)' },
         },
-        'pulse-ring': {
-          '0%': { transform: 'scale(0.9)', opacity: '0.55' },
-          '70%': { transform: 'scale(1.5)', opacity: '0' },
-          '100%': { transform: 'scale(1.5)', opacity: '0' },
-        },
         'caret': {
           '0%, 45%': { opacity: '1' },
           '50%, 95%': { opacity: '0' },
@@ -144,7 +139,6 @@ export default {
         'marquee': 'marquee 42s linear infinite',
         'marquee-slow': 'marquee 64s linear infinite',
         'sheen': 'sheen 2.6s cubic-bezier(0.16, 1, 0.3, 1) infinite',
-        'pulse-ring': 'pulse-ring 2.4s cubic-bezier(0.16, 1, 0.3, 1) infinite',
         'caret': 'caret 1.1s step-end infinite',
       },
       backgroundImage: {

@@ -108,31 +108,6 @@ export function Button({
   )
 }
 
-/** "Coming soon" / "Live" status chip. */
-export function StatusChip({ status, label, className = '' }) {
-  if (status === 'live') {
-    return (
-      <span
-        className={`inline-flex items-center gap-1.5 rounded-full bg-mint-50 px-2.5 py-1 text-micro font-bold text-mint-700 ring-1 ring-mint-200 ${className}`}
-      >
-        <span className="relative flex h-1.5 w-1.5">
-          <span className="absolute inline-flex h-full w-full rounded-full bg-mint-500 animate-pulse-ring" />
-          <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-mint-600" />
-        </span>
-        {label || 'Available now'}
-      </span>
-    )
-  }
-  return (
-    <span
-      className={`inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-micro font-bold text-amber-700 ring-1 ring-amber-200 ${className}`}
-    >
-      <Icon name="clock" className="h-3 w-3" />
-      {label || 'Coming soon'}
-    </span>
-  )
-}
-
 export function Stars({ rating = 5, size = 'sm', className = '' }) {
   const dim = size === 'lg' ? 'h-5 w-5' : size === 'md' ? 'h-4 w-4' : 'h-3.5 w-3.5'
   return (

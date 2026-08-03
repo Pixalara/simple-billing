@@ -1,4 +1,4 @@
-import { Container, Icon, Reveal, SectionHeading, StatusChip } from './ui'
+import { Container, Icon, Reveal, SectionHeading } from './ui'
 import { DELIVERY_CHANNELS } from '../../data/landingContent'
 
 /* Channel accents. Kept muted so six cards side by side don't turn into a
@@ -36,7 +36,7 @@ export default function Delivery() {
           />
         </Reveal>
 
-        {/* Available now */}
+        {/* Available today */}
         <Reveal delay={80} className="mt-14">
           <div className="flex items-center gap-3">
             <h3 className="text-[11px] font-bold uppercase tracking-[0.14em] text-white">
@@ -53,14 +53,13 @@ export default function Delivery() {
               delay={i * 60}
               className="group rounded-2xl bg-white/[0.05] p-5 ring-1 ring-white/10 backdrop-blur transition-all duration-300 ease-out-expo hover:-translate-y-1 hover:bg-white/[0.08] hover:ring-white/20"
             >
-              <div className="flex items-start justify-between gap-3">
-                <span
-                  className={`inline-flex h-11 w-11 items-center justify-center rounded-xl ring-1 ${TONE[channel.icon]}`}
-                >
-                  <Icon name={channel.icon} className="h-5 w-5" />
-                </span>
-                <StatusChip status="live" label={channel.tagline} />
-              </div>
+              {/* Tile sized to match the in-build cards, so both groups read as
+                  one family now that neither carries a status chip. */}
+              <span
+                className={`inline-flex h-12 w-12 items-center justify-center rounded-xl ring-1 transition-transform duration-300 ease-out-back group-hover:scale-110 ${TONE[channel.icon]}`}
+              >
+                <Icon name={channel.icon} className="h-5.5 w-5.5" />
+              </span>
               <h4 className="mt-4 text-display-sm font-display text-white">{channel.name}</h4>
               <p className="mt-1.5 text-body-sm text-ink-300">{channel.body}</p>
             </Reveal>

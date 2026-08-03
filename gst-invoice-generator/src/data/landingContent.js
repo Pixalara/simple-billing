@@ -127,9 +127,12 @@ export const FEATURES = [
 ]
 
 /* --- Delivery channels --------------------------------------------------
- * `status: 'live'`  → works in the product today, shows an "Available now" chip
+ * `status: 'live'`  → works in the product today, grouped under "Available today"
  * `status: 'soon'`  → NOT built yet; grouped under a panel that states plainly
  *                     that these are in build and not live
+ *
+ * There are no per-card status badges any more. The two group headings carry the
+ * distinction, so keep them if this section is restructured.
  */
 export const DELIVERY_CHANNELS = [
   {
@@ -137,7 +140,6 @@ export const DELIVERY_CHANNELS = [
     icon: 'download',
     name: 'PDF download',
     status: 'live',
-    tagline: 'Available now',
     body: 'A print-ready A4 PDF at 2× resolution, named after the customer and document number so your folders stay sorted.',
   },
   {
@@ -145,7 +147,6 @@ export const DELIVERY_CHANNELS = [
     icon: 'share',
     name: 'Share sheet',
     status: 'live',
-    tagline: 'Available now',
     body: 'On mobile, hand the PDF straight to your phone’s share sheet — WhatsApp, Drive, Telegram, anywhere it can go.',
   },
   {
