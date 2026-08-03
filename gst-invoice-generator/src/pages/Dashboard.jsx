@@ -11,6 +11,18 @@ import ExcelJS from 'exceljs'
 import { saveAs } from 'file-saver'
 import BrandingFooter from '../components/BrandingFooter'
 
+/**
+ * Indicative FX used to express multi-currency receipts in INR for reporting.
+ *
+ * Defined once so every chart converts identically — this used to be inlined in
+ * three separate memos, which is how they drift apart. Currencies not listed
+ * here are counted 1:1, so GBP, CAD and AUD are currently understated; add real
+ * rates (ideally fetched, not hardcoded) before relying on these figures for
+ * anything beyond a rough trend.
+ */
+const FX_TO_INR = { INR: 1, USD: 83, EUR: 90 }
+const fxToInr = (currency) => FX_TO_INR[currency] ?? 1
+
 // --- PREMIUM POPUP COMPONENT ---
 const Popup = ({ isOpen, onClose, title, message, type, actionLabel, onAction, cancelLabel }) => {
     if (!isOpen) return null;
@@ -575,38 +587,74 @@ export default function Dashboard() {
         map[key] = { key, label, invoiceAmount: 0, invoiceCount: 0, receiptAmount: 0, receiptCount: 0 }
       }
       const currency = rec.invoice_data?.currency || 'INR'
-      const rate = currency === 'USD' ? 83 : currency === 'EUR' ? 90 : 1
-      map[key].receiptAmount += parseFloat(rec.total_amount || 0) * rate
+      map[key].receiptAmount += parseFloat(rec.total_amount || 0) * fxToInr(currency)
       map[key].receiptCount += 1
     })
 
     return Object.values(map).sort((a, b) => a.key.localeCompare(b.key))
   }, [allInvoices, allReceipts])
 
-  const productRevenueData = useMemo(() => {
-    const map = {}
+  // Revenue broken down by line item AND grouped by what was sold: a recurring
+  // product/plan versus one-off service work. Products get a blue ramp and
+  // services a violet ramp, so the donut reads as a split at a glance.
+  //
+  // Receipts saved before the SaaS/Service switch existed carry no billingKind
+  // and fall back to Product, matching normalizeBillingKind elsewhere.
+  const revenueSplit = useMemo(() => {
+    const PRODUCT_COLORS = ['#2563eb', '#3b82f6', '#60a5fa', '#93c5fd', '#1d4ed8']
+    const SERVICE_COLORS = ['#7c3aed', '#8b5cf6', '#a78bfa', '#c4b5fd', '#6d28d9']
+
+    const groups = {
+      [BILLING_KINDS.SAAS]: { kind: BILLING_KINDS.SAAS, label: 'Products', total: 0, items: {} },
+      [BILLING_KINDS.SERVICE]: { kind: BILLING_KINDS.SERVICE, label: 'Services', total: 0, items: {} },
+    }
+
     allReceipts.forEach(r => {
-      const name = r.invoice_data?.productName || 'Other Plan'
-      const currency = r.invoice_data?.currency || 'INR'
-      const rate = currency === 'USD' ? 83 : currency === 'EUR' ? 90 : 1
-      const amountInINR = parseFloat(r.total_amount || 0) * rate
-      if (!map[name]) {
-        map[name] = { name, value: 0, displayByCurrency: {} }
+      const d = r.invoice_data || {}
+      const kind = normalizeBillingKind(d.billingKind)
+      const isSvc = kind === BILLING_KINDS.SERVICE
+      const name = d.productName || (isSvc ? 'Other Service' : 'Other Product')
+      const currency = d.currency || 'INR'
+      const raw = parseFloat(r.total_amount || 0)
+      const inr = raw * fxToInr(currency)
+
+      const group = groups[kind]
+      group.total += inr
+      if (!group.items[name]) {
+        group.items[name] = { name, kind, value: 0, displayByCurrency: {} }
       }
-      map[name].value += amountInINR
-      
-      if (!map[name].displayByCurrency[currency]) {
-        map[name].displayByCurrency[currency] = 0
-      }
-      map[name].displayByCurrency[currency] += parseFloat(r.total_amount || 0)
+      group.items[name].value += inr
+      group.items[name].displayByCurrency[currency] =
+        (group.items[name].displayByCurrency[currency] || 0) + raw
     })
-    const colors = ['#8b5cf6', '#3b82f6', '#10b981', '#f59e0b', '#ec4899', '#374151']
-    return Object.values(map).map((item, idx) => ({
-      name: item.name,
-      value: parseFloat(item.value.toFixed(2)),
-      color: colors[idx % colors.length],
-      displayByCurrency: item.displayByCurrency
-    }))
+
+    // Largest first within each group, products before services.
+    const build = (group, palette) =>
+      Object.values(group.items)
+        .sort((a, b) => b.value - a.value)
+        .map((item, idx) => ({
+          ...item,
+          value: parseFloat(item.value.toFixed(2)),
+          color: palette[idx % palette.length],
+        }))
+
+    const productItems = build(groups[BILLING_KINDS.SAAS], PRODUCT_COLORS)
+    const serviceItems = build(groups[BILLING_KINDS.SERVICE], SERVICE_COLORS)
+    const productTotal = parseFloat(groups[BILLING_KINDS.SAAS].total.toFixed(2))
+    const serviceTotal = parseFloat(groups[BILLING_KINDS.SERVICE].total.toFixed(2))
+    const total = productTotal + serviceTotal
+
+    return {
+      items: [...productItems, ...serviceItems],
+      groups: [
+        { label: 'Products', kind: BILLING_KINDS.SAAS, total: productTotal, items: productItems, accent: '#2563eb' },
+        { label: 'Services', kind: BILLING_KINDS.SERVICE, total: serviceTotal, items: serviceItems, accent: '#7c3aed' },
+      ],
+      productTotal,
+      serviceTotal,
+      total,
+      productShare: total > 0 ? (productTotal / total) * 100 : 0,
+    }
   }, [allReceipts])
 
   const taxCollectionData = useMemo(() => {
@@ -620,8 +668,7 @@ export default function Dashboard() {
     allReceipts.forEach(rec => {
       const taxAmt = parseFloat(rec.invoice_data?.taxAmount || 0)
       const currency = rec.invoice_data?.currency || 'INR'
-      const rate = currency === 'USD' ? 83 : currency === 'EUR' ? 90 : 1
-      saasTax += taxAmt * rate
+      saasTax += taxAmt * fxToInr(currency)
     })
 
     const data = [
@@ -1044,7 +1091,7 @@ export default function Dashboard() {
             <div className="bg-white/70 backdrop-blur-md p-4 sm:p-5 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-lg hover:shadow-indigo-500/5 border border-gray-100/80 flex flex-row items-center justify-between transition-all duration-300 hover:-translate-y-1 group border-l-4 border-l-indigo-500">
                 <div className="flex flex-col justify-between h-full">
                     <div>
-                        <p className="text-gray-450 text-[10px] uppercase font-bold tracking-widest">Total Invoices</p>
+                        <p className="text-gray-400 text-[10px] uppercase font-bold tracking-widest">Total Invoices</p>
                         <p className="text-3xl font-extrabold text-gray-950 mt-2 tracking-tight group-hover:text-indigo-600 transition-colors duration-200">{invoicesStats.count}</p>
                     </div>
                     <div className="mt-4 text-[11px] text-gray-400 font-semibold flex items-center gap-1.5">
@@ -1063,7 +1110,7 @@ export default function Dashboard() {
             <div className="bg-white/70 backdrop-blur-md p-4 sm:p-5 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-lg hover:shadow-blue-500/5 border border-gray-100/80 flex flex-row items-center justify-between transition-all duration-300 hover:-translate-y-1 group border-l-4 border-l-blue-500">
                 <div className="flex flex-col justify-between h-full">
                     <div>
-                        <p className="text-gray-455 text-[10px] uppercase font-bold tracking-widest">Invoiced Value</p>
+                        <p className="text-gray-500 text-[10px] uppercase font-bold tracking-widest">Invoiced Value</p>
                         <p className="text-2xl font-extrabold text-blue-600 mt-2 tracking-tight">₹{invoicesStats.totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                     </div>
                     <div className="mt-4 text-[11px] text-gray-400 font-semibold flex items-center gap-1.5">
@@ -1082,8 +1129,8 @@ export default function Dashboard() {
             <div className="bg-white/70 backdrop-blur-md p-4 sm:p-5 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-lg hover:shadow-emerald-500/5 border border-gray-100/80 flex flex-row items-center justify-between transition-all duration-300 hover:-translate-y-1 group border-l-4 border-l-emerald-500">
                 <div className="flex flex-col justify-between h-full">
                     <div>
-                        <p className="text-gray-450 text-[10px] uppercase font-bold tracking-widest">Total Receipts</p>
-                        <p className="text-3xl font-extrabold text-gray-955 mt-2 tracking-tight group-hover:text-emerald-600 transition-colors duration-200">{receiptsStats.count}</p>
+                        <p className="text-gray-400 text-[10px] uppercase font-bold tracking-widest">Total Receipts</p>
+                        <p className="text-3xl font-extrabold text-gray-950 mt-2 tracking-tight group-hover:text-emerald-600 transition-colors duration-200">{receiptsStats.count}</p>
                     </div>
                     <div className="mt-4 text-[11px] text-gray-400 font-semibold flex items-center gap-1.5">
                         <span className="text-[10px] bg-emerald-50/70 text-emerald-600 px-2 py-0.5 rounded-full font-bold border border-emerald-100/50">Receipt</span>
@@ -1101,7 +1148,7 @@ export default function Dashboard() {
             <div className="bg-white/70 backdrop-blur-md p-4 sm:p-5 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-lg hover:shadow-teal-500/5 border border-gray-100/80 flex flex-row items-center justify-between transition-all duration-300 hover:-translate-y-1 group border-l-4 border-l-teal-500">
                 <div className="flex flex-col justify-between h-full">
                     <div>
-                        <p className="text-gray-450 text-[10px] uppercase font-bold tracking-widest">Realized Revenue</p>
+                        <p className="text-gray-400 text-[10px] uppercase font-bold tracking-widest">Realized Revenue</p>
                         <div className="mt-2 flex flex-col gap-0.5">
                             {Object.keys(receiptsStats.totalsByCurrency).length === 0 ? (
                                 <p className="text-2xl font-extrabold text-emerald-600">₹0.00</p>
@@ -1109,13 +1156,13 @@ export default function Dashboard() {
                                 Object.entries(receiptsStats.totalsByCurrency).map(([currency, data]) => (
                                     <p key={currency} className="text-2xl font-extrabold text-emerald-600 leading-tight">
                                         {data.symbol}{data.amount.toLocaleString(currency === 'INR' ? 'en-IN' : 'en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                        <span className="text-[10px] text-gray-450 font-normal ml-1">({currency})</span>
+                                        <span className="text-[10px] text-gray-400 font-normal ml-1">({currency})</span>
                                     </p>
                                 ))
                              )}
                         </div>
                     </div>
-                    <div className="mt-4 text-[11px] text-gray-450 font-semibold flex items-center gap-1.5">
+                    <div className="mt-4 text-[11px] text-gray-400 font-semibold flex items-center gap-1.5">
                         <span className="text-[10px] bg-emerald-50/70 text-emerald-600 px-2 py-0.5 rounded-full font-bold border border-emerald-100/50">Income</span>
                         <span>Cleared Income</span>
                     </div>
@@ -1133,7 +1180,7 @@ export default function Dashboard() {
             
             {/* Chart 1: Invoices Volume & Value Trend */}
             <div className="bg-white/70 backdrop-blur-md p-4 sm:p-5 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.02)] border border-gray-100/80 flex flex-col h-[350px] transition-all duration-300 hover:shadow-md">
-                <h3 className="text-xs font-bold text-gray-450 uppercase tracking-wider mb-4">GST Invoices Monthly Trend</h3>
+                <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">GST Invoices Monthly Trend</h3>
                 {monthlyTrends.length > 0 ? (
                     <div className="w-full flex-1 min-h-0">
                         <ResponsiveContainer width="100%" height="100%">
@@ -1156,37 +1203,84 @@ export default function Dashboard() {
                 )}
             </div>
 
-            {/* Chart 2: Product-wise SaaS Revenue Breakdown */}
+            {/* Chart 2: Revenue split by Product vs Service, then by line item */}
             <div className="bg-white/70 backdrop-blur-md p-4 sm:p-5 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.02)] border border-gray-100/80 flex flex-col h-[350px] transition-all duration-300 hover:shadow-md">
-                <h3 className="text-xs font-bold text-gray-455 uppercase tracking-wider mb-4">Product-wise Revenue (INR Equiv.)</h3>
-                {productRevenueData.length > 0 ? (
-                    <div className="w-full flex-1 min-h-0 flex flex-row items-center">
-                        <div className="w-1/2 h-full">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <PieChart>
-                                    <Pie data={productRevenueData} cx="50%" cy="50%" innerRadius={50} outerRadius={70} paddingAngle={4} dataKey="value" cornerRadius={4}>
-                                        {productRevenueData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />)}
-                                    </Pie>
-                                    <Tooltip formatter={(value, name, props) => {
-                                        const originalBreakdown = props.payload.displayByCurrency || {};
-                                        const breakdownText = Object.entries(originalBreakdown)
-                                            .map(([cur, amt]) => `${cur === 'USD' ? '$' : cur === 'EUR' ? '€' : '₹'}${amt.toLocaleString()}`)
-                                            .join(', ');
-                                        return [`₹${value.toLocaleString('en-IN')} (${breakdownText})`, props.payload.name];
-                                    }} />
-                                </PieChart>
-                            </ResponsiveContainer>
-                        </div>
-                        <div className="w-1/2 max-h-full overflow-y-auto px-2 space-y-1.5 custom-scrollbar">
-                            {productRevenueData.map((item, idx) => (
-                                <div key={idx} className="flex items-center gap-2 text-xs">
-                                    <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: item.color }}></div>
-                                    <span className="font-semibold text-gray-700 truncate flex-1">{item.name}</span>
-                                    <span className="font-bold text-gray-900 shrink-0">₹{item.value.toLocaleString('en-IN')}</span>
+                <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Product vs Service Revenue (INR Equiv.)</h3>
+
+                {revenueSplit.items.length > 0 ? (
+                    <>
+                        {/* Split summary: two totals and a proportional bar */}
+                        <div className="mb-3 shrink-0">
+                            <div className="flex items-end justify-between gap-3">
+                                <div>
+                                    <p className="text-[9px] uppercase font-bold tracking-widest text-blue-600">Products</p>
+                                    <p className="text-base font-extrabold text-gray-900 leading-tight">
+                                        ₹{revenueSplit.productTotal.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                                    </p>
                                 </div>
-                            ))}
+                                <div className="text-right">
+                                    <p className="text-[9px] uppercase font-bold tracking-widest text-violet-600">Services</p>
+                                    <p className="text-base font-extrabold text-gray-900 leading-tight">
+                                        ₹{revenueSplit.serviceTotal.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                                    </p>
+                                </div>
+                            </div>
+                            <div
+                                className="mt-2 flex h-1.5 w-full overflow-hidden rounded-full bg-gray-100"
+                                role="img"
+                                aria-label={`Products ${Math.round(revenueSplit.productShare)} percent, services ${100 - Math.round(revenueSplit.productShare)} percent of revenue`}
+                            >
+                                <div className="bg-blue-500 transition-all duration-500" style={{ width: `${revenueSplit.productShare}%` }} />
+                                <div className="bg-violet-500 flex-1" />
+                            </div>
                         </div>
-                    </div>
+
+                        <div className="w-full flex-1 min-h-0 flex flex-row items-center">
+                            <div className="w-[42%] h-full">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <PieChart>
+                                        <Pie data={revenueSplit.items} cx="50%" cy="50%" innerRadius={40} outerRadius={58} paddingAngle={4} dataKey="value" cornerRadius={4}>
+                                            {revenueSplit.items.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />)}
+                                        </Pie>
+                                        <Tooltip formatter={(value, name, props) => {
+                                            const originalBreakdown = props.payload.displayByCurrency || {};
+                                            const breakdownText = Object.entries(originalBreakdown)
+                                                .map(([cur, amt]) => `${cur === 'USD' ? '$' : cur === 'EUR' ? '€' : '₹'}${amt.toLocaleString()}`)
+                                                .join(', ');
+                                            const kindLabel = props.payload.kind === BILLING_KINDS.SERVICE ? 'Service' : 'Product';
+                                            return [`₹${value.toLocaleString('en-IN')} (${breakdownText})`, `${props.payload.name} · ${kindLabel}`];
+                                        }} />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                            </div>
+
+                            {/* Legend grouped by kind, so the split is readable as text too */}
+                            <div className="w-[58%] max-h-full overflow-y-auto pl-1 pr-2 space-y-2 custom-scrollbar">
+                                {revenueSplit.groups.filter(g => g.items.length > 0).map(group => (
+                                    <div key={group.kind}>
+                                        <div className="flex items-center gap-1.5 mb-1">
+                                            <span className="h-2 w-0.5 rounded-full" style={{ backgroundColor: group.accent }} />
+                                            <span className="text-[9px] uppercase font-bold tracking-widest" style={{ color: group.accent }}>
+                                                {group.label}
+                                            </span>
+                                            <span className="text-[9px] font-bold text-gray-400">
+                                                {group.items.length}
+                                            </span>
+                                        </div>
+                                        <div className="space-y-1 pl-2">
+                                            {group.items.map((item, idx) => (
+                                                <div key={idx} className="flex items-center gap-2 text-xs">
+                                                    <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: item.color }}></div>
+                                                    <span className="font-semibold text-gray-700 truncate flex-1">{item.name}</span>
+                                                    <span className="font-bold text-gray-900 shrink-0">₹{item.value.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </>
                 ) : (
                     <div className="flex-1 flex flex-col items-center justify-center opacity-40">
                         <p className="text-xs font-medium">No receipt data available</p>
@@ -1196,7 +1290,7 @@ export default function Dashboard() {
 
             {/* Chart 3: Tax Collection Breakdown */}
             <div className="bg-white/70 backdrop-blur-md p-4 sm:p-5 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.02)] border border-gray-100/80 flex flex-col h-[350px] transition-all duration-300 hover:shadow-md">
-                <h3 className="text-xs font-bold text-gray-460 uppercase tracking-wider mb-4">Tax Collections Breakdown (INR Equiv.)</h3>
+                <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4">Tax Collections Breakdown (INR Equiv.)</h3>
                 {taxCollectionData.length > 0 ? (
                     <div className="w-full flex-1 min-h-0 flex flex-row items-center">
                         <div className="w-1/2 h-full">
@@ -1228,7 +1322,7 @@ export default function Dashboard() {
 
             {/* Chart 4: Payment Status (Existing status chart) */}
             <div className="bg-white/70 backdrop-blur-md p-4 sm:p-5 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.02)] border border-gray-100/80 flex flex-col relative h-[350px] transition-all duration-300 hover:shadow-md">
-                <h3 className="text-xs font-bold text-gray-470 uppercase tracking-wider mb-4">Invoice Payment Status</h3>
+                <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4">Invoice Payment Status</h3>
                 {statusData.length > 0 ? (
                     <div className="w-full flex-1 min-h-0">
                         <ResponsiveContainer width="100%" height="100%">
@@ -1250,7 +1344,7 @@ export default function Dashboard() {
 
             {/* Chart 5: Top Clients by Revenue (Existing list) */}
             <div className="bg-white/70 backdrop-blur-md p-4 sm:p-5 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.02)] border border-gray-100/80 flex flex-col lg:col-span-2 min-h-[250px] transition-all duration-300 hover:shadow-md">
-                <p className="text-xs font-bold text-gray-480 uppercase tracking-wider mb-4">Top Clients by Revenue</p>
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4">Top Clients by Revenue</p>
                 <div className="flex-1 flex flex-col justify-center space-y-3">
                     {topClients.length === 0 ? (
                         <div className="text-center opacity-40">
@@ -1673,7 +1767,7 @@ export default function Dashboard() {
                                                             <button 
                                                                 type="button"
                                                                 onClick={(e) => { e.stopPropagation(); handleDeleteClick(inv.id, e); }} 
-                                                                className="text-red-650 hover:text-red-600 p-1 px-2.5 hover:bg-red-50 rounded transition-all font-semibold text-xs border"
+                                                                className="text-red-600 hover:text-red-600 p-1 px-2.5 hover:bg-red-50 rounded transition-all font-semibold text-xs border"
                                                             >
                                                                 Delete
                                                             </button>
@@ -1851,7 +1945,7 @@ export default function Dashboard() {
                                                         <button 
                                                             type="button"
                                                             onClick={(e) => { e.stopPropagation(); handleDeleteClick(inv.id, e); }} 
-                                                            className="text-red-650 hover:underline p-1 text-xs font-bold"
+                                                            className="text-red-600 hover:underline p-1 text-xs font-bold"
                                                         >
                                                             Delete
                                                         </button>
