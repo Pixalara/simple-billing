@@ -43,7 +43,7 @@ export default function Footer() {
               <div className="rounded-2xl bg-ink-950/70 px-5 py-5 backdrop-blur">
                 <p className="flex items-center justify-center gap-2 text-eyebrow uppercase text-mint-300">
                   <Icon name="zap" className="h-3.5 w-3.5" />
-                  Coming soon, included in your plan
+                  In build — included in your plan
                 </p>
                 <ul className="mt-4 flex flex-wrap items-center justify-center gap-2">
                   {UPCOMING_HIGHLIGHTS.map((item) => (
@@ -57,7 +57,8 @@ export default function Footer() {
                   ))}
                 </ul>
                 <p className="mt-3.5 text-micro text-ink-400">
-                  Join now and each one switches on for you the day it ships — no upgrade needed.
+                  Not live yet. Join now and each one switches on for you the day it ships, at no
+                  extra cost.
                 </p>
               </div>
             </div>

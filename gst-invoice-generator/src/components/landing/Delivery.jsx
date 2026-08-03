@@ -67,10 +67,14 @@ export default function Delivery() {
           ))}
         </div>
 
-        {/* --- Launching soon ---------------------------------------------
+        {/* --- In build -----------------------------------------------------
             Highlighted rather than de-emphasised: a gradient hairline frame
             and full-strength cards, so the roadmap reads as capability
-            arriving, not capability missing. Still clearly labelled. */}
+            arriving, not capability missing.
+
+            Per-card badges were deliberately removed — six identical chips was
+            visual noise. The "not live yet" fact is stated once, in the panel
+            heading and subcopy. Keep that statement if this markup changes. */}
         <Reveal delay={100} className="mt-14">
           <div className="relative overflow-hidden rounded-4xl bg-gradient-to-b from-brand-400/40 via-mint-400/15 to-white/5 p-px shadow-hero">
             <div className="relative overflow-hidden rounded-4xl bg-ink-950/85 px-5 py-8 backdrop-blur-xl sm:px-8 sm:py-10">
@@ -81,16 +85,12 @@ export default function Delivery() {
               />
 
               <div className="relative flex flex-col items-center text-center">
-                <span className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-brand-500 to-mint-500 px-3.5 py-1.5 text-eyebrow uppercase text-white shadow-lift">
-                  <Icon name="zap" className="h-3.5 w-3.5" />
-                  Launching soon
-                </span>
-                <h3 className="mt-4 text-display-md font-display text-white text-balance">
-                  Four more ways to get paid, already in build
+                <h3 className="text-display-md font-display text-white text-balance">
+                  Four more ways to get paid, currently in build
                 </h3>
                 <p className="mt-3 max-w-prose-tight text-body text-ink-300">
-                  Included in your plan the day each one ships. No upgrade, no migration, no extra
-                  charge — start now and they simply appear.
+                  These are not live yet. Each one switches on inside your plan the day it ships —
+                  no upgrade, no migration, no extra charge.
                 </p>
               </div>
 
@@ -107,14 +107,11 @@ export default function Delivery() {
                       className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent transition-opacity duration-300 group-hover:via-white/60"
                     />
 
-                    <div className="flex items-start justify-between gap-3">
-                      <span
-                        className={`inline-flex h-12 w-12 items-center justify-center rounded-xl ring-1 transition-transform duration-300 ease-out-back group-hover:scale-110 ${TONE[channel.icon]}`}
-                      >
-                        <Icon name={channel.icon} className="h-5.5 w-5.5" />
-                      </span>
-                      <StatusChip status="soon" label={channel.tagline} />
-                    </div>
+                    <span
+                      className={`inline-flex h-12 w-12 items-center justify-center rounded-xl ring-1 transition-transform duration-300 ease-out-back group-hover:scale-110 ${TONE[channel.icon]}`}
+                    >
+                      <Icon name={channel.icon} className="h-5.5 w-5.5" />
+                    </span>
 
                     <h4 className="mt-4 text-display-sm font-display text-white">{channel.name}</h4>
                     <p className="mt-1.5 text-body-sm text-ink-300">{channel.body}</p>

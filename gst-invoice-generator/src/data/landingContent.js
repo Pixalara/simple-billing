@@ -3,9 +3,11 @@
  * =============================================================================
  * Copy lives here so the section components stay presentational.
  *
- * HONESTY RULE: anything not shipped yet carries `status: 'soon'` and renders
- * with a visible "Coming soon" chip. Do not promote a capability to shipped
- * until it actually works in the product.
+ * HONESTY RULE: anything not shipped yet carries `status: 'soon'`. Per-card
+ * badges were removed for visual calm, so the "not live yet" statement is made
+ * once in the section copy instead. If you restructure that section, keep an
+ * explicit statement somewhere — do not let unshipped items render identically
+ * to shipped ones.
  * ========================================================================== */
 
 export const NAV_LINKS = [
@@ -125,8 +127,9 @@ export const FEATURES = [
 ]
 
 /* --- Delivery channels --------------------------------------------------
- * `status: 'live'`  → works in the product today
- * `status: 'soon'`  → NOT built yet, renders a visible "Coming soon" chip
+ * `status: 'live'`  → works in the product today, shows an "Available now" chip
+ * `status: 'soon'`  → NOT built yet; grouped under a panel that states plainly
+ *                     that these are in build and not live
  */
 export const DELIVERY_CHANNELS = [
   {
@@ -150,7 +153,6 @@ export const DELIVERY_CHANNELS = [
     icon: 'whatsapp',
     name: 'WhatsApp send',
     status: 'soon',
-    tagline: 'Coming soon',
     body: 'Send the invoice to a saved customer number with a prefilled message, straight from the invoice screen. No share sheet detour.',
     bullets: ['One tap from the invoice', 'Message template you control'],
   },
@@ -159,7 +161,6 @@ export const DELIVERY_CHANNELS = [
     icon: 'mail',
     name: 'Email delivery',
     status: 'soon',
-    tagline: 'Coming soon',
     body: 'Email the PDF to your customer as a real attachment, from your business address, with delivery status on the invoice.',
     bullets: ['Real PDF attachment', 'Sent, opened and bounced status'],
   },
@@ -168,7 +169,6 @@ export const DELIVERY_CHANNELS = [
     icon: 'sms',
     name: 'SMS notification',
     status: 'soon',
-    tagline: 'Coming soon',
     body: 'A short SMS with the amount, due date and a secure link to the invoice — for customers who do not use WhatsApp.',
     bullets: ['Works without a smartphone', 'Secure single-invoice link'],
   },
@@ -177,7 +177,6 @@ export const DELIVERY_CHANNELS = [
     icon: 'bell',
     name: 'Payment reminders',
     status: 'soon',
-    tagline: 'Coming soon',
     body: 'Automatic nudges on overdue invoices across WhatsApp and email, so you stop chasing payments by hand.',
     bullets: ['Fires on your schedule', 'Stops the moment they pay'],
   },
@@ -270,7 +269,7 @@ export const FAQS = [
   },
   {
     q: 'Can I send invoices on WhatsApp or by email?',
-    a: 'Today you can download the PDF, and on a mobile device you can pass it to your phone’s share sheet, which includes WhatsApp. Direct WhatsApp send, email delivery as a real attachment, and SMS notifications are in build and marked "coming soon" on this page. We would rather show you what works now than claim otherwise.',
+    a: 'Today you can download the PDF, and on a mobile device you can pass it to your phone’s share sheet, which includes WhatsApp. Direct WhatsApp send, email delivery as a real attachment, SMS notifications and automatic reminders are in build and not live yet — the Delivery section above separates what works today from what is on the way. We would rather show you what works now than claim otherwise.',
   },
   {
     q: 'What happens to my data?',
