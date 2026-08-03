@@ -643,9 +643,12 @@ export default function CreateInvoice() {
           
           // CRITICAL FIX: Only update if editing existing invoice (id exists)
           if (id) {
+              // Leave status alone on edit — it may have been cycled to PAID/OVERDUE.
               await supabase.from('invoices').update(payload).eq('id', id);
           } else {
-              await supabase.from('invoices').insert(payload);
+              // Persist the opening status so the dashboard reads the column
+              // rather than relying on a display-time fallback.
+              await supabase.from('invoices').insert({ ...payload, status: 'PENDING' });
           }
           
           showPopup(

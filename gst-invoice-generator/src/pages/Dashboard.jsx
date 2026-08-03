@@ -57,6 +57,23 @@ const Popup = ({ isOpen, onClose, title, message, type, actionLabel, onAction, c
     )
 }
 
+/**
+ * The single source of truth for a document's payment status.
+ *
+ * Receipts are proof of payment, so they are PAID unless explicitly refunded.
+ * New receipts persist status: 'PAID' on insert, but ones saved before that
+ * change have a null status — hence the fallback, which keeps existing data
+ * reading correctly rather than showing up as Pending.
+ *
+ * Every consumer (table badges, status chart, Excel export, status cycling)
+ * must go through this. Two of them previously disagreed: the table showed a
+ * receipt as Paid while the chart counted the same receipt as Pending.
+ */
+const resolveDocStatus = (doc) => {
+    if (doc?.status) return doc.status;
+    return doc?.invoice_data?.type === 'receipt' ? 'PAID' : 'PENDING';
+};
+
 // --- ANALYTICS DATA PROCESSORS ---
 const processStatusData = (invoices) => {
     const data = [
@@ -67,7 +84,7 @@ const processStatusData = (invoices) => {
     ];
 
     invoices.forEach(inv => {
-        const status = inv.status || 'PENDING';
+        const status = resolveDocStatus(inv);
         const amount = inv.total_amount || 0;
         
         if (status === 'PAID') data[0].value += amount;
@@ -823,7 +840,7 @@ export default function Dashboard() {
       
       const isReceipt = invoice.invoice_data?.type === 'receipt';
       const statusOrder = isReceipt ? ['PAID', 'REFUNDED'] : ['PENDING', 'PAID', 'OVERDUE'];
-      const currentStatus = invoice.status || (isReceipt ? 'PAID' : 'PENDING');
+      const currentStatus = resolveDocStatus(invoice);
       const nextStatus = statusOrder[(statusOrder.indexOf(currentStatus) + 1) % statusOrder.length];
 
       try {
@@ -968,7 +985,7 @@ export default function Dashboard() {
             cgst: parseFloat(t.cgst || 0),
             sgst: parseFloat(t.sgst || 0),
             total: parseFloat(inv.total_amount || 0),
-            status: inv.status || 'PENDING'
+            status: resolveDocStatus(inv)
         });
 
         row.eachCell((cell, colNumber) => {
@@ -1322,7 +1339,8 @@ export default function Dashboard() {
 
             {/* Chart 4: Payment Status (Existing status chart) */}
             <div className="bg-white/70 backdrop-blur-md p-4 sm:p-5 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.02)] border border-gray-100/80 flex flex-col relative h-[350px] transition-all duration-300 hover:shadow-md">
-                <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4">Invoice Payment Status</h3>
+                {/* Covers invoices and receipts, so not "Invoice" status. */}
+                <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4">Payment Status</h3>
                 {statusData.length > 0 ? (
                     <div className="w-full flex-1 min-h-0">
                         <ResponsiveContainer width="100%" height="100%">
@@ -1857,9 +1875,9 @@ export default function Dashboard() {
                                                 <td className="px-5 py-3 text-center">
                                                     <button 
                                                         onClick={(e) => cycleStatus(e, inv)}
-                                                        className={`px-2.5 py-1 rounded-full text-[10px] font-bold border uppercase tracking-wide transition-all active:scale-95 ${getStatusBadgeStyles(inv.status || (inv.invoice_data?.type === 'receipt' ? 'PAID' : 'PENDING'))}`}
+                                                        className={`px-2.5 py-1 rounded-full text-[10px] font-bold border uppercase tracking-wide transition-all active:scale-95 ${getStatusBadgeStyles(resolveDocStatus(inv))}`}
                                                     >
-                                                        {inv.status || (inv.invoice_data?.type === 'receipt' ? 'PAID' : 'PENDING')}
+                                                        {resolveDocStatus(inv)}
                                                     </button>
                                                 </td>
                                                 <td className="px-5 py-3 text-right font-bold text-gray-900">
@@ -1970,9 +1988,9 @@ export default function Dashboard() {
                                                 </div>
                                                 <button 
                                                     onClick={(e) => cycleStatus(e, inv)}
-                                                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold border uppercase ${getStatusBadgeStyles(inv.status || (inv.invoice_data?.type === 'receipt' ? 'PAID' : 'PENDING'))}`}
+                                                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold border uppercase ${getStatusBadgeStyles(resolveDocStatus(inv))}`}
                                                 >
-                                                    {inv.status || (inv.invoice_data?.type === 'receipt' ? 'PAID' : 'PENDING')}
+                                                    {resolveDocStatus(inv)}
                                                 </button>
                                             </div>
                                             <div className="flex justify-between items-end">

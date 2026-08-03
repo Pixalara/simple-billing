@@ -536,9 +536,13 @@ export default function CreateReceipt() {
       }
 
       if (id) {
+        // Don't touch status on edit — it may have been set to REFUNDED.
         await supabase.from('invoices').update(payload).eq('id', id)
       } else {
-        await supabase.from('invoices').insert(payload)
+        // A receipt is proof of payment, so it is PAID the moment it exists.
+        // Written explicitly so the dashboard and its charts agree without
+        // relying on a display-time fallback.
+        await supabase.from('invoices').insert({ ...payload, status: 'PAID' })
       }
 
       showPopup(
