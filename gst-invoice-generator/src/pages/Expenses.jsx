@@ -14,7 +14,8 @@ import {
 import ExcelJS from 'exceljs'
 import { saveAs } from 'file-saver'
 import { supabase } from '../supabaseClient'
-import Icon from '../components/expenses/icons'
+import Icon from '../components/Icon'
+import ModuleNav from '../components/ModuleNav'
 import ExpenseFormModal from '../components/expenses/ExpenseFormModal'
 import BrandingFooter from '../components/BrandingFooter'
 import {
@@ -351,14 +352,7 @@ export default function Expenses() {
       <header className="sticky top-0 z-30 border-b border-ink-100 bg-white/85 backdrop-blur-xl">
         <div className="mx-auto flex max-w-container-wide flex-col gap-3 px-4 py-3 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => navigate('/dashboard')}
-              className="focus-ring flex h-9 w-9 items-center justify-center rounded-lg text-ink-500 ring-1 ring-ink-200 transition hover:text-ink-900"
-              aria-label="Back to dashboard"
-            >
-              <Icon name="arrowLeft" className="h-4 w-4" />
-            </button>
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-ink-900 to-ink-700 text-white">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-ink-900 to-ink-700 text-white">
               <Icon name="wallet" className="h-5 w-5" />
             </span>
             <div>
@@ -371,27 +365,22 @@ export default function Expenses() {
             </div>
           </div>
 
-          <div className="flex gap-2">
-            <button
-              onClick={() => navigate('/analytics')}
-              className="focus-ring inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-ink-200 bg-white px-4 py-2.5 text-xs font-bold text-ink-700 transition hover:bg-ink-50 lg:flex-none"
-            >
-              <Icon name="pie" className="h-4 w-4" />
-              Analytics
-            </button>
+          <div className="flex items-center gap-2">
+            <ModuleNav current="expenses" />
             <button
               onClick={handleExport}
-              className="focus-ring inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-ink-200 bg-white px-4 py-2.5 text-xs font-bold text-ink-700 transition hover:bg-ink-50 lg:flex-none"
+              aria-label="Export expenses"
+              className="focus-ring inline-flex items-center justify-center gap-2 rounded-xl border border-ink-200 bg-white px-3 py-2.5 text-xs font-bold text-ink-700 transition hover:bg-ink-50 sm:px-4"
             >
               <Icon name="download" className="h-4 w-4" />
-              Export
+              <span className="hidden sm:inline">Export</span>
             </button>
             <button
               onClick={() => setModal({ open: true, node: null })}
-              className="focus-ring inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-ink-900 px-5 py-2.5 text-xs font-bold text-white shadow-lift transition hover:-translate-y-0.5 hover:bg-ink-800 lg:flex-none"
+              className="focus-ring inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-ink-900 px-4 py-2.5 text-xs font-bold text-white shadow-lift transition hover:-translate-y-0.5 hover:bg-ink-800 lg:flex-none"
             >
               <Icon name="plus" className="h-4 w-4" strokeWidth={2.4} />
-              Add expense
+              <span className="whitespace-nowrap">Add expense</span>
             </button>
           </div>
         </div>

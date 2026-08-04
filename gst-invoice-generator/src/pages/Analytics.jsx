@@ -18,7 +18,8 @@ import {
 import ExcelJS from 'exceljs'
 import { saveAs } from 'file-saver'
 import { supabase } from '../supabaseClient'
-import Icon from '../components/expenses/icons'
+import Icon from '../components/Icon'
+import ModuleNav from '../components/ModuleNav'
 import BrandingFooter from '../components/BrandingFooter'
 import { REVENUE_BASES, buildAnalytics } from '../data/analytics'
 import { formatCompactINR, formatINR, formatPercent } from '../data/currency'
@@ -221,14 +222,7 @@ export default function Analytics() {
       <header className="sticky top-0 z-30 border-b border-ink-100 bg-white/85 backdrop-blur-xl">
         <div className="mx-auto flex max-w-container-wide flex-col gap-3 px-4 py-3 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => navigate('/dashboard')}
-              aria-label="Back to dashboard"
-              className="focus-ring flex h-9 w-9 items-center justify-center rounded-lg text-ink-500 ring-1 ring-ink-200 transition hover:text-ink-900"
-            >
-              <Icon name="arrowLeft" className="h-4 w-4" />
-            </button>
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-brand-600 to-brand-800 text-white">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-600 to-brand-800 text-white">
               <Icon name="pie" className="h-5 w-5" />
             </span>
             <div>
@@ -238,21 +232,16 @@ export default function Analytics() {
               </p>
             </div>
           </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => navigate('/expenses')}
-              className="focus-ring inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-ink-200 bg-white px-4 py-2.5 text-xs font-bold text-ink-700 transition hover:bg-ink-50 lg:flex-none"
-            >
-              <Icon name="wallet" className="h-4 w-4" />
-              Expenses
-            </button>
+          <div className="flex items-center gap-2">
+            <ModuleNav current="analytics" />
             <button
               onClick={handleExport}
               disabled={!hasData}
               className="focus-ring inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-ink-900 px-4 py-2.5 text-xs font-bold text-white shadow-lift transition hover:bg-ink-800 disabled:opacity-50 lg:flex-none"
             >
               <Icon name="download" className="h-4 w-4" />
-              Export P&amp;L
+              <span className="hidden xs:inline">Export P&amp;L</span>
+              <span className="xs:hidden">Export</span>
             </button>
           </div>
         </div>

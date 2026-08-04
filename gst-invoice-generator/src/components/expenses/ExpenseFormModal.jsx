@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../../supabaseClient'
-import Icon from './icons'
+import Icon from '../Icon'
 import {
   AMOUNT_MODES,
   EXPENSE_CATEGORIES,

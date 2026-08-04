@@ -12,6 +12,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, Bar, Line, X
 import ExcelJS from 'exceljs'
 import { saveAs } from 'file-saver'
 import BrandingFooter from '../components/BrandingFooter'
+import ModuleNav from '../components/ModuleNav'
 
 /**
  * Record types stored in the `invoices` table that are NOT sales invoices.
@@ -1103,29 +1104,13 @@ export default function Dashboard() {
 
       <div className="relative z-10 max-w-7xl mx-auto">
         <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4 mb-6">
-          <h1 className="text-2xl md:text-3xl font-extrabold text-gray-950 tracking-tight flex items-center gap-2">Dashboard</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl md:text-3xl font-extrabold text-gray-950 tracking-tight flex items-center gap-2">Dashboard</h1>
+            {/* Same module switcher as Expenses and Analytics, so the three
+                modules are reachable from each other without a detour. */}
+            <ModuleNav current="dashboard" />
+          </div>
           <div className="flex flex-row items-center gap-3 justify-end">
-            <button
-              onClick={() => navigate('/analytics')}
-              className="bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900 text-white font-bold px-5 py-3 rounded-xl shadow-md hover:shadow-lg hover:shadow-blue-500/20 transition-all duration-200 transform hover:scale-[1.02] active:scale-95 flex items-center gap-2 text-sm md:text-base shrink-0 border border-blue-500/10"
-            >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="8.5" />
-                <path d="M12 3.5V12h8.5" />
-              </svg>
-              Analytics
-            </button>
-            <button
-              onClick={() => navigate('/expenses')}
-              className="bg-gradient-to-r from-slate-800 to-slate-950 hover:from-slate-900 hover:to-black text-white font-bold px-5 py-3 rounded-xl shadow-md hover:shadow-lg hover:shadow-slate-900/20 transition-all duration-200 transform hover:scale-[1.02] active:scale-95 flex items-center gap-2 text-sm md:text-base shrink-0 border border-white/10"
-            >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                <rect x="3" y="6" width="18" height="13" rx="2.5" />
-                <path d="M3 10.5h18" strokeLinecap="round" />
-                <circle cx="16.5" cy="14.5" r="1.2" />
-              </svg>
-              Expenses
-            </button>
             <button 
               onClick={() => setCustomerModal({ isOpen: true, customer: null })}
               className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold px-5 py-3 rounded-xl shadow-md hover:shadow-lg hover:shadow-indigo-500/20 transition-all duration-200 transform hover:scale-[1.02] active:scale-95 flex items-center gap-2 text-sm md:text-base shrink-0 border border-indigo-500/10"
