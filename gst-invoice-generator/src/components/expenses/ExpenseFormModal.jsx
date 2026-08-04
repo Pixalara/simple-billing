@@ -87,6 +87,11 @@ export default function ExpenseFormModal({ expenseNode, allExpenses = [], onClos
       sac: fields.sac ? fields.sac : c.sac,
       gstRate: untouched ? c.gst : fields.gstRate,
       amountMode: untouched ? (c.noGst ? 'none' : 'exclusive') : fields.amountMode,
+      // Domains renew yearly, rent and payroll monthly. Offered as a starting
+      // point only, and never once the user has begun filling the amount.
+      ...(untouched && c.recurring
+        ? { isRecurring: true, recurringCycle: c.recurring }
+        : {}),
     })
   }
 
@@ -240,7 +245,7 @@ export default function ExpenseFormModal({ expenseNode, allExpenses = [], onClos
                   className={FIELD}
                   value={fields.vendor}
                   onChange={(e) => set({ vendor: e.target.value })}
-                  placeholder="e.g. Amazon Web Services"
+                  placeholder={category.vendorHint || 'Who was this paid to?'}
                   required
                 />
               </div>

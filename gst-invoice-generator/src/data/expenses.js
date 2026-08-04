@@ -18,25 +18,32 @@
 export const EXPENSE_TYPE = 'expense'
 
 /* --- Categories ---------------------------------------------------------
- * `sac` is the common SAC/HSN code for that spend type and `gst` the usual
- * rate — both prefill the form and remain editable, since the bill is the
- * source of truth, not our defaults.
+ * `sac`       common SAC/HSN code for that spend type
+ * `gst`       usual rate
+ * `noGst`     sits outside GST by nature, so the form defaults to No GST
+ * `recurring` typical renewal cycle, prefilled as a starting point
+ * `vendorHint` placeholder for "Paid to", to speed up entry
+ *
+ * All of these are defaults that prefill and stay editable. The bill is the
+ * source of truth, never our guesses.
  */
 export const EXPENSE_CATEGORIES = [
-  { id: 'rent', label: 'Rent & Premises', icon: 'building', color: '#2563eb', sac: '997212', gst: 18 },
-  // noGst: spend that sits outside GST by nature, so the form defaults to it.
-  { id: 'salaries', label: 'Salaries & Wages', icon: 'users', color: '#0891b2', sac: '', gst: 0, noGst: true },
-  { id: 'contractors', label: 'Contractors & Freelancers', icon: 'userPlus', color: '#0d9488', sac: '998519', gst: 18 },
-  { id: 'software', label: 'Software & Subscriptions', icon: 'cloud', color: '#7c3aed', sac: '997331', gst: 18 },
-  { id: 'marketing', label: 'Marketing & Advertising', icon: 'megaphone', color: '#db2777', sac: '998361', gst: 18 },
-  { id: 'utilities', label: 'Utilities & Internet', icon: 'bolt', color: '#ea580c', sac: '998631', gst: 18 },
-  { id: 'travel', label: 'Travel & Transport', icon: 'plane', color: '#0284c7', sac: '996411', gst: 5 },
-  { id: 'professional', label: 'Professional Fees', icon: 'briefcase', color: '#4f46e5', sac: '998221', gst: 18 },
-  { id: 'office', label: 'Office Supplies', icon: 'box', color: '#65a30d', sac: '', gst: 18 },
-  { id: 'equipment', label: 'Equipment & Assets', icon: 'monitor', color: '#475569', sac: '', gst: 18 },
-  { id: 'bank', label: 'Bank & Payment Fees', icon: 'bank', color: '#b45309', sac: '997119', gst: 18 },
-  { id: 'taxes', label: 'Taxes & Statutory', icon: 'receipt', color: '#be123c', sac: '', gst: 0, noGst: true },
-  { id: 'other', label: 'Other', icon: 'dots', color: '#6b7280', sac: '', gst: 18 },
+  { id: 'rent', label: 'Rent & Premises', icon: 'building', color: '#2563eb', sac: '997212', gst: 18, recurring: 'monthly', vendorHint: 'e.g. Landlord or property manager' },
+  { id: 'salaries', label: 'Salaries & Wages', icon: 'users', color: '#0891b2', sac: '', gst: 0, noGst: true, recurring: 'monthly', vendorHint: 'e.g. Payroll — August' },
+  { id: 'contractors', label: 'Contractors & Freelancers', icon: 'userPlus', color: '#0d9488', sac: '998519', gst: 18, vendorHint: 'e.g. Freelance designer' },
+  { id: 'software', label: 'Software & Subscriptions', icon: 'cloud', color: '#7c3aed', sac: '997331', gst: 18, recurring: 'monthly', vendorHint: 'e.g. Amazon Web Services' },
+  // Domain registration and renewals, plus the hosting they usually sit on —
+  // same vendor and same bill in practice (registrars, hosting providers).
+  { id: 'domains', label: 'Domains & Hosting', icon: 'globe', color: '#15803d', sac: '998315', gst: 18, recurring: 'yearly', vendorHint: 'e.g. GoDaddy, Hostinger, Cloudflare' },
+  { id: 'marketing', label: 'Marketing & Advertising', icon: 'megaphone', color: '#db2777', sac: '998361', gst: 18, vendorHint: 'e.g. Google Ads, Meta' },
+  { id: 'utilities', label: 'Utilities & Internet', icon: 'bolt', color: '#ea580c', sac: '998631', gst: 18, recurring: 'monthly', vendorHint: 'e.g. Electricity board, ISP' },
+  { id: 'travel', label: 'Travel & Transport', icon: 'plane', color: '#0284c7', sac: '996411', gst: 5, vendorHint: 'e.g. Airline, cab service' },
+  { id: 'professional', label: 'Professional Fees', icon: 'briefcase', color: '#4f46e5', sac: '998221', gst: 18, vendorHint: 'e.g. CA, legal counsel' },
+  { id: 'office', label: 'Office Supplies', icon: 'box', color: '#65a30d', sac: '', gst: 18, vendorHint: 'e.g. Stationery supplier' },
+  { id: 'equipment', label: 'Equipment & Assets', icon: 'monitor', color: '#475569', sac: '', gst: 18, vendorHint: 'e.g. Laptop, furniture' },
+  { id: 'bank', label: 'Bank & Payment Fees', icon: 'bank', color: '#b45309', sac: '997119', gst: 18, vendorHint: 'e.g. Razorpay, bank charges' },
+  { id: 'taxes', label: 'Taxes & Statutory', icon: 'receipt', color: '#be123c', sac: '', gst: 0, noGst: true, vendorHint: 'e.g. Income tax, PF, ROC' },
+  { id: 'other', label: 'Other', icon: 'dots', color: '#6b7280', sac: '', gst: 18, vendorHint: 'Who was this paid to?' },
 ]
 
 export const getCategory = (id) =>
